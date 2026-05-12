@@ -34,7 +34,7 @@ partition:
   quantity_alpha: 0.5
 misc:
   seed: 42
-  device: cpu
+  device: cuda
   save_dir: results
   resolved_save_dir: results/fedavg_dir05_E5_s42
 _config_stem: fedavg_dir05
