@@ -11,7 +11,7 @@ set -euo pipefail
 # This script submits a curated subset of experiments rather than the full
 # matrix in submit_all_core.sh / submit_mitigation.sh / submit_ablation.sh.
 
-LOG_DIR="/home/bk489/federated/federated-thesis/experiments/dermamnist/logs"
+LOG_DIR="/home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/logs"
 mkdir -p "$LOG_DIR"
 
 CORE_CONFIGS=(

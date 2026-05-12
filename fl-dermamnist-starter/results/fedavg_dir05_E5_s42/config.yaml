@@ -1,8 +1,8 @@
 dataset:
   name: dermamnist
-  size: 28
-  source: package
-  npz_path: datasets/medmnist/dermamnist.npz
+  size: 64
+  source: npz
+  npz_path: ../dermamnist_64.npz
 model:
   name: simple_cnn
   in_channels: 3
@@ -10,7 +10,7 @@ model:
   pretrained: false
 federation:
   num_clients: 10
-  num_rounds: 3
+  num_rounds: 100
   local_epochs: 5
   fraction_fit: 1.0
   fraction_evaluate: 1.0
@@ -38,4 +38,3 @@ misc:
   save_dir: results
   resolved_save_dir: results/fedavg_dir05_E5_s42
 _config_stem: fedavg_dir05
-debug_subset: 500

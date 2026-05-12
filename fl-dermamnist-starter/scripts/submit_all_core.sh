@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-mkdir -p /home/bk489/federated/federated-thesis/experiments/dermamnist/logs
+mkdir -p /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/logs
 
 for config in configs/fedavg_*.yaml configs/fedprox_*.yaml; do
   for seed in 42 123 456; do

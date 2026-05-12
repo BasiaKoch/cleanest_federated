@@ -1,8 +1,11 @@
 dataset:
   name: dermamnist
-  size: 28
-  source: package
-  npz_path: datasets/medmnist/dermamnist.npz
+  size: 64
+  source: npz
+  # Relative to repo root. The npz file lives one level above the repo on both
+  # local (/Users/.../cleanest_federated/dermamnist_64.npz) and HPC
+  # (/home/bk489/federated_clean/cleanest_federated/dermamnist_64.npz).
+  npz_path: ../dermamnist_64.npz
 
 model:
   name: simple_cnn

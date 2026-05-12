@@ -52,10 +52,17 @@ python experiments/run_experiment.py --config configs/fedavg_dir05.yaml --debug_
 
 ## HPC usage
 
-Edit the virtualenv path in `scripts/slurm_template.sh` if needed, then submit a single test job:
+The HPC scripts assume the repo is at `/home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter` and the dataset is at `/home/bk489/federated_clean/cleanest_federated/dermamnist_64.npz` (size 64). `configs/base.yaml` already points to that npz; no internet is needed on compute nodes.
 
 ```bash
-mkdir -p /home/bk489/federated/federated-thesis/experiments/dermamnist/logs
+# One-time login-node setup
+cd /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Submit a single test job before the full batch
 sbatch scripts/slurm_template.sh configs/fedavg_dir05.yaml 42
 ```
 
