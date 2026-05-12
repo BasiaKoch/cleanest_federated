@@ -20,9 +20,9 @@ training:
   batch_size: 64
   weight_decay: 0.0
 loss:
-  type: ce
+  type: weighted_ce
   focal_gamma: 2.0
-  weight_strategy: none
+  weight_strategy: local_inverse
 augmentation:
   use_weighted_sampler: false
 client_objective:
@@ -36,6 +36,6 @@ misc:
   seed: 42
   device: cpu
   save_dir: results
-  resolved_save_dir: results/fedavg_dir05_E5_s42
-_config_stem: fedavg_dir05
+  resolved_save_dir: results/fedavg_dir05_weighted_E5_s42
+_config_stem: fedavg_dir05_weighted
 debug_subset: 500

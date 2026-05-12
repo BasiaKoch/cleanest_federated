@@ -173,36 +173,65 @@ def dirichlet_quantity_partition(
     min_samples_per_client: int = 10,
     max_retries: int = 100,
 ) -> List[List[int]]:
-    """Combine label skew and quantity skew while preserving each sample once."""
-    # Practical combined skew: label-skew first, then move samples to approximate quantity skew.
-    # This preserves all samples exactly once while producing both label and size imbalance.
-    base = dirichlet_partition(dataset, num_clients, label_alpha, min_samples_per_client, seed, max_retries)
-    rng = np.random.default_rng(seed + 1000)
-    n = len(dataset)
-    proportions = rng.dirichlet(quantity_alpha * np.ones(num_clients))
-    target = np.maximum(np.floor(proportions * n).astype(int), 1)
-    while target.sum() < n:
-        target[np.argmin(target)] += 1
-    while target.sum() > n:
-        target[np.argmax(target)] -= 1
+    """Combine quantity skew and label skew while preserving each sample once.
 
-    pools = [list(x) for x in base]
-    for _ in range(10 * n):
-        sizes = np.array([len(x) for x in pools])
-        over = np.where(sizes > target)[0]
-        under = np.where(sizes < target)[0]
-        if len(over) == 0 or len(under) == 0:
-            break
-        src = int(over[np.argmax(sizes[over] - target[over])])
-        dst = int(under[np.argmax(target[under] - sizes[under])])
-        if not pools[src]:
-            break
-        move_pos = rng.integers(0, len(pools[src]))
-        pools[dst].append(pools[src].pop(move_pos))
-    for x in pools:
-        rng.shuffle(x)
-    _validate_partition(pools, n)
-    return pools
+    Quantity skew is applied FIRST (target client sizes ~ Dir(quantity_alpha));
+    THEN label skew is applied per class so each client's allocation reflects a
+    Dir(label_alpha) preference, weighted by its target size.
+    """
+    rng = np.random.default_rng(seed)
+    labels = get_labels(dataset)
+    n = len(dataset)
+    num_classes = int(labels.max()) + 1
+
+    for _ in range(max_retries):
+        # Step 1 — quantity skew: target sample count per client.
+        quantity_props = rng.dirichlet(quantity_alpha * np.ones(num_clients))
+        targets = np.maximum(np.floor(quantity_props * n).astype(int), 1)
+        while targets.sum() < n:
+            targets[int(np.argmin(targets))] += 1
+        while targets.sum() > n:
+            j = int(np.argmax(targets))
+            if targets[j] > 1:
+                targets[j] -= 1
+            else:
+                break
+
+        # Step 2 — label skew per client: each client gets a Dirichlet label preference.
+        # Weight by target size so a client's expected total matches its quantity target.
+        client_label_props = rng.dirichlet(label_alpha * np.ones(num_classes), size=num_clients)
+        demand = client_label_props * targets[:, None]  # (num_clients, num_classes)
+
+        class_indices = {c: np.where(labels == c)[0].copy() for c in range(num_classes)}
+        for c in class_indices:
+            rng.shuffle(class_indices[c])
+
+        client_indices: List[List[int]] = [[] for _ in range(num_clients)]
+        for c in range(num_classes):
+            idx = class_indices[c]
+            if len(idx) == 0:
+                continue
+            class_demand = demand[:, c]
+            if class_demand.sum() <= 0:
+                class_demand = targets.astype(float)
+            props = class_demand / class_demand.sum()
+            splits = (np.cumsum(props) * len(idx)).astype(int)[:-1]
+            chunks = np.split(idx, splits)
+            for i, chunk in enumerate(chunks):
+                client_indices[i].extend(int(x) for x in chunk)
+
+        if all(len(c) >= min_samples_per_client for c in client_indices):
+            for x in client_indices:
+                rng.shuffle(x)
+            _validate_partition(client_indices, n)
+            return client_indices
+
+    raise ValueError(
+        f"Could not satisfy min_samples={min_samples_per_client} with "
+        f"label_alpha={label_alpha}, quantity_alpha={quantity_alpha} and "
+        f"{num_clients} clients after {max_retries} retries. Try larger alphas, "
+        f"fewer clients, or smaller min_samples."
+    )
 
 
 def get_client_class_distribution(dataset: Dataset, client_indices: List[int]) -> Dict[int, int]:

@@ -20,13 +20,15 @@ def load_config(path: str | Path) -> Dict[str, Any]:
     path = Path(path)
     with open(path, 'r', encoding='utf-8') as f:
         override = yaml.safe_load(f) or {}
-    base_path = path.parent / 'base.yaml'
-    if path.name != 'base.yaml' and base_path.exists():
-        with open(base_path, 'r', encoding='utf-8') as f:
-            base = yaml.safe_load(f) or {}
-        cfg = merge_configs(base, override)
-    else:
-        cfg = override
+    cfg = override
+    if path.name != 'base.yaml':
+        for parent in [path.parent, *path.parent.parents]:
+            candidate = parent / 'base.yaml'
+            if candidate.exists():
+                with open(candidate, 'r', encoding='utf-8') as f:
+                    base = yaml.safe_load(f) or {}
+                cfg = merge_configs(base, override)
+                break
     cfg.setdefault('_config_stem', path.stem)
     return cfg
 
