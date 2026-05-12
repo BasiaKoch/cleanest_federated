@@ -18,7 +18,7 @@ cd "$REPO_DIR"
 source "$VENV_DIR/bin/activate"
 
 # Ray temp dir on home (avoid /tmp quota on shared nodes)
-export RAY_TMPDIR=/rds/user/$USER/hpc-work/ray_tmp
+export RAY_TMPDIR="$HOME/ray_tmp"
 mkdir -p "$RAY_TMPDIR" "$REPO_DIR/logs"
 
 python experiments/run_experiment.py --config "$1" --seed "$2" --device cuda
