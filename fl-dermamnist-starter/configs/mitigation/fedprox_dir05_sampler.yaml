@@ -1,0 +1,7 @@
+client_objective:
+  proximal_mu: 0.01
+augmentation:
+  use_weighted_sampler: true
+partition:
+  strategy: dirichlet
+  alpha: 0.5

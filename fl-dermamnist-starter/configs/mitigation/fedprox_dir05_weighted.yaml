@@ -1,0 +1,8 @@
+client_objective:
+  proximal_mu: 0.01
+loss:
+  type: weighted_ce
+  weight_strategy: local_inverse
+partition:
+  strategy: dirichlet
+  alpha: 0.5

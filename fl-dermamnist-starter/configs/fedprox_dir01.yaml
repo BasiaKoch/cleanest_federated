@@ -1,0 +1,5 @@
+client_objective:
+  proximal_mu: 0.01
+partition:
+  strategy: dirichlet
+  alpha: 0.1

@@ -1,0 +1,6 @@
+loss:
+  type: weighted_ce
+  weight_strategy: local_inverse
+partition:
+  strategy: dirichlet
+  alpha: 0.5

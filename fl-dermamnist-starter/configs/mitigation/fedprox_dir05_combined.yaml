@@ -1,0 +1,11 @@
+client_objective:
+  proximal_mu: 0.01
+loss:
+  type: focal
+  weight_strategy: local_inverse
+  focal_gamma: 2.0
+augmentation:
+  use_weighted_sampler: true
+partition:
+  strategy: dirichlet
+  alpha: 0.5

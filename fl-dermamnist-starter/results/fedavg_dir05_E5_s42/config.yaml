@@ -1,0 +1,41 @@
+dataset:
+  name: dermamnist
+  size: 28
+  source: package
+  npz_path: datasets/medmnist/dermamnist.npz
+model:
+  name: simple_cnn
+  in_channels: 3
+  num_classes: 7
+  pretrained: false
+federation:
+  num_clients: 10
+  num_rounds: 100
+  local_epochs: 5
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+training:
+  lr: 0.01
+  momentum: 0.9
+  batch_size: 64
+  weight_decay: 0.0
+loss:
+  type: ce
+  focal_gamma: 2.0
+  weight_strategy: none
+augmentation:
+  use_weighted_sampler: false
+client_objective:
+  proximal_mu: 0.0
+partition:
+  strategy: dirichlet
+  alpha: 0.5
+  classes_per_client: 2
+  quantity_alpha: 0.5
+misc:
+  seed: 42
+  device: cuda
+  save_dir: results
+  resolved_save_dir: results/fedavg_dir05_E5_s42
+_config_stem: fedavg_dir05
+debug_subset: 500
