@@ -13,8 +13,9 @@
 set -euo pipefail
 
 REPO_DIR=/home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter
+VENV_DIR=/home/bk489/federated_clean/.venv
 cd "$REPO_DIR"
-source "$REPO_DIR/.venv/bin/activate"
+source "$VENV_DIR/bin/activate"
 
 # Ray temp dir on home (avoid /tmp quota on shared nodes)
 export RAY_TMPDIR="$HOME/ray_tmp"
