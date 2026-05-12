@@ -1,0 +1,245 @@
+=== Experiment config ===
+dataset:
+  name: dermamnist
+  size: 64
+  source: npz
+  npz_path: ../dermamnist_64.npz
+model:
+  name: simple_cnn
+  in_channels: 3
+  num_classes: 7
+  pretrained: false
+federation:
+  num_clients: 10
+  num_rounds: 100
+  local_epochs: 5
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+training:
+  lr: 0.01
+  momentum: 0.9
+  batch_size: 64
+  weight_decay: 0.0
+loss:
+  type: ce
+  focal_gamma: 2.0
+  weight_strategy: none
+augmentation:
+  use_weighted_sampler: false
+client_objective:
+  proximal_mu: 0.0
+partition:
+  strategy: dirichlet
+  alpha: 0.5
+  classes_per_client: 2
+  quantity_alpha: 0.5
+misc:
+  seed: 42
+  device: cuda
+  save_dir: results/ablations/mu
+  resolved_save_dir: results/ablations/mu/abl_mu0.0_E5_s42
+_config_stem: abl_mu0.0
+
+
+=== Completed ===
+Experiment: abl_mu0.0_E5_s42
+Global: bACC=0.4128 | Macro F1=0.4478 | Worst F1=0.0000 | Melanoma Recall=0.3946
+Clients: Avg bACC=0.4575 | Worst bACC=0.3852 | Gap=0.2656
+Completed in 4.40 minutes
+=== Experiment config ===
+dataset:
+  name: dermamnist
+  size: 64
+  source: npz
+  npz_path: ../dermamnist_64.npz
+model:
+  name: simple_cnn
+  in_channels: 3
+  num_classes: 7
+  pretrained: false
+federation:
+  num_clients: 10
+  num_rounds: 100
+  local_epochs: 5
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+training:
+  lr: 0.01
+  momentum: 0.9
+  batch_size: 64
+  weight_decay: 0.0
+loss:
+  type: ce
+  focal_gamma: 2.0
+  weight_strategy: none
+augmentation:
+  use_weighted_sampler: false
+client_objective:
+  proximal_mu: 0.001
+partition:
+  strategy: dirichlet
+  alpha: 0.5
+  classes_per_client: 2
+  quantity_alpha: 0.5
+misc:
+  seed: 42
+  device: cuda
+  save_dir: results/ablations/mu
+  resolved_save_dir: results/ablations/mu/abl_mu0.001_E5_s42
+_config_stem: abl_mu0.001
+
+
+=== Completed ===
+Experiment: abl_mu0.001_E5_s42
+Global: bACC=0.4458 | Macro F1=0.4596 | Worst F1=0.0000 | Melanoma Recall=0.4709
+Clients: Avg bACC=0.5386 | Worst bACC=0.3802 | Gap=0.3350
+Completed in 4.93 minutes
+=== Experiment config ===
+dataset:
+  name: dermamnist
+  size: 64
+  source: npz
+  npz_path: ../dermamnist_64.npz
+model:
+  name: simple_cnn
+  in_channels: 3
+  num_classes: 7
+  pretrained: false
+federation:
+  num_clients: 10
+  num_rounds: 100
+  local_epochs: 5
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+training:
+  lr: 0.01
+  momentum: 0.9
+  batch_size: 64
+  weight_decay: 0.0
+loss:
+  type: ce
+  focal_gamma: 2.0
+  weight_strategy: none
+augmentation:
+  use_weighted_sampler: false
+client_objective:
+  proximal_mu: 0.01
+partition:
+  strategy: dirichlet
+  alpha: 0.5
+  classes_per_client: 2
+  quantity_alpha: 0.5
+misc:
+  seed: 42
+  device: cuda
+  save_dir: results/ablations/mu
+  resolved_save_dir: results/ablations/mu/abl_mu0.01_E5_s42
+_config_stem: abl_mu0.01
+
+
+=== Completed ===
+Experiment: abl_mu0.01_E5_s42
+Global: bACC=0.3594 | Macro F1=0.3752 | Worst F1=0.0000 | Melanoma Recall=0.2960
+Clients: Avg bACC=0.3857 | Worst bACC=0.2723 | Gap=0.3077
+Completed in 4.91 minutes
+=== Experiment config ===
+dataset:
+  name: dermamnist
+  size: 64
+  source: npz
+  npz_path: ../dermamnist_64.npz
+model:
+  name: simple_cnn
+  in_channels: 3
+  num_classes: 7
+  pretrained: false
+federation:
+  num_clients: 10
+  num_rounds: 100
+  local_epochs: 5
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+training:
+  lr: 0.01
+  momentum: 0.9
+  batch_size: 64
+  weight_decay: 0.0
+loss:
+  type: ce
+  focal_gamma: 2.0
+  weight_strategy: none
+augmentation:
+  use_weighted_sampler: false
+client_objective:
+  proximal_mu: 0.1
+partition:
+  strategy: dirichlet
+  alpha: 0.5
+  classes_per_client: 2
+  quantity_alpha: 0.5
+misc:
+  seed: 42
+  device: cuda
+  save_dir: results/ablations/mu
+  resolved_save_dir: results/ablations/mu/abl_mu0.1_E5_s42
+_config_stem: abl_mu0.1
+
+
+=== Completed ===
+Experiment: abl_mu0.1_E5_s42
+Global: bACC=0.3974 | Macro F1=0.4334 | Worst F1=0.0000 | Melanoma Recall=0.4305
+Clients: Avg bACC=0.4388 | Worst bACC=0.3280 | Gap=0.2210
+Completed in 4.92 minutes
+=== Experiment config ===
+dataset:
+  name: dermamnist
+  size: 64
+  source: npz
+  npz_path: ../dermamnist_64.npz
+model:
+  name: simple_cnn
+  in_channels: 3
+  num_classes: 7
+  pretrained: false
+federation:
+  num_clients: 10
+  num_rounds: 100
+  local_epochs: 5
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+training:
+  lr: 0.01
+  momentum: 0.9
+  batch_size: 64
+  weight_decay: 0.0
+loss:
+  type: ce
+  focal_gamma: 2.0
+  weight_strategy: none
+augmentation:
+  use_weighted_sampler: false
+client_objective:
+  proximal_mu: 1.0
+partition:
+  strategy: dirichlet
+  alpha: 0.5
+  classes_per_client: 2
+  quantity_alpha: 0.5
+misc:
+  seed: 42
+  device: cuda
+  save_dir: results/ablations/mu
+  resolved_save_dir: results/ablations/mu/abl_mu1.0_E5_s42
+_config_stem: abl_mu1.0
+
+
+=== Completed ===
+Experiment: abl_mu1.0_E5_s42
+Global: bACC=0.3157 | Macro F1=0.3342 | Worst F1=0.0000 | Melanoma Recall=0.2332
+Clients: Avg bACC=0.3468 | Worst bACC=0.2433 | Gap=0.2928
+Completed in 4.91 minutes
+Running: /home/bk489/federated_clean/.venv/bin/python experiments/run_experiment.py --config configs/tmp_ablations/abl_mu0.0.yaml --seed 42 --device cuda
+Running: /home/bk489/federated_clean/.venv/bin/python experiments/run_experiment.py --config configs/tmp_ablations/abl_mu0.001.yaml --seed 42 --device cuda
+Running: /home/bk489/federated_clean/.venv/bin/python experiments/run_experiment.py --config configs/tmp_ablations/abl_mu0.01.yaml --seed 42 --device cuda
+Running: /home/bk489/federated_clean/.venv/bin/python experiments/run_experiment.py --config configs/tmp_ablations/abl_mu0.1.yaml --seed 42 --device cuda
+Running: /home/bk489/federated_clean/.venv/bin/python experiments/run_experiment.py --config configs/tmp_ablations/abl_mu1.0.yaml --seed 42 --device cuda

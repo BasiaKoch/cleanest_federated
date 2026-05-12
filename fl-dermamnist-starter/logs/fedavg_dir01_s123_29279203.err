@@ -1,0 +1,1326 @@
+/home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:64: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+  prop = Group((name + Suppress("=") + comma_separated(value)) | oneOf(_CONSTANTS))
+/home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:85: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+  parse = parser.parseString(pattern)
+/home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'
+  parser.resetCache()
+/home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_mathtext.py:45: PyparsingDeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'
+  ParserElement.enablePackrat()
+In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'parseString' deprecated - use 'parse_string'
+In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'resetCache' deprecated - use 'reset_cache'
+/home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/visualise.py:71: UserWarning: Tight layout not applied. The bottom and top margins cannot be made large enough to accommodate all Axes decorations.
+  fig.tight_layout()
+[93mWARNING [0m:   DEPRECATED FEATURE: flwr.simulation.start_simulation() is deprecated.
+	Instead, use the `flwr run` CLI command to start a local simulation in your Flower app, as shown for example below:
+
+		$ flwr new  # Create a new Flower app from a template
+
+		$ flwr run  # Run the Flower app in Simulation Mode
+
+	Using `start_simulation()` is deprecated.
+
+            This is a deprecated feature. It will be removed
+            entirely in future versions of Flower.
+        
+[92mINFO [0m:      Starting Flower simulation, config: num_rounds=100, no round_timeout
+2026-05-12 19:27:34,422	INFO worker.py:1771 -- Started a local Ray instance.
+[92mINFO [0m:      Flower VCE: Ray initialized with resources: {'accelerator_type:A100': 1.0, 'node:__internal_head__': 1.0, 'node:10.43.74.103': 1.0, 'CPU': 128.0, 'object_store_memory': 200000000000.0, 'memory': 864840047616.0, 'GPU': 1.0}
+[92mINFO [0m:      Optimize your simulation with Flower VCE: https://flower.ai/docs/framework/how-to-run-simulations.html
+[92mINFO [0m:      Flower VCE: Resources for each Virtual Client: {'num_cpus': 1, 'num_gpus': 0.1}
+[92mINFO [0m:      Flower VCE: Creating VirtualClientEngineActorPool with 10 actors
+[92mINFO [0m:      [INIT]
+[92mINFO [0m:      Requesting initial parameters from one random client
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:64: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+[36m(ClientAppActor pid=206434)[0m   prop = Group((name + Suppress("=") + comma_separated(value)) | oneOf(_CONSTANTS))
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:85: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+[36m(ClientAppActor pid=206434)[0m   parse = parser.parseString(pattern)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'
+[36m(ClientAppActor pid=206434)[0m   parser.resetCache()
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_mathtext.py:45: PyparsingDeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'
+[36m(ClientAppActor pid=206434)[0m   ParserElement.enablePackrat()
+[36m(ClientAppActor pid=206434)[0m In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'parseString' deprecated - use 'parse_string'
+[36m(ClientAppActor pid=206434)[0m In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'resetCache' deprecated - use 'reset_cache'
+[36m(ClientAppActor pid=206434)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m             This is a deprecated feature. It will be removed
+[36m(ClientAppActor pid=206434)[0m             entirely in future versions of Flower.
+[36m(ClientAppActor pid=206434)[0m         
+[92mINFO [0m:      Received initial parameters from one random client
+[92mINFO [0m:      Starting evaluation of initial global parameters
+[92mINFO [0m:      initial parameters (loss, other metrics): 2.0140558758143294, {'accuracy': 0.03290129611166501, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.009100937672366244, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0637065637065637, 'recall_actinic_keratoses_an': 1.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.0, 'recall_melanocytic_nevi': 0.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 1]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206434)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m             This is a deprecated feature. It will be removed
+[36m(ClientAppActor pid=206434)[0m             entirely in future versions of Flower.
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=206434)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:64: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+[36m(ClientAppActor pid=206427)[0m   prop = Group((name + Suppress("=") + comma_separated(value)) | oneOf(_CONSTANTS))
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:85: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+[36m(ClientAppActor pid=206427)[0m   parse = parser.parseString(pattern)
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'
+[36m(ClientAppActor pid=206427)[0m   parser.resetCache()
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_mathtext.py:45: PyparsingDeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'
+[36m(ClientAppActor pid=206427)[0m   ParserElement.enablePackrat()
+[36m(ClientAppActor pid=206427)[0m In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'parseString' deprecated - use 'parse_string'
+[36m(ClientAppActor pid=206427)[0m In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'resetCache' deprecated - use 'reset_cache'
+[36m(ClientAppActor pid=206427)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m             This is a deprecated feature. It will be removed
+[36m(ClientAppActor pid=206427)[0m             entirely in future versions of Flower.
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206430)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 2x across cluster] (Ray deduplicates logs by default. Set RAY_DEDUP_LOGS=0 to disable log deduplication, or see https://docs.ray.io/en/master/ray-observability/user-guides/configure-logging.html#log-deduplication for more options.)[0m
+[36m(ClientAppActor pid=206430)[0m   tensor = torch.as_tensor(image)[32m [repeated 2x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[93mWARNING [0m:   No fit_metrics_aggregation_fn provided
+[92mINFO [0m:      fit progress: (1, 1.0922655638526468, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 8.47321123999427)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [0, 1, 2], expected [0, 1, 2, 3, 4, 5, 6]
+[36m(ClientAppActor pid=206427)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true
+[36m(ClientAppActor pid=206427)[0m   warnings.warn("y_pred contains classes not in y_true")
+[36m(ClientAppActor pid=206420)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.
+[36m(ClientAppActor pid=206420)[0m   warnings.warn(
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[93mWARNING [0m:   No evaluate_metrics_aggregation_fn provided
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 2]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206433)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:64: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m   prop = Group((name + Suppress("=") + comma_separated(value)) | oneOf(_CONSTANTS))[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:85: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m   parse = parser.parseString(pattern)[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m   parser.resetCache()[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_mathtext.py:45: PyparsingDeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m   ParserElement.enablePackrat()[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'parseString' deprecated - use 'parse_string'[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'resetCache' deprecated - use 'reset_cache'[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 28x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m             This is a deprecated feature. It will be removed[32m [repeated 28x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m             entirely in future versions of Flower.[32m [repeated 28x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (2, 1.0321724446915677, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 10.879154705995461)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 3]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 214x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m   tensor = torch.as_tensor(image)[32m [repeated 214x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (3, 1.0110472565514972, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 13.237134486000286)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 4]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [1, 3, 4, 5], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 29x across cluster][0m
+[36m(ClientAppActor pid=206429)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 29x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206430)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 5x across cluster][0m
+[36m(ClientAppActor pid=206430)[0m   warnings.warn([32m [repeated 5x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m             This is a deprecated feature. It will be removed[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m             entirely in future versions of Flower.[32m [repeated 40x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (4, 1.0021518112298617, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 15.528844161017332)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 5]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206419)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 244x across cluster][0m
+[36m(ClientAppActor pid=206419)[0m   tensor = torch.as_tensor(image)[32m [repeated 244x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (5, 0.9918551888328012, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 17.907821202010382)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 6]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206433)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [2, 3, 5], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206430)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 6x across cluster][0m
+[36m(ClientAppActor pid=206430)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 6x across cluster][0m
+[36m(ClientAppActor pid=206428)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206428)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m             This is a deprecated feature. It will be removed[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m             entirely in future versions of Flower.[32m [repeated 40x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (6, 0.9338760195914675, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 20.215313912020065)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 7]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206419)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 223x across cluster][0m
+[36m(ClientAppActor pid=206419)[0m   tensor = torch.as_tensor(image)[32m [repeated 223x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (7, 0.9929492736266832, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 22.519954303017585)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 8]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [0, 4], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 6x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 6x across cluster][0m
+[36m(ClientAppActor pid=206428)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206428)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m             This is a deprecated feature. It will be removed[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m             entirely in future versions of Flower.[32m [repeated 40x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (8, 0.9144893666564051, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 24.81159290400683)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 9]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206430)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 225x across cluster][0m
+[36m(ClientAppActor pid=206430)[0m   tensor = torch.as_tensor(image)[32m [repeated 225x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (9, 0.9215611221188919, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 27.34345210000174)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 10]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [4], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 7x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 7x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (10, 0.9441988963191792, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 29.820150109997485)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 11]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m             This is a deprecated feature. It will be removed[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m             entirely in future versions of Flower.[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206419)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 182x across cluster][0m
+[36m(ClientAppActor pid=206419)[0m   tensor = torch.as_tensor(image)[32m [repeated 182x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (11, 0.9108038692032233, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 32.30718949800939)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 12]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [0, 1, 2], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 6x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 6x across cluster][0m
+[36m(ClientAppActor pid=206429)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206429)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (12, 0.9086534788577649, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 34.906639469001675)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 13]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m             This is a deprecated feature. It will be removed[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m             entirely in future versions of Flower.[32m [repeated 40x across cluster][0m
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 206x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m   tensor = torch.as_tensor(image)[32m [repeated 206x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (13, 0.944031719552912, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 37.4015255740087)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 14]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [2, 3, 5], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206431)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 6x across cluster][0m
+[36m(ClientAppActor pid=206431)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 6x across cluster][0m
+[36m(ClientAppActor pid=206429)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206429)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (14, 0.9209046055407728, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 40.063420142018)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 15]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 44x across cluster][0m
+[36m(ClientAppActor pid=206430)[0m             This is a deprecated feature. It will be removed[32m [repeated 44x across cluster][0m
+[36m(ClientAppActor pid=206430)[0m             entirely in future versions of Flower.[32m [repeated 44x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206428)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 224x across cluster][0m
+[36m(ClientAppActor pid=206428)[0m   tensor = torch.as_tensor(image)[32m [repeated 224x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (15, 0.8733955647866961, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11479897348160821, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8035928143712575, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 42.53500707101193)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 16]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [1, 3, 4, 5], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206428)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 7x across cluster][0m
+[36m(ClientAppActor pid=206428)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 7x across cluster][0m
+[36m(ClientAppActor pid=206431)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206431)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (16, 0.9704642863359194, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11452466291175968, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8016726403823178, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 45.098762561014155)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 17]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m             This is a deprecated feature. It will be removed[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m             entirely in future versions of Flower.[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206432)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 211x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m   tensor = torch.as_tensor(image)[32m [repeated 211x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (17, 0.8897043725666948, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11493662213086674, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8045563549160671, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 47.6368994860095)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 18]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [4], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206431)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206431)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (18, 0.9451938260231513, {'accuracy': 0.6689930209371885, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.11466165413533835, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8026315789473685, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 50.12439879399608)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 19]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206420)[0m             This is a deprecated feature. It will be removed[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206420)[0m             entirely in future versions of Flower.[32m [repeated 42x across cluster][0m
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 219x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m   tensor = torch.as_tensor(image)[32m [repeated 219x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (19, 0.8287313965001586, {'accuracy': 0.6719840478564307, 'balanced_accuracy': 0.1510989010989011, 'macro_f1': 0.12835332508215833, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.08955223880597014, 'recall_basal_cell_carcinoma': 0.057692307692307696, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8089210367691381, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}, 52.683427529991604)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 20]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [2, 3, 5], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 8x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (20, 0.8336665351036657, {'accuracy': 0.6699900299102692, 'balanced_accuracy': 0.15306122448979592, 'macro_f1': 0.13426053113553113, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8064903846153846, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.13333333333333333, 'recall_vascular_lesions': 0.07142857142857142}, 55.287009569001384)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 21]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 32x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m             This is a deprecated feature. It will be removed[32m [repeated 32x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m             entirely in future versions of Flower.[32m [repeated 32x across cluster][0m
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206427)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 210x across cluster][0m
+[36m(ClientAppActor pid=206427)[0m   tensor = torch.as_tensor(image)[32m [repeated 210x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (21, 0.8621220488253524, {'accuracy': 0.67098703888335, 'balanced_accuracy': 0.1543599257884972, 'macro_f1': 0.13676533676533678, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.018018018018018018, 'recall_benign_keratosis-lik': 0.00909090909090909, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.806006006006006, 'recall_melanocytic_nevi': 1.0, 'f1_vascular_lesions': 0.13333333333333333, 'recall_vascular_lesions': 0.07142857142857142}, 57.85687524100649)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 22]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/metrics/evaluation.py:68: UserWarning: AUROC set to NaN because present classes are [0, 1, 2], expected [0, 1, 2, 3, 4, 5, 6][32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn(f'AUROC set to NaN because present classes are {present_classes}, expected {labels}')[32m [repeated 20x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:2524: UserWarning: y_pred contains classes not in y_true[32m [repeated 10x across cluster][0m
+[36m(ClientAppActor pid=206434)[0m   warnings.warn("y_pred contains classes not in y_true")[32m [repeated 10x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/sklearn/metrics/_classification.py:407: UserWarning: A single label was found in 'y_true' and 'y_pred'. For the confusion matrix to have the correct shape, use the 'labels' parameter to pass all known labels.[32m [repeated 4x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m   warnings.warn([32m [repeated 4x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (22, 0.8426440610129716, {'accuracy': 0.674975074775673, 'balanced_accuracy': 0.16788328767251484, 'macro_f1': 0.15813467767745504, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.14492753623188406, 'recall_basal_cell_carcinoma': 0.09615384615384616, 'f1_benign_keratosis-lik': 0.017543859649122806, 'recall_benign_keratosis-lik': 0.00909090909090909, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8111380145278451, 'recall_melanocytic_nevi': 0.9985096870342772, 'f1_vascular_lesions': 0.13333333333333333, 'recall_vascular_lesions': 0.07142857142857142}, 60.262153791001765)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 23]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`[32m [repeated 52x across cluster][0m
+[36m(ClientAppActor pid=206429)[0m             This is a deprecated feature. It will be removed[32m [repeated 52x across cluster][0m
+[36m(ClientAppActor pid=206429)[0m             entirely in future versions of Flower.[32m [repeated 52x across cluster][0m
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206432)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)[32m [repeated 210x across cluster][0m
+[36m(ClientAppActor pid=206432)[0m   tensor = torch.as_tensor(image)[32m [repeated 210x across cluster][0m
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[92mINFO [0m:      fit progress: (23, 0.8084877054926644, {'accuracy': 0.674975074775673, 'balanced_accuracy': 0.16788328767251484, 'macro_f1': 0.1579575703799306, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.14285714285714285, 'recall_basal_cell_carcinoma': 0.09615384615384616, 'f1_benign_keratosis-lik': 0.017391304347826087, 'recall_benign_keratosis-lik': 0.00909090909090909, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.0, 'recall_melanoma': 0.0, 'f1_melanocytic_nevi': 0.8121212121212121, 'recall_melanocytic_nevi': 0.9985096870342772, 'f1_vascular_lesions': 0.13333333333333333, 'recall_vascular_lesions': 0.07142857142857142}, 62.75465525401523)
+[92mINFO [0m:      configure_evaluate: strategy sampled 10 clients (out of 10)
+[92mINFO [0m:      aggregate_evaluate: received 10 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 24]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206427)[0m 
+[36m(ClientAppActor pid=206427)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206419)[0m 
+[36m(ClientAppActor pid=206419)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206430)[0m 
+[36m(ClientAppActor pid=206430)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206432)[0m 
+[36m(ClientAppActor pid=206432)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206420)[0m 
+[36m(ClientAppActor pid=206420)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206431)[0m 
+[36m(ClientAppActor pid=206431)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206428)[0m 
+[36m(ClientAppActor pid=206428)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206429)[0m 
+[36m(ClientAppActor pid=206429)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206433)[0m 
+[36m(ClientAppActor pid=206433)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[36m(ClientAppActor pid=206434)[0m 
+[36m(ClientAppActor pid=206434)[0m         
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures

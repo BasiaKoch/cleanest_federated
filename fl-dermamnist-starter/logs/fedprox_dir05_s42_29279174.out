@@ -1,0 +1,49 @@
+=== Experiment config ===
+dataset:
+  name: dermamnist
+  size: 64
+  source: npz
+  npz_path: ../dermamnist_64.npz
+model:
+  name: simple_cnn
+  in_channels: 3
+  num_classes: 7
+  pretrained: false
+federation:
+  num_clients: 10
+  num_rounds: 100
+  local_epochs: 5
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+training:
+  lr: 0.01
+  momentum: 0.9
+  batch_size: 64
+  weight_decay: 0.0
+loss:
+  type: ce
+  focal_gamma: 2.0
+  weight_strategy: none
+augmentation:
+  use_weighted_sampler: false
+client_objective:
+  proximal_mu: 0.01
+partition:
+  strategy: dirichlet
+  alpha: 0.5
+  classes_per_client: 2
+  quantity_alpha: 0.5
+misc:
+  seed: 42
+  device: cuda
+  save_dir: results
+  resolved_save_dir: results/fedprox_dir05_E5_s42
+_config_stem: fedprox_dir05
+
+
+=== Completed ===
+Experiment: fedprox_dir05_E5_s42
+Global: bACC=0.3624 | Macro F1=0.3875 | Worst F1=0.0000 | Melanoma Recall=0.3318
+Clients: Avg bACC=0.4073 | Worst bACC=0.2688 | Gap=0.3238
+Completed in 4.94 minutes
+Job completed: config=configs/fedprox_dir05.yaml seed=42

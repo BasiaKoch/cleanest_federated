@@ -1,0 +1,91 @@
+/home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:64: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+  prop = Group((name + Suppress("=") + comma_separated(value)) | oneOf(_CONSTANTS))
+/home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:85: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+  parse = parser.parseString(pattern)
+/home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'
+  parser.resetCache()
+/home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_mathtext.py:45: PyparsingDeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'
+  ParserElement.enablePackrat()
+In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'parseString' deprecated - use 'parse_string'
+In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'resetCache' deprecated - use 'reset_cache'
+/home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/visualise.py:71: UserWarning: Tight layout not applied. The bottom and top margins cannot be made large enough to accommodate all Axes decorations.
+  fig.tight_layout()
+[93mWARNING [0m:   DEPRECATED FEATURE: flwr.simulation.start_simulation() is deprecated.
+	Instead, use the `flwr run` CLI command to start a local simulation in your Flower app, as shown for example below:
+
+		$ flwr new  # Create a new Flower app from a template
+
+		$ flwr run  # Run the Flower app in Simulation Mode
+
+	Using `start_simulation()` is deprecated.
+
+            This is a deprecated feature. It will be removed
+            entirely in future versions of Flower.
+        
+[92mINFO [0m:      Starting Flower simulation, config: num_rounds=100, no round_timeout
+2026-05-12 19:28:34,343	INFO worker.py:1771 -- Started a local Ray instance.
+[92mINFO [0m:      Flower VCE: Ray initialized with resources: {'accelerator_type:A100': 1.0, 'node:__internal_head__': 1.0, 'node:10.43.74.103': 1.0, 'CPU': 128.0, 'object_store_memory': 200000000000.0, 'memory': 844577528832.0, 'GPU': 1.0}
+[92mINFO [0m:      Optimize your simulation with Flower VCE: https://flower.ai/docs/framework/how-to-run-simulations.html
+[92mINFO [0m:      Flower VCE: Resources for each Virtual Client: {'num_cpus': 1, 'num_gpus': 0.1}
+[92mINFO [0m:      Flower VCE: Creating VirtualClientEngineActorPool with 10 actors
+[92mINFO [0m:      [INIT]
+[92mINFO [0m:      Requesting initial parameters from one random client
+[92mINFO [0m:      Received initial parameters from one random client
+[92mINFO [0m:      Starting evaluation of initial global parameters
+[92mINFO [0m:      initial parameters (loss, other metrics): 1.9066269981302506, {'accuracy': 0.1106679960119641, 'balanced_accuracy': 0.14285714285714285, 'macro_f1': 0.028468838163631698, 'worst_class_f1': 0.0, 'worst_class_recall': 0.0, 'f1_actinic_keratoses_an': 0.0, 'recall_actinic_keratoses_an': 0.0, 'f1_basal_cell_carcinoma': 0.0, 'recall_basal_cell_carcinoma': 0.0, 'f1_benign_keratosis-lik': 0.0, 'recall_benign_keratosis-lik': 0.0, 'f1_dermatofibroma': 0.0, 'recall_dermatofibroma': 0.0, 'f1_melanoma': 0.1992818671454219, 'recall_melanoma': 1.0, 'f1_melanocytic_nevi': 0.0, 'recall_melanocytic_nevi': 0.0, 'f1_vascular_lesions': 0.0, 'recall_vascular_lesions': 0.0}
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 1]
+[92mINFO [0m:      configure_fit: strategy sampled 10 clients (out of 10)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:64: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+[36m(ClientAppActor pid=225429)[0m   prop = Group((name + Suppress("=") + comma_separated(value)) | oneOf(_CONSTANTS))
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:85: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+[36m(ClientAppActor pid=225429)[0m   parse = parser.parseString(pattern)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'
+[36m(ClientAppActor pid=225429)[0m   parser.resetCache()
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/_mathtext.py:45: PyparsingDeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'
+[36m(ClientAppActor pid=225429)[0m   ParserElement.enablePackrat()
+[36m(ClientAppActor pid=225429)[0m In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'parseString' deprecated - use 'parse_string'
+[36m(ClientAppActor pid=225429)[0m In /home/bk489/federated_clean/.venv/lib/python3.9/site-packages/matplotlib/mpl-data/stylelib/classic.mplstyle: 'resetCache' deprecated - use 'reset_cache'
+[36m(ClientAppActor pid=225429)[0m [93mWARNING [0m:   DEPRECATED FEATURE: `client_fn` now expects a signature `def client_fn(context: Context)`.The provided `client_fn` has signature: {'cid': <Parameter "cid: 'str'">}. You can import the `Context` like this: `from flwr.common import Context`
+[36m(ClientAppActor pid=225429)[0m 
+[36m(ClientAppActor pid=225429)[0m             This is a deprecated feature. It will be removed
+[36m(ClientAppActor pid=225429)[0m             entirely in future versions of Flower.
+[36m(ClientAppActor pid=225429)[0m         
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=225429)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=225429)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=225429)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=225429)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=225429)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=225429)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=225429)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=225429)[0m /home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter/data/download.py:27: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+[36m(ClientAppActor pid=225429)[0m   tensor = torch.as_tensor(image)
+[36m(ClientAppActor pid=225427)[0m 
+[36m(ClientAppActor pid=225427)[0m         
+[36m(ClientAppActor pid=225419)[0m 
+[36m(ClientAppActor pid=225419)[0m         
+[36m(ClientAppActor pid=225472)[0m 
+[36m(ClientAppActor pid=225472)[0m         
+[36m(ClientAppActor pid=225557)[0m 
+[36m(ClientAppActor pid=225557)[0m         
+[36m(ClientAppActor pid=225430)[0m 
+[36m(ClientAppActor pid=225430)[0m         
+[36m(ClientAppActor pid=225562)[0m 
+[36m(ClientAppActor pid=225562)[0m         
+[36m(ClientAppActor pid=225562)[0m 
+[36m(ClientAppActor pid=225562)[0m         
+[36m(ClientAppActor pid=225418)[0m 
+[36m(ClientAppActor pid=225418)[0m         
+[36m(ClientAppActor pid=225508)[0m 
+[36m(ClientAppActor pid=225508)[0m         
+[36m(ClientAppActor pid=225426)[0m 
+[36m(ClientAppActor pid=225426)[0m         
+[92mINFO [0m:      aggregate_fit: received 10 results and 0 failures
+[93mWARNING [0m:   No fit_metrics_aggregation_fn provided

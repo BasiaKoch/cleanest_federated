@@ -1,5 +1,0 @@
-round,f1_actinic_keratoses_an,recall_actinic_keratoses_an,f1_basal_cell_carcinoma,recall_basal_cell_carcinoma,f1_benign_keratosis-lik,recall_benign_keratosis-lik,f1_dermatofibroma,recall_dermatofibroma,f1_melanoma,recall_melanoma,f1_melanocytic_nevi,recall_melanocytic_nevi,f1_vascular_lesions,recall_vascular_lesions,balanced_accuracy,worst_class_f1
-0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.17297297297297298,0.7207207207207207,0.0,0.0,0.029556650246305417,0.21428571428571427,0.13357234785806213,0.0
-1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.8016726403823178,1.0,0.0,0.0,0.14285714285714285,0.0
-2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.8016726403823178,1.0,0.0,0.0,0.14285714285714285,0.0
-3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.8016726403823178,1.0,0.0,0.0,0.14285714285714285,0.0
