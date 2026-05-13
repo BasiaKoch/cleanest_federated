@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import math
 import json
+import os
 import numpy as np
 import pandas as pd
 import torch
@@ -192,10 +193,12 @@ def run_simulation(config: Dict):
 
     if dataset_cfg['name'] != 'dermamnist':
         raise NotImplementedError('run_simulation currently supports dermamnist. Use run_fl_mnist.py for MNIST validation.')
+    # $DERMAMNIST_NPZ_PATH wins (lets HPC and laptop point to different absolute paths).
+    npz_path = os.environ.get('DERMAMNIST_NPZ_PATH') or dataset_cfg.get('npz_path', 'datasets/medmnist/dermamnist.npz')
     train_ds, val_ds, test_ds = load_dermamnist(
         size=int(dataset_cfg.get('size', 28)),
         source=str(dataset_cfg.get('source', 'package')),
-        npz_path=dataset_cfg.get('npz_path', 'datasets/medmnist/dermamnist.npz'),
+        npz_path=npz_path,
     )
     if config.get('debug_subset'):
         n = int(config['debug_subset'])

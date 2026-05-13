@@ -14,6 +14,7 @@ set -euo pipefail
 
 REPO_DIR=/home/bk489/federated_clean/cleanest_federated/fl-dermamnist-starter
 VENV_DIR=/home/bk489/federated_clean/.venv
+
 cd "$REPO_DIR"
 source "$VENV_DIR/bin/activate"
 
