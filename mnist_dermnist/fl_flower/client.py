@@ -51,6 +51,7 @@ class FlClient(fl.client.NumPyClient):
         momentum: float,
         proximal_mu: float,
         dropout: float = 0.2,
+        device: str = "cpu",
     ):
         self.cid = int(cid)
         self.train_loader = train_loader
@@ -58,7 +59,7 @@ class FlClient(fl.client.NumPyClient):
         self.lr = float(lr)
         self.momentum = float(momentum)
         self.proximal_mu = float(proximal_mu)
-        self.device = torch.device("cpu")
+        self.device = torch.device(device)
         self.model = DermMNISTCNN(num_classes=7, dropout=dropout).to(self.device)
         self.criterion = nn.CrossEntropyLoss()
 

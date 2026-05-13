@@ -53,20 +53,23 @@ CLASS_NAMES = ("actinic", "basal", "benign_k", "dermato", "melanoma", "mel_nevi"
 
 
 @torch.no_grad()
-def evaluate_global(parameters: List[np.ndarray], loader: DataLoader, dropout: float = 0.2) -> Dict:
-    model = DermMNISTCNN(num_classes=7, dropout=dropout)
+def evaluate_global(parameters: List[np.ndarray], loader: DataLoader, dropout: float = 0.2,
+                    device: str = "cpu") -> Dict:
+    dev = torch.device(device)
+    model = DermMNISTCNN(num_classes=7, dropout=dropout).to(dev)
     numpy_to_state_dict(model, parameters)
     model.eval()
     crit = torch.nn.CrossEntropyLoss()
     total_loss, total = 0.0, 0
     all_preds, all_targets = [], []
     for x, y in loader:
-        y = y.view(-1).long()
+        x = x.to(dev)
+        y = y.to(dev).view(-1).long()
         logits = model(x)
         total_loss += float(crit(logits, y).item()) * y.size(0)
         total += y.size(0)
-        all_preds.extend(logits.argmax(1).numpy().tolist())
-        all_targets.extend(y.numpy().tolist())
+        all_preds.extend(logits.argmax(1).cpu().numpy().tolist())
+        all_targets.extend(y.cpu().numpy().tolist())
     labels = list(range(7))
     return {
         "loss": total_loss / max(total, 1),
@@ -81,7 +84,7 @@ def evaluate_global(parameters: List[np.ndarray], loader: DataLoader, dropout: f
 
 def run_one(*, algorithm: str, mu: float, seed: int,
             num_rounds: int, local_epochs: int, lr: float, batch_size: int,
-            train, val_loader, test_loader, partitions) -> Dict:
+            train, val_loader, test_loader, partitions, device: str = "cpu") -> Dict:
     """Run one FL experiment via Flower simulation; return summary dict."""
     num_clients = len(partitions)
 
@@ -109,6 +112,7 @@ def run_one(*, algorithm: str, mu: float, seed: int,
             lr=lr,
             momentum=0.9,
             proximal_mu=mu,
+            device=device,
         ).to_client()
 
     # ---- best-val checkpoint tracking via mutable closure state ----
@@ -121,7 +125,7 @@ def run_one(*, algorithm: str, mu: float, seed: int,
         }
 
     def evaluate_fn(server_round, parameters, _config):
-        m = evaluate_global(parameters, val_loader)
+        m = evaluate_global(parameters, val_loader, device=device)
         # Update best-val checkpoint (selected by val macro-F1)
         if m["macro_f1"] > best["val_macro_f1"]:
             best["val_macro_f1"] = m["macro_f1"]
@@ -157,7 +161,7 @@ def run_one(*, algorithm: str, mu: float, seed: int,
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
-        client_resources={"num_cpus": 1, "num_gpus": 0.0},
+        client_resources={"num_cpus": 1, "num_gpus": 1.0 if device == "cuda" else 0.0},
     )
     elapsed = time.time() - t0
 
@@ -165,7 +169,7 @@ def run_one(*, algorithm: str, mu: float, seed: int,
     if best["params"] is None:
         # Shouldn't happen, but fall back to last-round params
         raise RuntimeError("No best checkpoint captured — was validation evaluated at all?")
-    test_metrics = evaluate_global(best["params"], test_loader)
+    test_metrics = evaluate_global(best["params"], test_loader, device=device)
 
     # ---- flatten Flower history into a per-round DataFrame ----
     rows: Dict[int, Dict] = {}
@@ -234,6 +238,8 @@ def main():
     ap.add_argument("--out-dir", default="mnist_dermnist/results/cpu_flower")
     ap.add_argument("--skip-fedavg", action="store_true",
                     help="Don't re-run FedAvg; reuse a previous result from out-dir (any μ).")
+    ap.add_argument("--device", choices=["cpu", "cuda"], default="cpu",
+                    help="Device to train on. 'cuda' if a GPU is available.")
     ap.add_argument("--partition",
                     choices=["medical_skew_7_clients", "balanced_specialist_7_clients",
                              "balanced_paired_7_clients",
@@ -293,7 +299,7 @@ def main():
                      num_rounds=args.num_rounds, local_epochs=args.local_epochs,
                      lr=args.lr, batch_size=args.batch_size,
                      train=train, val_loader=val_loader, test_loader=test_loader,
-                     partitions=partitions)
+                     partitions=partitions, device=args.device)
         # Save per-round CSV for curve plotting
         fa_history_path = out_dir / f"history_fedavg_mu0.0_E{args.local_epochs}_s{args.seed}.csv"
         fa["history_df"].to_csv(fa_history_path, index=False)
@@ -308,7 +314,7 @@ def main():
                  num_rounds=args.num_rounds, local_epochs=args.local_epochs,
                  lr=args.lr, batch_size=args.batch_size,
                  train=train, val_loader=val_loader, test_loader=test_loader,
-                 partitions=partitions)
+                 partitions=partitions, device=args.device)
     fp_history_path = out_dir / f"history_fedprox_mu{args.mu}_E{args.local_epochs}_s{args.seed}.csv"
     fp["history_df"].to_csv(fp_history_path, index=False)
     print(f"  wrote per-round history: {fp_history_path}")
