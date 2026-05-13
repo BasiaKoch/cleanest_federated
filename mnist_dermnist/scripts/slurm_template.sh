@@ -21,7 +21,7 @@
 set -euo pipefail
 
 REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
-VENV_DIR=${REPO_ROOT}/.venv
+VENV_DIR=/home/bk489/federated_clean/.venv
 
 cd "$REPO_ROOT"
 source "$VENV_DIR/bin/activate"
