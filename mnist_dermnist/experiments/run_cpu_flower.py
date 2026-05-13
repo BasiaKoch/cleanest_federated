@@ -253,7 +253,7 @@ def main():
     print("=" * 72)
     print(f"  seed={args.seed}  rounds={args.num_rounds}  E={args.local_epochs}")
     print(f"  lr={args.lr}  batch={args.batch_size}  μ={args.mu}")
-    print(f"  framework: Flower simulation  device: cpu  num_workers=0")
+    print(f"  framework: Flower simulation  device: {args.device}  num_workers=0")
     print(f"  partition: {args.partition}")
     print()
 
