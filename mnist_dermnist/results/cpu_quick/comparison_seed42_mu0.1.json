@@ -1,0 +1,50 @@
+{
+  "seed": 42,
+  "num_rounds": 2,
+  "local_epochs": 1,
+  "mu": 0.1,
+  "lr": 0.01,
+  "batch_size": 64,
+  "fedavg": {
+    "algo": "fedavg",
+    "mu": 0.0,
+    "elapsed_s": 10.441031217575073,
+    "best_round": 1,
+    "best_val_macro_f1": 0.11452466291175968,
+    "test_macro_f1": 0.11450772777730338,
+    "test_balanced_accuracy": 0.14285714285714285,
+    "test_accuracy": 0.6688279301745635,
+    "test_loss": 1.1769995848734183,
+    "test_per_class_f1": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.8015540944411237,
+      0.0
+    ]
+  },
+  "fedprox": {
+    "algo": "fedprox",
+    "mu": 0.1,
+    "elapsed_s": 9.913359880447388,
+    "best_round": 1,
+    "best_val_macro_f1": 0.11452466291175968,
+    "test_macro_f1": 0.11450772777730338,
+    "test_balanced_accuracy": 0.14285714285714285,
+    "test_accuracy": 0.6688279301745635,
+    "test_loss": 1.1684196476924449,
+    "test_per_class_f1": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.8015540944411237,
+      0.0
+    ]
+  },
+  "delta_macro_f1": 0.0,
+  "delta_balanced_accuracy": 0.0
+}

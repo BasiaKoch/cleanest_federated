@@ -63,6 +63,25 @@ SIMPLE_PATHOLOGICAL_3_CLIENTS: Tuple[Tuple[int, ...], ...] = (
 )
 
 
+# Mode 3 — FedProx-favourable balanced partition.
+#
+# 7 equal-size clients (~1000 samples each), all sharing the same background
+# of class 5 (melanocytic_nevi), each specialising in ONE other class. Designed
+# so each client carries roughly the same aggregation weight (1/7 ≈ 14.3%):
+# this makes per-client drift matter, which is the regime where FedProx's
+# proximal-term advantage is largest.
+BALANCED_SPECIALIST_7_CLIENTS: List[Dict] = [
+    # (specialty_class, share_of_specialty_class)
+    {"id": 0, "specialty": 0, "share": 1.00},   # all 228 actinic
+    {"id": 1, "specialty": 1, "share": 1.00},   # all 359 basal
+    {"id": 2, "specialty": 2, "share": 0.50},   # half of 769 benign keratosis
+    {"id": 3, "specialty": 2, "share": 1.00},   # the rest
+    {"id": 4, "specialty": 4, "share": 0.50},   # half of 779 melanoma
+    {"id": 5, "specialty": 4, "share": 1.00},   # the rest
+    {"id": 6, "specialty": (3, 6), "share": 1.00},  # all 80 dermato + 99 vascular (both rare)
+]
+
+
 # Mode 2 — medical skew with both DOMINANT and SECONDARY classes.
 #
 # For each client we list:
@@ -229,6 +248,76 @@ def medical_skew_7_clients(
     return clients, df
 
 
+def balanced_specialist_7_clients(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Mode 3 — equal-size specialists. FedProx-favourable partition.
+
+    7 clients, each ~1000 samples. Composition per client:
+      - 1/7 share of class 5 (mel_nevi) — uniform background
+      - Their full allocated share of one specialty class (or pair, for C6)
+
+    Aggregation weights are ~uniform across clients (each ~14%), so per-client
+    drift contributes meaningfully to the aggregated model. This is the regime
+    where FedProx's proximal-term advantage is largest (paper §5.1).
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    _assert_labels_valid(labels_arr)
+
+    K = len(BALANCED_SPECIALIST_7_CLIENTS)
+    pools = _class_pools(labels_arr, seed)
+    clients: List[List[int]] = [[] for _ in range(K)]
+
+    # 1) Split mel_nevi (class 5) equally across all 7 clients.
+    nevi = pools[5]
+    nevi_chunks = np.array_split(nevi, K)
+    for cid in range(K):
+        clients[cid].extend(int(i) for i in nevi_chunks[cid])
+
+    # 2) Distribute specialty classes per the BALANCED_SPECIALIST_7_CLIENTS spec.
+    # Cursors track how much of each non-mel_nevi class has been claimed.
+    cursors: Dict[int, int] = {c: 0 for c in range(num_classes_helper())}
+
+    def take(c: int, share: float) -> np.ndarray:
+        """Take `share` fraction of class c's REMAINING samples."""
+        remaining = pools[c][cursors[c]:]
+        n = int(round(len(remaining) * share))
+        chunk = remaining[:n]
+        cursors[c] += n
+        return chunk
+
+    for spec in BALANCED_SPECIALIST_7_CLIENTS:
+        cid = spec["id"]
+        specialty = spec["specialty"]
+        share = spec["share"]
+        if isinstance(specialty, tuple):
+            for c in specialty:
+                clients[cid].extend(int(i) for i in take(c, share))
+        else:
+            clients[cid].extend(int(i) for i in take(specialty, share))
+
+    # 3) Sweep up any straggler samples (rounding errors, unallocated rare classes)
+    # via round-robin onto clients to satisfy "every sample assigned exactly once".
+    leftover: List[int] = []
+    for c in range(NUM_CLASSES):
+        if c == 5:
+            continue   # mel_nevi already fully consumed in step 1
+        leftover.extend(pools[c][cursors[c]:].tolist())
+    rng_left = np.random.default_rng(seed + 9999)
+    rng_left.shuffle(leftover)
+    for i, idx in enumerate(leftover):
+        clients[i % K].append(int(idx))
+
+    df = _build_long_form(clients, labels_arr)
+    _validate(clients, labels_arr)
+    return clients, df
+
+
+def num_classes_helper() -> int:
+    return NUM_CLASSES
+
+
 # ----------------------------------------------------------------------------
 # Validation, table, IO
 # ----------------------------------------------------------------------------
@@ -339,7 +428,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--npz", default="/Users/basiakoch/cleanest_federated/dermamnist_64.npz",
                     help="Path to dermamnist .npz file")
-    ap.add_argument("--mode", choices=["simple_pathological_3_clients", "medical_skew_7_clients"],
+    ap.add_argument("--mode",
+                    choices=["simple_pathological_3_clients",
+                             "medical_skew_7_clients",
+                             "balanced_specialist_7_clients"],
                     default="medical_skew_7_clients")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default="mnist_dermnist/results/partitions")
@@ -352,6 +444,8 @@ def main():
 
     if args.mode == "simple_pathological_3_clients":
         clients, df = simple_pathological_3_clients(labels, seed=args.seed)
+    elif args.mode == "balanced_specialist_7_clients":
+        clients, df = balanced_specialist_7_clients(labels, seed=args.seed)
     else:
         clients, df = medical_skew_7_clients(labels, seed=args.seed)
 
