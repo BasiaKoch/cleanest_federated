@@ -1,0 +1,59 @@
+{
+  "framework": "flower-simulation",
+  "device": "cpu",
+  "seed": 42,
+  "num_rounds": 5,
+  "local_epochs": 5,
+  "mu": 0.01,
+  "lr": 0.01,
+  "batch_size": 32,
+  "fedavg_reused": false,
+  "fedavg": {
+    "algorithm": "fedavg",
+    "mu": 0.0,
+    "seed": 42,
+    "num_rounds": 5,
+    "local_epochs": 5,
+    "elapsed_s": 36.15294814109802,
+    "best_round": 0,
+    "best_val_macro_f1": 0.11452466291175968,
+    "test_macro_f1": 0.11430281268701377,
+    "test_balanced_accuracy": 0.1424310216256525,
+    "test_accuracy": 0.6668329177057356,
+    "test_loss": 1.8426165953538662,
+    "test_per_class_f1": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.8001196888090963,
+      0.0
+    ]
+  },
+  "fedprox": {
+    "algorithm": "fedprox",
+    "mu": 0.01,
+    "seed": 42,
+    "num_rounds": 5,
+    "local_epochs": 5,
+    "elapsed_s": 49.80980563163757,
+    "best_round": 5,
+    "best_val_macro_f1": 0.11459311758176073,
+    "test_macro_f1": 0.1283116941914683,
+    "test_balanced_accuracy": 0.15,
+    "test_accuracy": 0.6743142144638404,
+    "test_loss": 1.2660757764616513,
+    "test_per_class_f1": [
+      0.0,
+      0.0,
+      0.09205020920502092,
+      0.0,
+      0.0,
+      0.806131650135257,
+      0.0
+    ]
+  },
+  "delta_macro_f1": 0.01400888150445452,
+  "delta_balanced_accuracy": 0.007568978374347501
+}

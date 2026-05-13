@@ -1,0 +1,14 @@
+
+=== FEDPROX (μ=0.01) seed=42 E=20 ===
+  partition=balanced_paired_7_clients  rounds=150  fraction_fit=1.0
+  client sizes: [964, 963, 1095, 1094, 1110, 1108, 673]
+  device=cuda
+
+Test @ best-val checkpoint (round 134, val_macro_f1=0.5657):
+  test_macro_f1   = 0.5162
+  test_balanced_a = 0.4981
+  test_accuracy   = 0.7571
+  test_loss       = 1.4679
+
+Wrote outputs to /home/bk489/federated_clean/cleanest_federated/mnist_dermnist/results/headline
+Job complete: algo=fedprox mu=0.01 seed=42 E=20 partition=balanced_paired_7_clients

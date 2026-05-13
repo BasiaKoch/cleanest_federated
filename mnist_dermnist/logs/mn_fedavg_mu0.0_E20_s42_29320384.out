@@ -1,0 +1,14 @@
+
+=== FEDAVG (μ=0.0) seed=42 E=20 ===
+  partition=balanced_paired_7_clients  rounds=150  fraction_fit=1.0
+  client sizes: [964, 963, 1095, 1094, 1110, 1108, 673]
+  device=cuda
+
+Test @ best-val checkpoint (round 121, val_macro_f1=0.5194):
+  test_macro_f1   = 0.4477
+  test_balanced_a = 0.4463
+  test_accuracy   = 0.7471
+  test_loss       = 1.6781
+
+Wrote outputs to /home/bk489/federated_clean/cleanest_federated/mnist_dermnist/results/headline
+Job complete: algo=fedavg mu=0.0 seed=42 E=20 partition=balanced_paired_7_clients

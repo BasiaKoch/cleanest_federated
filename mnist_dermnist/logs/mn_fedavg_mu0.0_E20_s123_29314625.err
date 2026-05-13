@@ -1,0 +1,8 @@
+usage: run_one.py [-h] --algorithm {fedavg,fedprox} [--mu MU] [--seed SEED]
+                  [--local-epochs LOCAL_EPOCHS] [--num-rounds NUM_ROUNDS]
+                  [--fraction-fit FRACTION_FIT] [--lr LR]
+                  [--momentum MOMENTUM] [--weight-decay WEIGHT_DECAY]
+                  [--batch-size BATCH_SIZE] [--image-size IMAGE_SIZE]
+                  [--partition {medical_skew_7_clients,simple_pathological_3_clients}]
+                  [--device DEVICE] [--npz-path NPZ_PATH] [--out-dir OUT_DIR]
+run_one.py: error: argument --partition: invalid choice: 'balanced_paired_7_clients' (choose from 'medical_skew_7_clients', 'simple_pathological_3_clients')
