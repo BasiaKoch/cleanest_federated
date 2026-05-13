@@ -45,6 +45,7 @@ PYTHONPATH=. python -m mnist_dermnist.experiments.run_one \
     --batch-size 32 \
     --partition "$PARTITION" \
     --device cuda \
+    --npz-path "$REPO_ROOT/dermamnist_64.npz" \
     --out-dir "$OUT_DIR"
 
 echo "Job complete: algo=$ALGO mu=$MU seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION"
