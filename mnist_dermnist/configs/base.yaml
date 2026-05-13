@@ -1,0 +1,15 @@
+# Base config for the mnist_dermnist headline FedAvg vs FedProx experiment.
+# Other configs may inherit from this one and override individual fields.
+
+dataset:
+  name: dermmnist
+  npz_path: /Users/basiakoch/cleanest_federated/dermamnist_64.npz
+  image_size: 28              # downsampled from the 64x64 npz at load time
+
+model:
+  name: dermmnist_cnn         # ← selector. Must match a key in models/__init__.py _REGISTRY
+  num_classes: 7
+  dropout: 0.2
+
+# Federation, training, partition fields will be added in later patches.
+# Keep this file minimal until then to avoid premature commitments.
