@@ -1,0 +1,33 @@
+{
+  "framework": "flower-simulation (recovered from Colab head-to-head log)",
+  "device": "cuda (Colab T4/A100)",
+  "seed": 42,
+  "num_rounds": 150,
+  "local_epochs": 20,
+  "mu": 0.01,
+  "lr": 0.01,
+  "batch_size": 32,
+  "partition": "balanced_paired_7_clients",
+  "class_names": ["actinic", "basal", "benign_kerat", "dermato", "melanoma", "mel_nevi", "vascular"],
+  "fedavg": {
+    "test_macro_f1": 0.4921,
+    "test_balanced_accuracy": 0.4696,
+    "test_accuracy": 0.7551,
+    "test_per_class_f1": [0.509, 0.475, 0.427, 0.222, 0.305, 0.891, 0.615],
+    "seed": 42,
+    "algorithm": "fedavg",
+    "mu": 0.0
+  },
+  "fedprox": {
+    "test_macro_f1": 0.5378,
+    "test_balanced_accuracy": 0.5267,
+    "test_accuracy": 0.7551,
+    "test_per_class_f1": [0.453, 0.497, 0.439, 0.462, 0.364, 0.882, 0.667],
+    "seed": 42,
+    "algorithm": "fedprox",
+    "mu": 0.01
+  },
+  "delta_macro_f1": 0.0457,
+  "delta_balanced_accuracy": 0.0572,
+  "delta_per_class_f1": [-0.056, 0.023, 0.012, 0.239, 0.059, -0.008, 0.051]
+}

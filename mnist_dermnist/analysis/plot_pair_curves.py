@@ -47,6 +47,8 @@ def main():
     ap.add_argument("--fedavg", required=True)
     ap.add_argument("--fedprox", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--caveat", default=None,
+                    help="Optional caveat string shown prominently below suptitle")
     args = ap.parse_args()
 
     fa = pd.read_csv(args.fedavg)
@@ -84,6 +86,10 @@ def main():
     title += f", E={E}, μ_FedProx={mu_fp})\n"
     title += f"best val_macro_f1:  FedAvg {fa_best:.4f}   FedProx {fp_best:.4f}   Δ = {delta_best:+.4f}"
     fig.suptitle(title, fontsize=12, fontweight="bold")
+    if args.caveat:
+        fig.text(0.5, -0.02, args.caveat, ha="center", fontsize=10,
+                 color="#c53030", fontweight="bold",
+                 bbox=dict(boxstyle="round,pad=0.4", fc="#fed7d7", ec="#c53030"))
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
