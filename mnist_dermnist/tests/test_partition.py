@@ -8,9 +8,13 @@ from mnist_dermnist.data.partition import (
     NUM_CLASSES,
     SIMPLE_PATHOLOGICAL_3_CLIENTS,
     MEDICAL_SKEW_7_CLIENTS,
+    QUANTITY_SKEW_IMPROVED_SPEC,
+    BALANCED_PAIRED_7_CLIENTS_SPEC,
     simple_pathological_3_clients,
     medical_skew_7_clients,
     balanced_specialist_7_clients,
+    balanced_paired_7_clients,
+    quantity_skew_improved,
     class_count_table,
 )
 
@@ -166,6 +170,73 @@ def test_balanced_mode_has_uniform_client_sizes(labels):
     sizes = [len(c) for c in clients]
     assert max(sizes) / min(sizes) < 2.0, \
         f"balanced partition size ratio is {max(sizes)/min(sizes):.2f}x, expected < 2x. Sizes: {sizes}"
+
+
+def test_balanced_paired_spec_matches_real_dermmnist_counts():
+    """The hardcoded per-class allocation must sum to DermMNIST's training counts."""
+    actual_counts = {0: 228, 1: 359, 2: 769, 3: 80, 4: 779, 5: 4693, 6: 99}
+    spec_sums = {c: 0 for c in range(NUM_CLASSES)}
+    for entry in BALANCED_PAIRED_7_CLIENTS_SPEC:
+        for c, n in entry["per_class"].items():
+            spec_sums[c] += int(n)
+    for c in range(NUM_CLASSES):
+        assert spec_sums[c] == actual_counts[c], (
+            f"class {c}: spec sums to {spec_sums[c]}, real DermMNIST has {actual_counts[c]}"
+        )
+
+
+def test_balanced_paired_every_minority_class_in_at_least_two_clients():
+    """The defining property: every non-mel_nevi class is owned by ≥2 clients."""
+    counts = [228, 359, 769, 80, 779, 4693, 99]
+    labels = []
+    for c, n in enumerate(counts):
+        labels.extend([c] * n)
+    labels = np.asarray(labels, dtype=np.int64)
+    np.random.default_rng(0).shuffle(labels)
+    clients, _ = balanced_paired_7_clients(labels, seed=42)
+    for c in range(NUM_CLASSES):
+        if c == 5:   # mel_nevi background — present everywhere
+            continue
+        owners = sum(1 for cl in clients
+                     if any(int(labels[i]) == c for i in cl))
+        assert owners >= 2, f"class {c} ({['actinic','basal','benign','dermato','melanoma','nevi','vascular'][c]}) is owned by {owners} clients, expected ≥ 2"
+
+
+def test_quantity_skew_improved_spec_matches_real_dermmnist_counts():
+    """The hardcoded per-class allocation in QUANTITY_SKEW_IMPROVED_SPEC
+    must sum to DermMNIST's real per-class training counts."""
+    actual_counts = {0: 228, 1: 359, 2: 769, 3: 80, 4: 779, 5: 4693, 6: 99}
+    spec_sums = {c: 0 for c in range(NUM_CLASSES)}
+    for entry in QUANTITY_SKEW_IMPROVED_SPEC:
+        for c, n in entry["per_class"].items():
+            spec_sums[c] += int(n)
+    for c in range(NUM_CLASSES):
+        assert spec_sums[c] == actual_counts[c], (
+            f"class {c}: spec sums to {spec_sums[c]}, real DermMNIST has {actual_counts[c]}"
+        )
+
+
+def test_quantity_skew_improved_aborts_when_spec_mismatches_dataset():
+    """If labels don't match the hardcoded spec, must abort loudly."""
+    # Tiny synthetic with wrong class proportions
+    bad_labels = np.array([0, 1, 5, 5, 5], dtype=np.int64)
+    with pytest.raises(ValueError):
+        quantity_skew_improved(bad_labels, seed=42)
+
+
+def test_quantity_skew_improved_per_client_totals_real_dermmnist():
+    """Verifies the per-client totals from the user spec on real-size labels."""
+    counts = [228, 359, 769, 80, 779, 4693, 99]
+    labels = []
+    for c, n in enumerate(counts):
+        labels.extend([c] * n)
+    labels = np.asarray(labels, dtype=np.int64)
+    np.random.default_rng(0).shuffle(labels)
+
+    clients, _ = quantity_skew_improved(labels, seed=42)
+    sizes = [len(c) for c in clients]
+    expected = [2420, 2050, 1331, 348, 509, 150, 199]
+    assert sizes == expected, f"client totals {sizes} != spec {expected}"
 
 
 def test_balanced_mode_each_client_has_mel_nevi_background(labels):

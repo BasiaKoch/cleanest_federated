@@ -1,0 +1,8 @@
+client_id,class_0_actinic_kerato,class_1_basal_cell_car,class_2_benign_keratos,class_3_dermatofibroma,class_4_melanoma,class_5_melanocytic_ne,class_6_vascular_lesio,total
+0,0,0,40,0,80,2300,0,2420
+1,0,0,250,0,100,1700,0,2050
+2,0,0,429,0,579,323,0,1331
+3,228,0,0,0,0,120,0,348
+4,0,359,0,0,0,150,0,509
+5,0,0,20,80,0,50,0,150
+6,0,0,30,0,20,50,99,199

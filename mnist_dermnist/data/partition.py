@@ -63,6 +63,56 @@ SIMPLE_PATHOLOGICAL_3_CLIENTS: Tuple[Tuple[int, ...], ...] = (
 )
 
 
+# Mode 5 — fully paired balanced partition.
+#
+# Refinement of Mode 3 (balanced_specialist_7_clients) in which EVERY minority
+# class is owned by exactly two clients, eliminating singleton specialists.
+# Designed to maximise FedProx's expected advantage: the proximal term only
+# delivers gains when multiple clients carry the same class but disagree —
+# under the previous mode, half the rare classes had a single owner, denying
+# FedProx the mechanism it needs.
+#
+# Per-client composition (matches the spec, hardcoded counts to make the
+# pairing exact):
+BALANCED_PAIRED_7_CLIENTS_SPEC: List[Dict] = [
+    {"id": 0, "per_class": {0: 114, 1: 180, 5: 670}},   # actinic-a + basal-a + nevi
+    {"id": 1, "per_class": {0: 114, 1: 179, 5: 670}},   # actinic-b + basal-b + nevi
+    {"id": 2, "per_class": {2: 385, 3:  40, 5: 670}},   # benign-a  + dermato-a + nevi
+    {"id": 3, "per_class": {2: 384, 3:  40, 5: 670}},   # benign-b  + dermato-b + nevi
+    {"id": 4, "per_class": {4: 390, 6:  50, 5: 670}},   # melanoma-a + vascular-a + nevi
+    {"id": 5, "per_class": {4: 389, 6:  49, 5: 670}},   # melanoma-b + vascular-b + nevi
+    {"id": 6, "per_class": {5: 673}},                    # general nevi-only client
+]
+
+
+# Mode 4 — quantity-skewed specialist 7 clients.
+#
+# Realistic medical referral network: 3 size-skewed hospital-style clients
+# (C0–C2) hold most of the volume but share several common classes; 4 small
+# specialty clinics (C3–C6) hold a unique rare class plus a small mel_nevi
+# background to prevent single-class collapse during local training.
+#
+# Per-class counts are HARDCODED per the user-specified spec; the partitioner
+# verifies these exactly match the actual class sizes in the dataset.
+QUANTITY_SKEW_IMPROVED_SPEC: List[Dict] = [
+    # Each entry: {client_id, name, per_class_counts: {class_id: count}}
+    {"id": 0, "name": "nevi_hospital_large",
+     "per_class": {5: 2300, 4:   80, 2:   40}},                # 2420
+    {"id": 1, "name": "nevi_benign_hospital",
+     "per_class": {5: 1700, 2:  250, 4:  100}},                # 2050
+    {"id": 2, "name": "melanoma_benign_referral",
+     "per_class": {4:  579, 2:  429, 5:  323}},                # 1331
+    {"id": 3, "name": "actinic_clinic",
+     "per_class": {0:  228, 5:  120}},                          # 348
+    {"id": 4, "name": "basal_clinic",
+     "per_class": {1:  359, 5:  150}},                          # 509
+    {"id": 5, "name": "dermatofibroma_clinic",
+     "per_class": {3:   80, 5:   50, 2:   20}},                 # 150
+    {"id": 6, "name": "vascular_clinic",
+     "per_class": {6:   99, 5:   50, 2:   30, 4:   20}},        # 199
+]
+
+
 # Mode 3 — FedProx-favourable balanced partition.
 #
 # 7 equal-size clients (~1000 samples each), all sharing the same background
@@ -318,6 +368,127 @@ def num_classes_helper() -> int:
     return NUM_CLASSES
 
 
+def balanced_paired_7_clients(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Mode 5 — every minority class is owned by exactly 2 clients.
+
+    Each client gets a near-equal mel_nevi background plus two paired-specialty
+    fragments (or only nevi for the general client). Designed to maximise
+    FedProx's advantage on the per-class drift mechanism: with every rare
+    class held by two clients, the proximal term has consensus-finding work
+    to do everywhere — no singleton ownership.
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    _assert_labels_valid(labels_arr)
+
+    # Verify spec consistency
+    actual = {c: int((labels_arr == c).sum()) for c in range(NUM_CLASSES)}
+    spec_totals: Dict[int, int] = {c: 0 for c in range(NUM_CLASSES)}
+    for entry in BALANCED_PAIRED_7_CLIENTS_SPEC:
+        for c, n in entry["per_class"].items():
+            spec_totals[c] += int(n)
+    for c in range(NUM_CLASSES):
+        if spec_totals[c] != actual[c]:
+            raise ValueError(
+                f"balanced_paired_7_clients: spec sums to {spec_totals[c]} for class "
+                f"{c} ({CLASS_NAMES[c]}) but the training set has {actual[c]}."
+            )
+
+    pools = _class_pools(labels_arr, seed)
+    cursors: Dict[int, int] = {c: 0 for c in range(NUM_CLASSES)}
+
+    K = len(BALANCED_PAIRED_7_CLIENTS_SPEC)
+    clients: List[List[int]] = [[] for _ in range(K)]
+    for entry in BALANCED_PAIRED_7_CLIENTS_SPEC:
+        cid = entry["id"]
+        for c, n in entry["per_class"].items():
+            start = cursors[c]
+            end = start + int(n)
+            if end > len(pools[c]):
+                raise ValueError(
+                    f"balanced_paired_7_clients: ran out of class {c} during client {cid}."
+                )
+            clients[cid].extend(int(i) for i in pools[c][start:end])
+            cursors[c] = end
+
+    df = _build_long_form(clients, labels_arr)
+    _validate(clients, labels_arr)
+    return clients, df
+
+
+def quantity_skew_improved(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Mode 4 — quantity-skewed specialist 7-client partition.
+
+    Realistic medical referral network: 3 large hospital-style clients (C0–C2)
+    own most of the volume but share common classes (nevi, melanoma, benign);
+    4 small specialty clinics (C3–C6) each own a unique rare class plus a
+    mel_nevi background so local training doesn't collapse to one class.
+
+    The per-class allocations are HARDCODED via `QUANTITY_SKEW_IMPROVED_SPEC`.
+    The function:
+      - validates that the spec's per-class sums match the dataset's class
+        sizes exactly (raises ValueError if not — abort loudly per spec);
+      - shuffles each class deterministically by seed;
+      - takes the first n samples of each class for each client (in spec order).
+
+    Different seeds therefore produce different SAMPLE-LEVEL assignments but
+    the same per-class structure (sizes are fixed by the spec).
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    _assert_labels_valid(labels_arr)
+
+    # 1) Verify the spec is consistent with the dataset.
+    actual = {c: int((labels_arr == c).sum()) for c in range(NUM_CLASSES)}
+    spec_totals: Dict[int, int] = {c: 0 for c in range(NUM_CLASSES)}
+    for entry in QUANTITY_SKEW_IMPROVED_SPEC:
+        for c, n in entry["per_class"].items():
+            spec_totals[c] += int(n)
+    for c in range(NUM_CLASSES):
+        if spec_totals[c] != actual[c]:
+            raise ValueError(
+                f"quantity_skew_improved: spec sums to {spec_totals[c]} for class "
+                f"{c} ({CLASS_NAMES[c]}) but the training set has {actual[c]}. "
+                f"The spec is incompatible with this dataset."
+            )
+
+    # 2) Pre-shuffle each class deterministically.
+    pools = _class_pools(labels_arr, seed)
+    cursors: Dict[int, int] = {c: 0 for c in range(NUM_CLASSES)}
+
+    # 3) Allocate per spec order.
+    K = len(QUANTITY_SKEW_IMPROVED_SPEC)
+    clients: List[List[int]] = [[] for _ in range(K)]
+    for entry in QUANTITY_SKEW_IMPROVED_SPEC:
+        cid = entry["id"]
+        for c, n in entry["per_class"].items():
+            start = cursors[c]
+            end = start + int(n)
+            if end > len(pools[c]):
+                raise ValueError(
+                    f"quantity_skew_improved: ran out of class {c} during client {cid} "
+                    f"allocation (requested {n}, only {len(pools[c]) - start} remain)."
+                )
+            clients[cid].extend(int(i) for i in pools[c][start:end])
+            cursors[c] = end
+
+    # 4) Sanity-check no leftovers (spec totals == dataset totals so this should be empty).
+    leftover_total = sum(len(pools[c]) - cursors[c] for c in range(NUM_CLASSES))
+    if leftover_total != 0:
+        raise ValueError(
+            f"quantity_skew_improved: {leftover_total} samples left unassigned after spec "
+            f"applied. Sums don't match — please check QUANTITY_SKEW_IMPROVED_SPEC."
+        )
+
+    df = _build_long_form(clients, labels_arr)
+    _validate(clients, labels_arr)
+    return clients, df
+
+
 # ----------------------------------------------------------------------------
 # Validation, table, IO
 # ----------------------------------------------------------------------------
@@ -431,7 +602,9 @@ def main():
     ap.add_argument("--mode",
                     choices=["simple_pathological_3_clients",
                              "medical_skew_7_clients",
-                             "balanced_specialist_7_clients"],
+                             "balanced_specialist_7_clients",
+                             "balanced_paired_7_clients",
+                             "quantity_skew_improved"],
                     default="medical_skew_7_clients")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default="mnist_dermnist/results/partitions")
@@ -446,6 +619,10 @@ def main():
         clients, df = simple_pathological_3_clients(labels, seed=args.seed)
     elif args.mode == "balanced_specialist_7_clients":
         clients, df = balanced_specialist_7_clients(labels, seed=args.seed)
+    elif args.mode == "balanced_paired_7_clients":
+        clients, df = balanced_paired_7_clients(labels, seed=args.seed)
+    elif args.mode == "quantity_skew_improved":
+        clients, df = quantity_skew_improved(labels, seed=args.seed)
     else:
         clients, df = medical_skew_7_clients(labels, seed=args.seed)
 

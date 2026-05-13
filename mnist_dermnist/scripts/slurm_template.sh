@@ -31,6 +31,7 @@ MU="${2:?mu required}"
 SEED="${3:?seed required}"
 LOCAL_EPOCHS="${4:?local_epochs required}"
 OUT_DIR="${5:-mnist_dermnist/results/headline}"
+PARTITION="${6:-balanced_paired_7_clients}"
 
 mkdir -p "$OUT_DIR" mnist_dermnist/logs
 
@@ -42,8 +43,8 @@ PYTHONPATH=. python -m mnist_dermnist.experiments.run_one \
     --num-rounds 150 \
     --lr 0.01 \
     --batch-size 32 \
-    --partition medical_skew_7_clients \
+    --partition "$PARTITION" \
     --device cuda \
     --out-dir "$OUT_DIR"
 
-echo "Job complete: algo=$ALGO mu=$MU seed=$SEED E=$LOCAL_EPOCHS"
+echo "Job complete: algo=$ALGO mu=$MU seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION"

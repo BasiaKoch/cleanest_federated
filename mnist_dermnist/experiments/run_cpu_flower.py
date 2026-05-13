@@ -39,7 +39,9 @@ from mnist_dermnist.data.load import load_dermmnist
 from mnist_dermnist.data.partition import (
     medical_skew_7_clients,
     balanced_specialist_7_clients,
+    balanced_paired_7_clients,
     simple_pathological_3_clients,
+    quantity_skew_improved,
 )
 from mnist_dermnist.fl_flower.client import FlClient, numpy_to_state_dict
 from mnist_dermnist.models import DermMNISTCNN
@@ -165,6 +167,23 @@ def run_one(*, algorithm: str, mu: float, seed: int,
         raise RuntimeError("No best checkpoint captured — was validation evaluated at all?")
     test_metrics = evaluate_global(best["params"], test_loader)
 
+    # ---- flatten Flower history into a per-round DataFrame ----
+    rows: Dict[int, Dict] = {}
+    for k, vals in history.metrics_centralized.items():
+        for rnd, v in vals:
+            rows.setdefault(int(rnd), {"round": int(rnd)})[k] = float(v)
+    for rnd, v in history.losses_centralized:
+        rows.setdefault(int(rnd), {"round": int(rnd)})["val_loss_flower"] = float(v)
+    if hasattr(history, "metrics_distributed_fit"):
+        for k, vals in history.metrics_distributed_fit.items():
+            for rnd, v in vals:
+                rows.setdefault(int(rnd), {"round": int(rnd)})[k] = float(v)
+    history_df = pd.DataFrame([rows[k] for k in sorted(rows)])
+    history_df["algorithm"] = algorithm
+    history_df["mu"] = mu
+    history_df["seed"] = seed
+    history_df["local_epochs"] = local_epochs
+
     return {
         "algorithm": algorithm, "mu": mu, "seed": seed,
         "num_rounds": num_rounds, "local_epochs": local_epochs,
@@ -176,6 +195,7 @@ def run_one(*, algorithm: str, mu: float, seed: int,
         "test_accuracy": test_metrics["accuracy"],
         "test_loss": test_metrics["loss"],
         "test_per_class_f1": test_metrics["per_class_f1"],
+        "history_df": history_df,
         "history": history,
     }
 
@@ -216,9 +236,10 @@ def main():
                     help="Don't re-run FedAvg; reuse a previous result from out-dir (any μ).")
     ap.add_argument("--partition",
                     choices=["medical_skew_7_clients", "balanced_specialist_7_clients",
-                             "simple_pathological_3_clients"],
-                    default="balanced_specialist_7_clients",
-                    help="Default switched to balanced_specialist_7_clients — FedProx-favourable.")
+                             "balanced_paired_7_clients",
+                             "simple_pathological_3_clients", "quantity_skew_improved"],
+                    default="balanced_paired_7_clients",
+                    help="Default: balanced_paired_7_clients (every class held by ≥2 clients).")
     args = ap.parse_args()
 
     print("=" * 72)
@@ -236,7 +257,9 @@ def main():
     partitioners = {
         "medical_skew_7_clients": medical_skew_7_clients,
         "balanced_specialist_7_clients": balanced_specialist_7_clients,
+        "balanced_paired_7_clients": balanced_paired_7_clients,
         "simple_pathological_3_clients": simple_pathological_3_clients,
+        "quantity_skew_improved": quantity_skew_improved,
     }
     partitions, _ = partitioners[args.partition](train.labels, seed=args.seed)
     print(f"  train={len(train)}  val={len(val)}  test={len(test)}")
@@ -271,8 +294,12 @@ def main():
                      lr=args.lr, batch_size=args.batch_size,
                      train=train, val_loader=val_loader, test_loader=test_loader,
                      partitions=partitions)
-        # Strip history before storing (large)
-        fa = {k: v for k, v in fa.items() if k != "history"}
+        # Save per-round CSV for curve plotting
+        fa_history_path = out_dir / f"history_fedavg_mu0.0_E{args.local_epochs}_s{args.seed}.csv"
+        fa["history_df"].to_csv(fa_history_path, index=False)
+        print(f"  wrote per-round history: {fa_history_path}")
+        # Strip Flower internal history before storing in JSON (large)
+        fa = {k: v for k, v in fa.items() if k not in ("history", "history_df")}
         print(f"  elapsed: {fa['elapsed_s']/60:.1f} min   test macro-F1 = {fa['test_macro_f1']:.4f}")
         print()
 
@@ -282,7 +309,10 @@ def main():
                  lr=args.lr, batch_size=args.batch_size,
                  train=train, val_loader=val_loader, test_loader=test_loader,
                  partitions=partitions)
-    fp = {k: v for k, v in fp.items() if k != "history"}
+    fp_history_path = out_dir / f"history_fedprox_mu{args.mu}_E{args.local_epochs}_s{args.seed}.csv"
+    fp["history_df"].to_csv(fp_history_path, index=False)
+    print(f"  wrote per-round history: {fp_history_path}")
+    fp = {k: v for k, v in fp.items() if k not in ("history", "history_df")}
     print(f"  elapsed: {fp['elapsed_s']/60:.1f} min   test macro-F1 = {fp['test_macro_f1']:.4f}")
     print()
 
