@@ -265,6 +265,37 @@ def compute_distribution_entropy(client_distribution) -> float:
     return float(scipy_entropy(p, base=2))
 
 
+def specialist_partition(dataset: Dataset, num_clients: int, seed: int = 42) -> List[List[int]]:
+    """Specialist clients: each client gets all samples of exactly one class.
+
+    Setup follows Zhao et al. 2018 ("Federated Learning with Non-IID Data") and
+    the extreme pathological case in Li et al. 2020 (FedProx). Each client
+    `c` receives every training sample with label `c`. num_clients must equal
+    the number of classes in the dataset.
+
+    The natural class imbalance is preserved (no subsampling): client sizes
+    follow the global class counts. On DermaMNIST this means client sizes
+    differ by up to 58×, with the Melanocytic-Nevi specialist holding ~67%
+    of all training samples. This is the most extreme case for FedAvg's
+    size-weighted aggregation.
+    """
+    labels = get_labels(dataset)
+    num_classes = int(labels.max()) + 1
+    if num_clients != num_classes:
+        raise ValueError(
+            f'specialist_partition requires num_clients == num_classes '
+            f'(got num_clients={num_clients}, num_classes={num_classes}).'
+        )
+    rng = np.random.default_rng(seed)
+    client_indices: List[List[int]] = []
+    for c in range(num_classes):
+        idxs = np.where(labels == c)[0]
+        rng.shuffle(idxs)
+        client_indices.append(idxs.astype(int).tolist())
+    _validate_partition(client_indices, len(dataset))
+    return client_indices
+
+
 def make_partition(dataset: Dataset, strategy: str, num_clients: int, seed: int = 42, **kwargs) -> List[List[int]]:
     strategy = strategy.lower()
     if strategy == 'iid':
@@ -283,4 +314,6 @@ def make_partition(dataset: Dataset, strategy: str, num_clients: int, seed: int 
             quantity_alpha=float(kwargs.get('quantity_alpha', 0.5)),
             seed=seed,
         )
+    if strategy == 'specialist':
+        return specialist_partition(dataset, num_clients, seed=seed)
     raise ValueError(f'Unknown partition strategy: {strategy}')

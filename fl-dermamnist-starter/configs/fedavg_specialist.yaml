@@ -1,0 +1,26 @@
+# Specialist clients — FedAvg baseline.
+#
+# Setup follows Zhao et al. 2018 "Federated Learning with Non-IID Data" and
+# the extreme pathological case in Li et al. 2020 (FedProx Section 5).
+# Each client holds ALL training samples of one class:
+#   Client 0: 228 Actinic keratoses
+#   Client 1: 359 Basal cell carcinoma
+#   Client 2: 769 Benign keratosis
+#   Client 3:  80 Dermatofibroma         <- rarest
+#   Client 4: 779 Melanoma               <- clinically critical
+#   Client 5: 4693 Melanocytic nevi      <- 67% of all data
+#   Client 6:  99 Vascular lesions
+#
+# Evaluation: held-out global validation set (1003 samples, all classes,
+# natural distribution) for per-round model selection (best by balanced
+# accuracy). Final reporting on global test set (2005 samples).
+# Client-local validation is NOT used (single-class clients = degenerate).
+
+federation:
+  num_clients: 7
+  num_rounds: 100
+  local_epochs: 5
+  fraction_fit: 1.0
+  fraction_evaluate: 1.0
+partition:
+  strategy: specialist

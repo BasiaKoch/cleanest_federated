@@ -54,13 +54,15 @@ class FLClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
+        # System heterogeneity: server may override local_epochs per round per client.
+        local_epochs = int(config.get('local_epochs', self.local_epochs))
         if self.proximal_mu > 0:
             global_params = [p.clone().detach() for p in self.model.parameters()]
         else:
             global_params = None
         self.model.train()
         total_loss, num_batches = 0.0, 0
-        for _ in range(self.local_epochs):
+        for _ in range(local_epochs):
             for x, y in self.train_loader:
                 x = x.to(self.device)
                 y = y.to(self.device).view(-1).long()
@@ -76,7 +78,11 @@ class FLClient(fl.client.NumPyClient):
                 total_loss += float(loss.item())
                 num_batches += 1
         avg_loss = total_loss / max(num_batches, 1)
-        return self.get_parameters(config={}), len(self.train_loader.dataset), {'train_loss': avg_loss, 'cid': self.cid}
+        return self.get_parameters(config={}), len(self.train_loader.dataset), {
+            'train_loss': avg_loss,
+            'cid': self.cid,
+            'local_epochs_actual': local_epochs,
+        }
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)

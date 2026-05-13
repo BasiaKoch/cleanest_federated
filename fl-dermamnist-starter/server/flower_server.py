@@ -27,7 +27,9 @@ from utils.experiment_tracker import make_jsonable
 class SaveModelFedAvg(fl.server.strategy.FedAvg):
     """FedAvg with checkpointing and optional client drift tracking."""
 
-    def __init__(self, *args, track_drift: bool = False, **kwargs):
+    def __init__(self, *args, track_drift: bool = False,
+                 system_het_epochs=None, system_het_seed: int = 42,
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.best_parameters_ndarrays = None
         self.best_balanced_accuracy = -1.0
@@ -35,6 +37,29 @@ class SaveModelFedAvg(fl.server.strategy.FedAvg):
         self.track_drift = track_drift
         self.drift_history = []
         self._previous_global_params = None
+        # System heterogeneity: list of candidate local-epoch values to sample
+        # from per-client per-round. If None / empty, behaves like vanilla FedAvg
+        # (constant local_epochs from the YAML).
+        self.system_het_epochs = list(system_het_epochs) if system_het_epochs else None
+        self._sys_het_rng = np.random.default_rng(system_het_seed)
+        self.epochs_history = []  # list of {round, client_id, local_epochs}
+
+    def configure_fit(self, server_round, parameters, client_manager):
+        instructions = super().configure_fit(server_round, parameters, client_manager)
+        if not self.system_het_epochs:
+            return instructions
+        new_instructions = []
+        for client, fit_ins in instructions:
+            assigned = int(self._sys_het_rng.choice(self.system_het_epochs))
+            cfg = dict(fit_ins.config) if fit_ins.config else {}
+            cfg['local_epochs'] = assigned
+            new_instructions.append((client, fl.common.FitIns(fit_ins.parameters, cfg)))
+            self.epochs_history.append({
+                'round': int(server_round),
+                'client_proxy': getattr(client, 'cid', 'unknown'),
+                'local_epochs': assigned,
+            })
+        return new_instructions
 
     def aggregate_fit(self, server_round, results, failures):
         if self.track_drift and self._previous_global_params is not None:
@@ -236,6 +261,7 @@ def run_simulation(config: Dict):
     fraction_evaluate = float(fed_cfg.get('fraction_evaluate', 1.0))
     min_fit_clients = max(1, math.ceil(num_clients * fraction_fit))
     min_eval_clients = max(1, math.ceil(num_clients * fraction_evaluate))
+    system_het_epochs = fed_cfg.get('system_heterogeneity', None)
     strategy = SaveModelFedAvg(
         fraction_fit=fraction_fit,
         fraction_evaluate=fraction_evaluate,
@@ -244,6 +270,8 @@ def run_simulation(config: Dict):
         min_available_clients=num_clients,
         evaluate_fn=evaluate_fn,
         track_drift=bool(config.get('track_drift', False)),
+        system_het_epochs=system_het_epochs,
+        system_het_seed=int(config.get('misc', {}).get('seed', 42)),
     )
     # Rebind evaluate_fn to the actual strategy instance used by Flower.
     strategy.evaluate_fn = create_centralised_evaluate_fn(model_fn, global_val_loader, device, num_classes, class_names, strategy)
@@ -261,6 +289,8 @@ def run_simulation(config: Dict):
 
     history_df = _history_to_dataframe(history)
     history_df.to_csv(save_dir / 'metrics_history.csv', index=False)
+    if strategy.epochs_history:
+        pd.DataFrame(strategy.epochs_history).to_csv(save_dir / 'epochs_history.csv', index=False)
     if not history_df.empty:
         plot_training_curves(history_df, save_dir / 'accuracy_loss_curve.png')
         tracker = PerClassTracker(num_classes, class_names, save_dir)
