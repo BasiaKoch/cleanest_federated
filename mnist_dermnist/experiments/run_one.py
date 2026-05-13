@@ -23,7 +23,10 @@ from torch.utils.data import DataLoader
 
 from mnist_dermnist.data.load import load_dermmnist
 from mnist_dermnist.data.partition import (
+    balanced_paired_7_clients,
+    balanced_specialist_7_clients,
     medical_skew_7_clients,
+    quantity_skew_improved,
     simple_pathological_3_clients,
 )
 from mnist_dermnist.fl.server_loop import FLConfig, run_fl, save_run_outputs
@@ -33,6 +36,9 @@ from mnist_dermnist.models import DermMNISTCNN
 PARTITIONERS = {
     "medical_skew_7_clients": medical_skew_7_clients,
     "simple_pathological_3_clients": simple_pathological_3_clients,
+    "balanced_specialist_7_clients": balanced_specialist_7_clients,
+    "balanced_paired_7_clients": balanced_paired_7_clients,
+    "quantity_skew_improved": quantity_skew_improved,
 }
 
 
