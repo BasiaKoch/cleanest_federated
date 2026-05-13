@@ -56,7 +56,9 @@ class FLClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         # System heterogeneity: server may override local_epochs per round per client.
         local_epochs = int(config.get('local_epochs', self.local_epochs))
-        if self.proximal_mu > 0:
+        # PATCH 7: server may override proximal_mu per round (adaptive μ)
+        proximal_mu = float(config.get('proximal_mu', self.proximal_mu))
+        if proximal_mu > 0:
             global_params = [p.clone().detach() for p in self.model.parameters()]
         else:
             global_params = None
@@ -72,7 +74,8 @@ class FLClient(fl.client.NumPyClient):
                     prox = 0.0
                     for local_p, global_p in zip(self.model.parameters(), global_params):
                         prox = prox + torch.sum((local_p - global_p.to(self.device)) ** 2)
-                    loss = loss + (self.proximal_mu / 2.0) * prox
+                    # Use the per-round proximal_mu (supports adaptive μ from server)
+                    loss = loss + (proximal_mu / 2.0) * prox
                 loss.backward()
                 self.optimizer.step()
                 total_loss += float(loss.item())

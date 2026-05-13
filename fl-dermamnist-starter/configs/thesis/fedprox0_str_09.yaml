@@ -1,0 +1,8 @@
+federation:
+  local_epochs: 20
+  num_rounds: 100
+  stragglers_fraction: 0.9
+  straggler_mode: fedprox
+  track_grad_variance: true
+client_objective:
+  proximal_mu: 0.0

@@ -1,0 +1,3 @@
+# FedProx with μ=0.1 — strong proximal pull, motivated by high E + non-IID.
+client_objective:
+  proximal_mu: 0.1

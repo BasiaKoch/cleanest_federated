@@ -296,6 +296,118 @@ def specialist_partition(dataset: Dataset, num_clients: int, seed: int = 42) -> 
     return client_indices
 
 
+def mixed_type_partition(dataset: Dataset, num_clients: int = 10, seed: int = 42,
+                         hospital_ids=(0, 1, 2),
+                         specialist_assignments=((3, 0), (4, 1), (5, 3), (6, 6)),
+                         mixed_ids=(7, 8, 9),
+                         specialist_dominance: float = 0.70,
+                         hospital_common_share: float = 0.90,
+                         common_classes=(2, 4, 5),
+                         min_samples_per_client: int = 10) -> List[List[int]]:
+    """Mixed-type partition for the thesis FedProx stress experiment.
+
+    Creates exactly 10 clients with three roles:
+      - 3 large hospital clients (IDs 0,1,2): mostly common classes (2,4,5)
+      - 4 specialist clinics (IDs 3-6): each dominated by one rare class
+        Default assignments: client 3 -> class 0 (actinic keratoses),
+                             client 4 -> class 1 (basal cell carcinoma),
+                             client 5 -> class 3 (dermatofibroma),
+                             client 6 -> class 6 (vascular lesions).
+      - 3 mixed clients (IDs 7,8,9): receive leftover samples from all classes
+
+    Procedure:
+      1. For each specialist, take `specialist_dominance` (default 70%) of its
+         dominant class.
+      2. For each common class, give `hospital_common_share` (default 90%) of
+         remaining samples split evenly across the 3 hospitals.
+      3. Round-robin remaining samples to mixed clients (and specialists as
+         filler) so every class is non-empty globally and every client has
+         at least `min_samples_per_client` samples.
+
+    The partition is deterministic given a seed but produces different
+    partitions for different seeds.
+    """
+    assert num_clients == 10, 'mixed_type_partition currently requires exactly 10 clients'
+    rng = np.random.default_rng(seed)
+    labels = get_labels(dataset)
+    num_classes = int(labels.max()) + 1
+    assert num_classes == 7, f'mixed_type_partition assumes 7 classes (got {num_classes})'
+
+    # Permute class indices reproducibly
+    class_idxs: Dict[int, np.ndarray] = {}
+    for c in range(num_classes):
+        idxs = np.where(labels == c)[0]
+        rng.shuffle(idxs)
+        class_idxs[c] = idxs
+
+    clients: List[List[int]] = [[] for _ in range(num_clients)]
+
+    # Step 1 — specialists take their dominant class share
+    for client_id, dominant_class in specialist_assignments:
+        idxs = class_idxs[dominant_class]
+        n_take = max(1, int(len(idxs) * specialist_dominance))
+        clients[client_id].extend(idxs[:n_take].astype(int).tolist())
+        class_idxs[dominant_class] = idxs[n_take:]
+
+    # Step 2 — hospitals split common-class samples evenly.
+    # IMPORTANT: common-class leftovers go BACK to hospitals (not to specialists)
+    # to avoid drowning specialists' dominant class with majority-class filler.
+    for c in common_classes:
+        idxs = class_idxs[c]
+        # Split ALL common-class samples evenly across hospitals
+        chunks = np.array_split(idxs, len(hospital_ids))
+        for h, chunk in zip(hospital_ids, chunks):
+            clients[h].extend(chunk.astype(int).tolist())
+        class_idxs[c] = np.array([], dtype=int)   # fully consumed
+
+    # Step 3 — distribute remaining rare-class samples round-robin to
+    # mixed clients + specialists. These are minority-heavy by construction.
+    remaining = []
+    for c in range(num_classes):
+        for idx in class_idxs[c]:
+            remaining.append(int(idx))
+    rng.shuffle(remaining)
+
+    target_clients = list(mixed_ids) + [c for c, _ in specialist_assignments]
+    for i, idx in enumerate(remaining):
+        clients[target_clients[i % len(target_clients)]].append(idx)
+
+    # Final validations
+    _validate_partition(clients, len(dataset))
+
+    # Per-spec: every class must appear globally, every client must have enough samples
+    for c in range(num_classes):
+        if not any(c in [int(labels[i]) for i in cl] for cl in clients):
+            raise ValueError(f'Class {c} missing globally — partition invalid')
+    for cid, cl in enumerate(clients):
+        if len(cl) < min_samples_per_client:
+            raise ValueError(
+                f'Client {cid} has only {len(cl)} samples (< min_samples_per_client={min_samples_per_client}). '
+                f'Try smaller specialist_dominance or hospital_common_share.'
+            )
+
+    return clients
+
+
+def print_partition_table(dataset: Dataset, client_indices: List[List[int]], class_names=None) -> pd.DataFrame:
+    """Pretty-print a clients × classes count table. Returns the DataFrame."""
+    labels = get_labels(dataset)
+    num_classes = int(labels.max()) + 1
+    rows = []
+    for cid, cl in enumerate(client_indices):
+        cl_labels = labels[np.asarray(cl, dtype=int)]
+        row = {f'class_{c}': int((cl_labels == c).sum()) for c in range(num_classes)}
+        row['client_id'] = cid
+        row['total'] = len(cl)
+        rows.append(row)
+    df = pd.DataFrame(rows).set_index('client_id')
+    cols_order = [f'class_{c}' for c in range(num_classes)] + ['total']
+    df = df[cols_order]
+    if class_names is not None:
+        df.columns = list(class_names) + ['total']
+    return df
+
+
 def make_partition(dataset: Dataset, strategy: str, num_clients: int, seed: int = 42, **kwargs) -> List[List[int]]:
     strategy = strategy.lower()
     if strategy == 'iid':
@@ -316,4 +428,13 @@ def make_partition(dataset: Dataset, strategy: str, num_clients: int, seed: int 
         )
     if strategy == 'specialist':
         return specialist_partition(dataset, num_clients, seed=seed)
+    if strategy in ('mixed_type', 'mixed'):
+        return mixed_type_partition(
+            dataset,
+            num_clients,
+            seed=seed,
+            specialist_dominance=float(kwargs.get('specialist_dominance', 0.70)),
+            hospital_common_share=float(kwargs.get('hospital_common_share', 0.90)),
+            min_samples_per_client=int(kwargs.get('min_samples_per_client', 10)),
+        )
     raise ValueError(f'Unknown partition strategy: {strategy}')

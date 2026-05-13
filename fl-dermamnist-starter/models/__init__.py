@@ -1,10 +1,13 @@
 from .simple_cnn import SimpleCNN
 from .resnet import get_resnet18
+from .big_cnn import BigCNN
 
 
 def get_model(model_name: str, in_channels: int, num_classes: int, image_size: int = 28, pretrained: bool = False):
     if model_name == 'simple_cnn':
         return SimpleCNN(in_channels, num_classes)
+    if model_name == 'big_cnn':
+        return BigCNN(in_channels, num_classes)
     if model_name == 'resnet18':
         return get_resnet18(in_channels, num_classes, pretrained=pretrained, image_size=image_size)
     raise ValueError(f'Unknown model: {model_name}')
