@@ -14,7 +14,8 @@ thesis_ready/
 ├── data/                              ← machine-readable analysis output
 │   ├── per_seed_results.csv           ← 10-row paired table (the raw data)
 │   ├── per_class_results.csv          ← 7-row per-class table with Wilcoxon p
-│   └── summary_statistics.json        ← every aggregate stat in one JSON
+│   ├── summary_statistics.json        ← every aggregate stat in one JSON
+│   └── curves_aggregated.csv          ← per-round mean/SD across 10 seeds (for curve regen)
 ├── figures/                           ← publication-quality plots (PNG @ 300 dpi + PDF vector)
 │   ├── 01_headline_summary.{png,pdf}      ← bar chart with significance
 │   ├── 02_paired_forest.{png,pdf}         ← per-seed forest plot
@@ -22,7 +23,10 @@ thesis_ready/
 │   ├── 04_per_class_bars.{png,pdf}        ← per-class grouped bars
 │   ├── 05_per_class_delta.{png,pdf}       ← per-class Δ with significance
 │   ├── 06_distribution.{png,pdf}          ← box+strip plot, paired connectors
-│   └── 07_summary_panel.{png,pdf}         ← three-panel summary
+│   ├── 07_summary_panel.{png,pdf}         ← three-panel summary
+│   ├── 08_curves_main.{png,pdf}           ← 4-panel convergence curves (val macro-F1, val loss, train loss, val bACC)
+│   ├── 09_curves_per_class.{png,pdf}      ← 7-panel per-class val F1 curves
+│   └── 10_overfitting_diagnostic.{png,pdf} ← train vs val loss per algorithm
 ├── writing/                           ← prose ready to drop into your thesis
 │   ├── 01_abstract_paragraph.md           ← three lengths
 │   ├── 02_methods.md                      ← full methodology chapter
@@ -30,9 +34,13 @@ thesis_ready/
 │   ├── 04_discussion.md                   ← full discussion chapter
 │   ├── 05_figure_captions.md              ← captions for each figure
 │   ├── 06_tables.md                       ← LaTeX + Markdown tables
-│   └── 07_bibliography.bib                ← BibTeX entries for every citation
-├── conclusions/
-│   └── thesis_claims_summary.md           ← bullet-point list of every claim + evidence
+│   ├── 07_bibliography.bib                ← BibTeX entries for every citation
+│   └── 08_curves_analysis.md              ← curve-by-curve analysis + drop-in prose
+├── conclusions/                       ← analysis findings, claim-by-claim
+│   ├── thesis_claims_summary.md           ← bullet-point list of every claim + evidence
+│   ├── numerical_differences_from_curves.md  ← every numerical Δ visible in the curves
+│   ├── metric_relationship_macro_vs_per_class.md  ← how Fig 8 and Fig 9 relate
+│   └── partition_mechanism_mel_nevi.md    ← why mel_nevi shows no FedProx advantage
 └── scripts/
     └── generate_all_figures.py            ← reproduces all figures from /data
 ```
