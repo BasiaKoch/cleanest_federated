@@ -1,0 +1,30 @@
+{
+  "loss": 1.6820247227414291,
+  "accuracy": 0.7471321695760599,
+  "balanced_accuracy": 0.45190904944704996,
+  "macro_f1": 0.4898081498704081,
+  "per_class_f1": [
+    0.38202247191011235,
+    0.48044692737430167,
+    0.46215139442231074,
+    0.4,
+    0.12549019607843137,
+    0.8846685082872928,
+    0.6938775510204082
+  ],
+  "n": 2005,
+  "selected_round": 148,
+  "best_val_macro_f1": 0.49743485591651965,
+  "seed": 271828,
+  "algorithm": "fedavg",
+  "mu": 0.0,
+  "num_rounds": 150,
+  "local_epochs": 20,
+  "fraction_fit": 1.0,
+  "lr": 0.01,
+  "momentum": 0.9,
+  "weight_decay": 0.0,
+  "batch_size": 32,
+  "num_classes": 7,
+  "device": "cuda"
+}
