@@ -1,0 +1,8 @@
+class_id,class_name,prevalence_train_pct,fedavg_mean_f1,fedprox_mean_f1,delta_mean_f1,wilcoxon_p,significant_at_05
+0,actinic_keratoses,3.27,0.403906,0.471275,0.067369,0.019531,True
+1,basal_cell_carcinoma,5.13,0.474728,0.473282,-0.001446,0.845703,False
+2,benign_keratosis_like_lesions,10.97,0.440140,0.443759,0.003619,0.695312,False
+3,dermatofibroma,1.15,0.283234,0.296380,0.013146,0.921875,False
+4,melanoma,11.11,0.186627,0.300705,0.114078,0.005859,True
+5,melanocytic_nevi,67.05,0.883688,0.885617,0.001928,0.375000,False
+6,vascular_lesions,1.41,0.697564,0.685720,-0.011844,0.695312,False

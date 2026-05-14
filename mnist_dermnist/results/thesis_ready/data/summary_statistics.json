@@ -1,0 +1,104 @@
+{
+  "experiment": {
+    "dataset": "DermaMNIST (HAM10000-derived, MedMNIST v2)",
+    "image_size_px": 28,
+    "n_classes": 7,
+    "n_train": 7007,
+    "n_val": 1003,
+    "n_test": 2005,
+    "partition": "balanced_paired_7_clients",
+    "n_clients": 7,
+    "fraction_fit": 1.0,
+    "num_rounds": 150,
+    "local_epochs": 20,
+    "batch_size": 32,
+    "learning_rate": 0.01,
+    "momentum": 0.9,
+    "weight_decay": 0.0,
+    "dropout": 0.2,
+    "model": "DermMNISTCNN",
+    "model_params": 423000,
+    "normalisation": "GroupNorm",
+    "optimizer": "SGD with momentum",
+    "device": "NVIDIA A100-SXM4-80GB",
+    "framework": "Flower 1.x simulation"
+  },
+  "algorithms": {
+    "fedavg": {"mu": 0.0, "description": "Baseline federated averaging (McMahan 2017)"},
+    "fedprox": {"mu": 0.01, "description": "Proximal-term federated averaging (Li 2020)"}
+  },
+  "seeds": [42, 123, 456, 789, 999, 2024, 31337, 161803, 271828, 8675309],
+  "n_paired_seeds": 10,
+  "headline": {
+    "primary_metric": "test_macro_f1",
+    "fedavg_mean": 0.4814,
+    "fedavg_std":  0.0254,
+    "fedprox_mean": 0.5081,
+    "fedprox_std":  0.0140,
+    "mean_delta": 0.0267,
+    "std_delta":  0.0349,
+    "median_delta": 0.0200,
+    "min_delta": -0.0200,
+    "max_delta":  0.0953,
+    "fedprox_win_rate": "9/10",
+    "fedprox_wins": 9,
+    "fedprox_losses": 1,
+    "ties": 0
+  },
+  "statistical_tests": {
+    "primary": {
+      "test": "Wilcoxon signed-rank (paired)",
+      "alternative": "two-sided",
+      "p_value": 0.0195,
+      "alpha": 0.05,
+      "significant": true,
+      "bonferroni_corrected_alpha_3metrics": 0.0167,
+      "still_significant_after_bonferroni": false,
+      "note": "p=0.0195 narrowly fails Bonferroni at alpha/3=0.0167; one-sided test is comfortably significant"
+    },
+    "secondary": {
+      "test": "Wilcoxon signed-rank (paired)",
+      "alternative": "greater (H1: FedProx > FedAvg)",
+      "p_value": 0.0098,
+      "significant_at_05": true,
+      "significant_at_01": true
+    },
+    "effect_size": {
+      "metric": "rank-biserial correlation",
+      "value": 0.818,
+      "magnitude": "very large",
+      "interpretation": "FedProx wins almost universally (9/10 paired seeds); rank-sum of positive differences dominates"
+    }
+  },
+  "design_criteria_check": {
+    "max_allowed_per_class_regression": 0.05,
+    "largest_observed_regression_mean": -0.011844,
+    "largest_regression_class": "vascular_lesions",
+    "criterion_satisfied": true,
+    "note": "No mean per-class F1 regresses by more than 0.012 — well within the pre-registered 0.05 tolerance."
+  },
+  "per_class_summary": {
+    "significant_improvements_at_05": ["actinic_keratoses", "melanoma"],
+    "clinically_critical_classes": {
+      "melanoma": {
+        "delta_mean_f1": 0.114078,
+        "wilcoxon_p": 0.005859,
+        "interpretation": "Largest absolute improvement; clinically the most important class (life-threatening if missed)."
+      }
+    },
+    "majority_class_stability": {
+      "melanocytic_nevi": {
+        "fedavg_f1": 0.883688,
+        "fedprox_f1": 0.885617,
+        "delta": 0.001928,
+        "interpretation": "Majority class (67% prevalence) is stable under both algorithms — no degradation from FedProx regularisation."
+      }
+    }
+  },
+  "variance_comparison": {
+    "fedavg_macroF1_std": 0.0254,
+    "fedprox_macroF1_std": 0.0140,
+    "ratio": 0.551,
+    "interpretation": "FedProx exhibits ~45% lower across-seed variance than FedAvg, suggesting more stable convergence."
+  }
+}
