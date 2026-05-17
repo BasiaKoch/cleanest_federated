@@ -1,0 +1,505 @@
+%==============================================================================
+% Drop-in Overleaf-ready LaTeX file
+% Copy this entire file into Overleaf as a new .tex document, then upload
+%   - figures/08_curves_main.png
+%   - figures/09_curves_per_class.png
+% to the same Overleaf project (or update the \includegraphics paths below).
+%
+% Compiles standalone with pdflatex. No external .bib needed — references
+% are embedded as a thebibliography block.
+%==============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% --- APA-style author-year citation macros (minimal, no apacite required) ---
+% Avoids redefining the built-in \cite and works without external .bib files.
+\providecommand{\citep}[1]{(#1)}
+\providecommand{\citet}[1]{#1}
+\providecommand{\citealt}[1]{#1}
+
+\title{Federated Averaging vs.\ Proximal Federated Optimization on
+DermaMNIST: A Paired-Seed Empirical Comparison Under a
+Pairing-Constrained Non-IID Partition}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+%==============================================================================
+\section{Experimental Setting}
+%==============================================================================
+
+\subsection{Dataset}
+We use DermaMNIST \citep{Yang et al., 2023}, the dermatology subset of the
+MedMNIST~v2 benchmark, derived from the HAM10000 collection of
+dermatoscopic images \citep{Tschandl et al., 2018}. DermaMNIST contains 10{,}015
+dermoscopic images of skin lesions across seven diagnostic categories,
+split into 7{,}007 training, 1{,}003 validation, and 2{,}005 test samples in
+the canonical MedMNIST split. Images are loaded from the official
+\texttt{dermamnist\_64.npz} archive at 64$\times$64 resolution and resized
+to 28$\times$28 to match the MedMNIST~v1 baseline. The class distribution
+is severely imbalanced, with a 58:1 ratio between the most prevalent
+(\textit{melanocytic nevi}, 67.05\%) and least prevalent
+(\textit{dermatofibroma}, 1.15\%) classes. This imbalance is preserved without
+re-sampling so that any reported gain reflects realistic clinical priors.
+
+\subsection{Model Architecture}
+The classifier is a four-block convolutional neural network
+(\texttt{DermMNISTCNN}, $\sim$423K parameters) with feature widths
+$32\to 64\to 128\to 256$, each block consisting of two 3$\times$3
+convolutions, GroupNorm, ReLU, and max-pooling, followed by global
+average pooling and a 256\,$\to$\,128\,$\to$\,7 fully connected head with
+dropout 0.2. GroupNorm \citep{Wu \& He, 2018} is used in place of
+BatchNorm because per-client batch statistics encode local distribution
+information that cannot be safely averaged across heterogeneous clients
+\citep{Hsieh et al., 2020}.
+
+\subsection{Federated Learning Setup}
+Training is performed with the Flower 1.x simulation framework
+\citep{Beutel et al., 2020}. The server orchestrates a fixed pool of seven
+clients with full participation per round (fraction-fit $C = 1.0$). At
+each of $R = 150$ communication rounds, the server broadcasts the global
+parameter vector $w^t$ to all clients; each client performs $E = 20$
+local epochs of SGD on its private partition; the server then aggregates
+the updated parameters with the size-weighted FedAvg rule,
+$w^{t+1} = \sum_i (n_i / \sum_j n_j)\, w_i^{t+1}$. After aggregation, the
+global model is evaluated on the validation set. The test set is
+evaluated once per run at the round of best validation macro-F1, in
+accordance with the standard early-stopping protocol \citep{Goodfellow et al., 2016}.
+
+Hyperparameters are listed in Table~\ref{tab:hyperparams}.
+
+\begin{table}[h]
+\centering
+\caption{Fixed hyperparameters across all runs.}
+\label{tab:hyperparams}
+\small
+\begin{tabular}{lll}
+\toprule
+Parameter & Value & Justification \\
+\midrule
+Clients ($K$)               & 7         & Matches partition design (Table~\ref{tab:partition}) \\
+Fraction-fit ($C$)          & 1.0       & Full participation isolates drift effect \\
+Rounds ($R$)                & 150       & Sufficient for FedAvg convergence \\
+Local epochs ($E$)          & 20        & High-$E$ regime where drift dominates \\
+Optimizer                   & SGD + momentum & \citet{McMahan et al., 2017} \\
+Learning rate               & 0.01      & Standard for CNNs at this scale \\
+Momentum                    & 0.9       & Standard \\
+Weight decay                & 0.0       & Avoids conflation with proximal term \\
+Batch size                  & 32        & Capped per-client to $\min(32, \text{client size})$ \\
+Normalisation               & GroupNorm & FL-safe \citep{Hsieh et al., 2020} \\
+Dropout                     & 0.2       & Mild regularisation \\
+Hardware                    & NVIDIA A100-SXM4-80GB & CSD3 Ampere partition \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Algorithms}
+\textbf{FedAvg} \citep{McMahan et al., 2017} minimises the local
+cross-entropy objective for $E$ epochs per round and aggregates the
+resulting client parameters by the size-weighted mean above.
+\textbf{FedProx} \citep{Li et al., 2020} augments the local objective with
+a proximal regulariser anchoring the local model to the round-start
+global parameters:
+\[
+\mathcal{L}_i^{\text{FedProx}}(w) = \mathcal{L}_i^{\text{FedAvg}}(w)
++ \tfrac{\mu}{2}\, \lVert w - w^t \rVert_2^2.
+\]
+When $\mu = 0$, FedProx reduces to FedAvg. We use $\mu = 0.01$, selected
+on a three-seed pilot sweep over $\{0.001, 0.01, 0.1\}$. The proximal
+anchor $w^t$ is snapshotted at the start of each round and detached from
+the autograd graph; the term is summed over all trainable parameters.
+
+\subsection{Partition: \texttt{balanced\_paired\_7\_clients}}
+We use a custom non-IID partition designed to satisfy three desiderata:
+(i) the global class distribution is heterogeneous across clients to
+challenge FedAvg's gradient-averaging assumption; (ii) no client
+dominates aggregation; (iii) no class is held by exactly one client, as
+singleton ownership caused catastrophic per-class regression in pilot
+experiments with an earlier ``specialist'' partition. Composition is
+given in Table~\ref{tab:partition}.
+
+\begin{table}[h]
+\centering
+\caption{The \texttt{balanced\_paired\_7\_clients} non-IID partition.
+Every minority class is held by exactly two clients; the majority class
+(\textit{melanocytic nevi}) is held by all seven clients. Client sizes
+are within a 1.65$\times$ range.}
+\label{tab:partition}
+\small
+\begin{tabular}{cll}
+\toprule
+Client & Composition & Samples \\
+\midrule
+C0 & actinic + basal + nevi              &  964 \\
+C1 & actinic + basal + nevi              &  963 \\
+C2 & benign\_keratosis + dermato + nevi  & 1{,}095 \\
+C3 & benign\_keratosis + dermato + nevi  & 1{,}094 \\
+C4 & melanoma + vascular + nevi          & 1{,}110 \\
+C5 & melanoma + vascular + nevi          & 1{,}108 \\
+C6 & nevi only                           &  673 \\
+\midrule
+\textbf{Total} & & \textbf{7{,}007} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Paired-Seed Protocol}
+The single most important experimental control is paired seeding: for
+each seed $s \in S = \{42,\, 123,\, 456,\, 789,\, 999,\, 2024,\, 31337,\, 161803,\, 271828,\, 8675309\}$,
+FedAvg and FedProx are run with identical random state---identical
+partition, identical model initialisation, identical dataloader RNG.
+Within-seed paired differences therefore reflect only the algorithmic
+difference (presence vs.\ absence of the proximal term), not random
+seed variance. Each of the 20 SLURM jobs (10 seeds $\times$ 2
+algorithms) ran for approximately one to one-and-a-half hours on a
+single A100; total sweep compute was $\sim$25~GPU-hours.
+
+\subsection{Metrics and Statistical Analysis}
+The primary outcome is test macro-F1, the unweighted mean of per-class
+F1 scores. Accuracy is reported as a secondary descriptor but is
+misleading under the severe class imbalance present in DermaMNIST.
+Per-class F1 is reported separately to detect class-specific
+regressions. Validation metrics are recorded after every communication
+round and aggregated across the 10 paired seeds with mean and standard
+error of the mean (SEM); the test set is evaluated once per run at the
+round of best validation macro-F1, producing 20 single-shot test
+evaluations from which all reported test statistics are computed.
+
+The headline test macro-F1 comparison uses the paired Wilcoxon
+signed-rank test \citep{Demsar, 2006}, robust to the non-normality and
+small sample size ($n = 10$) of paired differences. We report the
+two-sided $p$-value as the primary statistic and the rank-biserial
+correlation $r_{rb}$ \citep{Kerby, 2014} as the effect size. Bootstrap
+95\% confidence intervals on the mean paired difference are computed
+from 10{,}000 resamples \citep{Efron \& Tibshirani, 1993}. Per-class
+paired Wilcoxon tests are computed identically on the seven per-class
+test F1 vectors. Macro-F1 is treated as the single primary outcome to
+avoid multiple-comparison inflation; balanced accuracy and accuracy are
+reported descriptively.
+
+%==============================================================================
+\section{Results}
+%==============================================================================
+
+\subsection{Final Test Performance}
+Across the 10 paired seeds, FedProx outperformed FedAvg on the primary
+outcome (Table~\ref{tab:headline}). The two-sided paired Wilcoxon
+signed-rank test on test macro-F1 yielded $p = 0.020$, with a
+rank-biserial effect size of $r_{rb} = +0.818$
+(``very large''; \citealt{Kerby, 2014}); the bootstrap 95\% confidence
+interval on the mean paired difference excludes zero. FedProx
+outperformed FedAvg on 9 of 10 paired seeds. The single losing seed
+(789) yielded $\Delta = -0.020$, small in magnitude and consistent with
+random initialisation variance.
+
+\begin{table}[h]
+\centering
+\caption{Headline paired comparison on the test set ($n = 10$ paired seeds).}
+\label{tab:headline}
+\small
+\begin{tabular}{lccc}
+\toprule
+Statistic & FedAvg & FedProx & $\Delta$ (FedProx $-$ FedAvg) \\
+\midrule
+Mean test macro-F1 ($\pm$ SD)         & $0.481 \pm 0.025$ & $0.508 \pm 0.014$ & $\mathbf{+0.027 \pm 0.035}$ \\
+Median test macro-F1                  & $0.479$           & $0.506$           & $+0.020$ \\
+Min / Max test macro-F1               & $0.441 / 0.522$   & $0.490 / 0.536$   & --- \\
+FedProx wins                          & ---               & ---               & $\mathbf{9 / 10}$ \\
+Paired Wilcoxon $p$ (two-sided)       & ---               & ---               & $\mathbf{0.020}$ \\
+Paired Wilcoxon $p$ (one-sided)       & ---               & ---               & $0.010$ \\
+Rank-biserial $r_{rb}$                & ---               & ---               & $\mathbf{+0.818}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The per-seed paired test results in Table~\ref{tab:per-seed} show that
+the central tendency masks substantial across-seed variability.
+Individual $\Delta$ values range from $-0.020$ (seed 789) to $+0.095$
+(seed 8675309); two seeds yield deltas exceeding the mean by more than
+one standard deviation, both in the positive direction. The
+across-seed standard deviation of FedProx (0.014) is 45\% lower than
+that of FedAvg (0.025), suggesting that FedProx produces more
+reproducible global models under non-IID conditions.
+
+\begin{table}[h]
+\centering
+\caption{Per-seed paired test results (test macro-F1 at the round of best validation macro-F1).}
+\label{tab:per-seed}
+\small
+\begin{tabular}{rcccc}
+\toprule
+Seed & FedAvg & FedProx & $\Delta$ & FedProx wins \\
+\midrule
+42       & 0.4477 & 0.5162 & $+0.0685$ & \checkmark \\
+123      & 0.4966 & 0.4980 & $+0.0014$ & \checkmark \\
+456      & 0.5105 & 0.5109 & $+0.0004$ & \checkmark \\
+789      & 0.5223 & 0.5023 & $-0.0200$ & $\times$ \\
+999      & 0.4768 & 0.5040 & $+0.0272$ & \checkmark \\
+2024     & 0.4702 & 0.5074 & $+0.0372$ & \checkmark \\
+31337    & 0.4825 & 0.5230 & $+0.0404$ & \checkmark \\
+161803   & 0.4770 & 0.4897 & $+0.0127$ & \checkmark \\
+271828   & 0.4898 & 0.4936 & $+0.0038$ & \checkmark \\
+8675309  & 0.4406 & 0.5360 & $+0.0953$ & \checkmark \\
+\midrule
+\textbf{Mean $\pm$ SD} & $\mathbf{0.4814 \pm 0.0254}$ & $\mathbf{0.5081 \pm 0.0140}$ & $\mathbf{+0.0267 \pm 0.0349}$ & $\mathbf{9 / 10}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Per-Class Test Performance}
+The class-wise breakdown (Table~\ref{tab:per-class}) localises the
+macro-F1 advantage to two classes: \textit{melanoma}, with the largest
+mean improvement ($\Delta = +0.114$, $p = 0.006$), and \textit{actinic
+keratoses} ($\Delta = +0.067$, $p = 0.020$). These are also the two
+most-represented minority classes. No class showed a statistically
+significant regression: the largest mean per-class regression was on
+\textit{vascular lesions} ($\Delta = -0.012$, $p = 0.70$), well within
+the pre-registered safety tolerance of $\pm 0.05$. The majority class
+(\textit{melanocytic nevi}, 67\% prevalence) was statistically
+unchanged ($\Delta = +0.002$, $p = 0.38$), confirming that FedProx's
+regularisation did not degrade performance on the dominant class.
+
+\begin{table}[h]
+\centering
+\caption{Per-class test F1 across 10 paired seeds, with paired Wilcoxon $p$-values.
+Bold values are significant at $\alpha = 0.05$ (uncorrected).}
+\label{tab:per-class}
+\small
+\begin{tabular}{lrcccc}
+\toprule
+Class                              & Prev.\ (\%) & FedAvg & FedProx & $\Delta$ & Wilcoxon $p$ \\
+\midrule
+Melanocytic nevi (majority)        & 67.05 & 0.884 & 0.886 & $+0.002$           & $0.375$ \\
+Melanoma                           & 11.11 & 0.187 & 0.301 & $\mathbf{+0.114}$  & $\mathbf{0.006}$ \\
+Benign keratosis-like              & 10.97 & 0.440 & 0.444 & $+0.004$           & $0.695$ \\
+Basal cell carcinoma               &  5.13 & 0.475 & 0.473 & $-0.001$           & $0.846$ \\
+Actinic keratoses                  &  3.27 & 0.404 & 0.471 & $\mathbf{+0.067}$  & $\mathbf{0.020}$ \\
+Vascular lesions                   &  1.41 & 0.698 & 0.686 & $-0.012$           & $0.695$ \\
+Dermatofibroma                     &  1.15 & 0.283 & 0.296 & $+0.013$           & $0.922$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Convergence Behaviour}
+Figure~\ref{fig:curves-main} presents the per-round validation
+trajectories aggregated as mean $\pm$ SEM across the 10 paired seeds.
+At round~1, both algorithms are statistically indistinguishable (mean
+val macro-F1 = 0.115 for both), confirming that the paired-seed
+protocol successfully equalises initial conditions. FedProx pulls
+ahead within five rounds and maintains a consistent advantage
+throughout training: the gap is largest near round~50 ($\Delta =
++0.094$ on validation macro-F1) and narrows to $+0.039$ by round~150
+as FedAvg slowly closes the early-training difference. FedProx reaches
+val macro-F1 = 0.45 in 13 rounds on average, versus 39 rounds for
+FedAvg, representing an approximately threefold communication-efficiency
+gain. Validation loss reaches its minimum near round~30 for both
+algorithms and rises thereafter, indicating overfitting under the
+chosen $E = 20$ local-epoch regime; FedProx's validation loss
+nonetheless remains 0.10--0.18 below FedAvg's throughout the second
+half of training. The training-loss panel (log scale) provides
+mechanistic evidence that the proximal term is actively constraining
+local updates: FedAvg's training loss decays to approximately 0.002 by
+round~150, whereas FedProx's training loss is held above 0.004---a
+2.2$\times$ gap that persists because the proximal regulariser
+$\frac{\mu}{2}\lVert w - w^t \rVert_2^2$ contributes a strictly
+positive penalty whenever the local model diverges from the global
+anchor. Validation balanced accuracy (panel~D) closely tracks
+validation macro-F1, confirming that the result is not an artefact of
+the macro averaging.
+
+\begin{figure}[h]
+\centering
+% Update this path to wherever you place the figure in Overleaf
+\includegraphics[width=\textwidth]{08_curves_main.png}
+\caption{Convergence curves across 10 paired seeds. Validation metrics
+versus communication round, with mean (solid line) and $\pm$SEM
+(shaded band) computed across 10 paired seeds for each algorithm.
+\textbf{(A)} Validation macro-F1: FedProx maintains a consistent
+advantage over FedAvg from round $\sim$5 onwards. \textbf{(B)}
+Validation loss: both algorithms exhibit overfitting after round
+$\sim$30. \textbf{(C)} Training loss (log scale): FedAvg's training
+loss collapses to a lower asymptote, evidence that the proximal term
+actively prevents memorisation. \textbf{(D)} Validation balanced
+accuracy: tracks macro-F1 closely, confirming the result is not a
+metric artefact.}
+\label{fig:curves-main}
+\end{figure}
+
+\subsection{Per-Class Convergence}
+Figure~\ref{fig:curves-per-class} shows the per-class validation F1
+trajectories. The FedProx advantage is concentrated on minority
+classes. The majority class (\textit{melanocytic nevi}, panel F) is
+learned to F1 $\sim$0.88 by both algorithms within ten rounds, with no
+visible separation thereafter---an expected consequence of the
+partition design, in which every client holds nevi samples so no
+inter-client drift exists on these parameters and the proximal anchor
+has no effect to apply. By contrast, every class held by only two of
+seven clients shows a sustained FedProx advantage. The largest
+mid-training per-class gap occurs at round~50 on \textit{melanoma}
+(panel~E), where FedAvg has barely learned the class
+(F1~$\approx 0.06$) while FedProx has reached F1~$\approx 0.30$. This
+single observation accounts for a substantial portion of the
+mid-training macro-F1 gap. Per-class trajectories on minority classes
+also exhibit wider $\pm$SEM bands than the majority class, reflecting
+the higher variance of F1 estimates computed over the small number of
+validation samples in those classes.
+
+\begin{figure}[h]
+\centering
+% Update this path to wherever you place the figure in Overleaf
+\includegraphics[width=\textwidth]{09_curves_per_class.png}
+\caption{Per-class validation F1 over rounds, mean $\pm$SEM across 10
+paired seeds for each of the seven DermaMNIST classes; class names
+annotated with training-set prevalence. FedProx (orange) shows the
+largest advantage on \textit{melanoma} (panel E), consistent with the
+aggregated per-class statistics in Table~\ref{tab:per-class}. The
+majority class \textit{mel\_nevi} (panel F) is learned rapidly and
+stably by both algorithms with no visible gap, consistent with the
+partition design that places nevi in every client.}
+\label{fig:curves-per-class}
+\end{figure}
+
+\subsection{Summary of Numerical Observations from the Curves}
+Table~\ref{tab:curve-stats} summarises the principal numerical
+observations extractable from Figures~\ref{fig:curves-main} and
+\ref{fig:curves-per-class}.
+
+\begin{table}[h]
+\centering
+\caption{Numerical observations from the convergence curves (mean across 10 paired seeds).}
+\label{tab:curve-stats}
+\small
+\begin{tabular}{lcc}
+\toprule
+Observation & FedAvg & FedProx \\
+\midrule
+Val macro-F1 at round 1                 & 0.115 & 0.115 \\
+Val macro-F1 at round 50                & 0.404 & 0.498 \\
+Val macro-F1 at round 150               & 0.473 & 0.511 \\
+Peak val macro-F1 (mean curve)          & 0.475 & 0.526 \\
+Round of mean peak val macro-F1         & 148   & 146 \\
+Mean rounds to reach val macro-F1 $\geq 0.45$ & 38.8 & 13.1 \\
+Mean rounds to reach val macro-F1 $\geq 0.48$ & 73.3 & 30.7 \\
+Mean train loss at round 150            & 0.0020 & 0.0045 \\
+Val loss at round 30 (overfitting onset)& 1.45  & 1.37 \\
+Across-seed SD of val macro-F1 at round 10 & 0.071 & 0.028 \\
+\midrule
+Largest mid-training $\Delta$ (round 50, val macro-F1)         & \multicolumn{2}{c}{$+0.094$} \\
+Val macro-F1 AUC over 150 rounds (normalised)                  & 0.408 & 0.479 \\
+Largest mid-training per-class $\Delta$ (round 50, melanoma)    & \multicolumn{2}{c}{$+0.239$} \\
+Mel\_nevi $\Delta$ at every measured round                      & \multicolumn{2}{c}{$\leq +0.014$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{Discussion}
+%==============================================================================
+
+The convergence curves in Figures~\ref{fig:curves-main} and
+\ref{fig:curves-per-class} reveal a coherent mechanistic picture
+consistent with the theoretical motivation for FedProx.
+
+First, the training-loss panel of Figure~\ref{fig:curves-main} provides
+direct evidence that the proximal regulariser is binding throughout
+training. By round~150, FedAvg's mean training loss has decayed to
+approximately~0.002---consistent with effective memorisation of each
+client's local data---while FedProx's training loss is held more than
+two-fold higher. This is not a side-effect of $\mu = 0.01$; it is the
+defining property of the regularised objective. Under client
+heterogeneity, when each client minimises an unregularised local
+objective for $E = 20$ epochs, the resulting parameter vector drifts
+toward the local minimum of that client's data slice. The FedAvg
+size-weighted average of these drifted vectors is biased toward
+whichever clients have the largest local data and the most aggressive
+drift. FedProx's proximal anchor caps each client's drift magnitude,
+preserving minority-class signals during aggregation.
+
+Second, the per-class trajectories in Figure~\ref{fig:curves-per-class}
+show that this drift-correction mechanism engages selectively. The
+majority class \textit{melanocytic nevi}, held by every client, shows
+no inter-algorithm difference at any round: when no client diverges
+from the others on a class, the proximal term has nothing to constrain,
+and the algorithms behave identically. By contrast, every minority
+class---held by exactly two of seven clients in our partition---shows
+a sustained FedProx advantage, with the largest mid-training gap on
+\textit{melanoma}. This per-class asymmetry constitutes evidence that
+FedProx's gain is not a generic, partition-blind perturbation but is
+targeted at the classes where drift correction is needed.
+
+Third, the mid-training communication-efficiency gain (3$\times$ fewer
+rounds to reach val macro-F1 = 0.45) is consistent with FedProx's
+theoretical convergence guarantee \citep{Li et al., 2020}. The
+near-perfect identity of the two algorithms at round~1 confirms that
+the paired-seed protocol has successfully equalised initial conditions,
+so all subsequent divergence is attributable to the algorithmic
+difference.
+
+%==============================================================================
+\section*{References}
+%==============================================================================
+\begin{description}\setlength{\itemsep}{2pt}
+\item Beutel, D.~J., Topal, T., Mathur, A., Qiu, X., Parcollet, T.,
+de Gusm\~ao, P.~P.~B., \& Lane, N.~D. (2020). Flower: A friendly
+federated learning research framework. \textit{arXiv preprint}
+arXiv:2007.14390.
+
+\item Dem\v{s}ar, J. (2006). Statistical comparisons of classifiers
+over multiple data sets. \textit{Journal of Machine Learning Research},
+\textit{7}, 1--30.
+
+\item Efron, B., \& Tibshirani, R.~J. (1993). \textit{An introduction
+to the bootstrap}. Chapman \& Hall/CRC.
+
+\item Goodfellow, I., Bengio, Y., \& Courville, A. (2016).
+\textit{Deep learning}. MIT Press.
+
+\item Hsieh, K., Phanishayee, A., Mutlu, O., \& Gibbons, P.~B. (2020).
+The non-IID data quagmire of decentralized machine learning. In
+\textit{Proceedings of the 37th International Conference on Machine
+Learning} (pp.\ 4387--4398).
+
+\item Kerby, D.~S. (2014). The simple difference formula: An approach
+to teaching nonparametric correlation. \textit{Comprehensive
+Psychology}, \textit{3}, 11.IT.3.1.
+
+\item Li, T., Sahu, A.~K., Zaheer, M., Sanjabi, M., Talwalkar, A., \&
+Smith, V. (2020). Federated optimization in heterogeneous networks. In
+\textit{Proceedings of Machine Learning and Systems}, \textit{2},
+429--450.
+
+\item McMahan, B., Moore, E., Ramage, D., Hampson, S., \& y~Arcas,
+B.~A. (2017). Communication-efficient learning of deep networks from
+decentralized data. In \textit{Proceedings of the 20th International
+Conference on Artificial Intelligence and Statistics} (pp.\ 1273--1282).
+
+\item Tschandl, P., Rosendahl, C., \& Kittler, H. (2018). The HAM10000
+dataset, a large collection of multi-source dermatoscopic images of
+common pigmented skin lesions. \textit{Scientific Data}, \textit{5},
+180161.
+
+\item Wu, Y., \& He, K. (2018). Group normalization. In
+\textit{Proceedings of the European Conference on Computer Vision}
+(pp.\ 3--19).
+
+\item Yang, J., Shi, R., Wei, D., Liu, Z., Zhao, L., Ke, B., Pfister,
+H., \& Ni, B. (2023). MedMNIST~v2---A large-scale lightweight benchmark
+for 2D and 3D biomedical image classification. \textit{Scientific
+Data}, \textit{10}, 41.
+\end{description}
+
+\end{document}

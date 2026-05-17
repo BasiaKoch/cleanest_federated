@@ -1,0 +1,93 @@
+{
+  "description": "Per-specialty-pair test F1 from the global model. Each row aggregates over the classes a client pair (or generalist) was responsible for in the balanced_paired_7_clients partition.",
+  "n_paired_seeds": 10,
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    999,
+    2024,
+    31337,
+    161803,
+    271828,
+    8675309
+  ],
+  "specialties": {
+    "pair0 (C0+C1)": {
+      "specialty": "pair0 (C0+C1)",
+      "classes": "actinic, basal",
+      "n_classes": 2,
+      "fedavg_mean_f1": 0.43931667948443165,
+      "fedavg_sd_f1": 0.0706347274217088,
+      "fedprox_mean_f1": 0.4722785477929916,
+      "fedprox_sd_f1": 0.023977607978098954,
+      "delta_mean": 0.032961868308559954,
+      "delta_sd": 0.06353665269158491,
+      "fedprox_wins": 7,
+      "n_pairs": 10,
+      "wilcoxon_p": 0.130859375,
+      "significant_05": false
+    },
+    "pair1 (C2+C3)": {
+      "specialty": "pair1 (C2+C3)",
+      "classes": "benign_kerat, dermato",
+      "n_classes": 2,
+      "fedavg_mean_f1": 0.3616867210423379,
+      "fedavg_sd_f1": 0.08639159144616854,
+      "fedprox_mean_f1": 0.37006918699000435,
+      "fedprox_sd_f1": 0.04088033344109515,
+      "delta_mean": 0.008382465947666382,
+      "delta_sd": 0.07502769073579173,
+      "fedprox_wins": 4,
+      "n_pairs": 10,
+      "wilcoxon_p": 0.921875,
+      "significant_05": false
+    },
+    "pair2 (C4+C5)": {
+      "specialty": "pair2 (C4+C5)",
+      "classes": "melanoma, vascular",
+      "n_classes": 2,
+      "fedavg_mean_f1": 0.4420956474400084,
+      "fedavg_sd_f1": 0.029462194894480327,
+      "fedprox_mean_f1": 0.49321248363053866,
+      "fedprox_sd_f1": 0.025876321632617973,
+      "delta_mean": 0.05111683619053029,
+      "delta_sd": 0.03823006951383769,
+      "fedprox_wins": 9,
+      "n_pairs": 10,
+      "wilcoxon_p": 0.009765625,
+      "significant_05": true
+    },
+    "generalist (C6)": {
+      "specialty": "generalist (C6)",
+      "classes": "mel_nevi",
+      "n_classes": 1,
+      "fedavg_mean_f1": 0.8836884927498687,
+      "fedavg_sd_f1": 0.0032988236900525587,
+      "fedprox_mean_f1": 0.8856166106303538,
+      "fedprox_sd_f1": 0.004074194603520488,
+      "delta_mean": 0.0019281178804850141,
+      "delta_sd": 0.00589227936086871,
+      "fedprox_wins": 7,
+      "n_pairs": 10,
+      "wilcoxon_p": 0.375,
+      "significant_05": false
+    },
+    "all minorities": {
+      "specialty": "all minorities",
+      "classes": "all except mel_nevi",
+      "n_classes": 6,
+      "fedavg_mean_f1": 0.41436634932225935,
+      "fedavg_sd_f1": 0.029488081193553235,
+      "fedprox_mean_f1": 0.44518673947117826,
+      "fedprox_sd_f1": 0.01647094495308513,
+      "delta_mean": 0.03082039014891888,
+      "delta_sd": 0.04089280350557531,
+      "fedprox_wins": 8,
+      "n_pairs": 10,
+      "wilcoxon_p": 0.02734375,
+      "significant_05": true
+    }
+  }
+}

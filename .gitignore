@@ -1,0 +1,37 @@
+# --- Reference materials (NEVER push) ---
+# Marija's thesis is used as inspiration only — must not be committed.
+Marija_Thesis_Federated_Learning_and_Class_Imbalances.pdf
+Marija_Thesis*.pdf
+**/Marija_Thesis*.pdf
+
+# --- macOS metadata ---
+.DS_Store
+**/.DS_Store
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# --- Large data archives ---
+# DermaMNIST source data is downloaded separately, not versioned
+dermamnist*.npz
+*.npz.tmp
+
+# --- Job logs ---
+mnist_dermnist/logs/*.out
+mnist_dermnist/logs/*.err
+
+# --- Local editor scratch ---
+*.swp
+*.swo
+.vscode/
+.idea/

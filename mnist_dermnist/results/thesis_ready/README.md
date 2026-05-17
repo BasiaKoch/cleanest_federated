@@ -35,12 +35,14 @@ thesis_ready/
 │   ├── 05_figure_captions.md              ← captions for each figure
 │   ├── 06_tables.md                       ← LaTeX + Markdown tables
 │   ├── 07_bibliography.bib                ← BibTeX entries for every citation
-│   └── 08_curves_analysis.md              ← curve-by-curve analysis + drop-in prose
+│   ├── 08_curves_analysis.md              ← curve-by-curve analysis + drop-in prose
+│   └── 09_overleaf_ready.tex              ← single drop-in .tex file (Figs 8 & 9, APA-style)
 ├── conclusions/                       ← analysis findings, claim-by-claim
 │   ├── thesis_claims_summary.md           ← bullet-point list of every claim + evidence
 │   ├── numerical_differences_from_curves.md  ← every numerical Δ visible in the curves
 │   ├── metric_relationship_macro_vs_per_class.md  ← how Fig 8 and Fig 9 relate
-│   └── partition_mechanism_mel_nevi.md    ← why mel_nevi shows no FedProx advantage
+│   ├── partition_mechanism_mel_nevi.md    ← why mel_nevi shows no FedProx advantage
+│   └── per_client_and_best_vs_last.md     ← per-specialty + best-vs-last analysis
 └── scripts/
     └── generate_all_figures.py            ← reproduces all figures from /data
 ```

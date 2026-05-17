@@ -25,6 +25,8 @@ from mnist_dermnist.data.load import load_dermmnist
 from mnist_dermnist.data.partition import (
     balanced_paired_7_clients,
     balanced_specialist_7_clients,
+    dirichlet_7_clients,
+    iid_7_clients,
     medical_skew_7_clients,
     quantity_skew_improved,
     simple_pathological_3_clients,
@@ -33,12 +35,23 @@ from mnist_dermnist.fl.server_loop import FLConfig, run_fl, save_run_outputs
 from mnist_dermnist.models import DermMNISTCNN
 
 
+def _dir_a01(labels, seed=42):
+    return dirichlet_7_clients(labels, seed=seed, alpha=0.1)
+
+
+def _dir_a05(labels, seed=42):
+    return dirichlet_7_clients(labels, seed=seed, alpha=0.5)
+
+
 PARTITIONERS = {
     "medical_skew_7_clients": medical_skew_7_clients,
     "simple_pathological_3_clients": simple_pathological_3_clients,
     "balanced_specialist_7_clients": balanced_specialist_7_clients,
     "balanced_paired_7_clients": balanced_paired_7_clients,
     "quantity_skew_improved": quantity_skew_improved,
+    "iid_7_clients": iid_7_clients,
+    "dirichlet_alpha01_7_clients": _dir_a01,
+    "dirichlet_alpha05_7_clients": _dir_a05,
 }
 
 
