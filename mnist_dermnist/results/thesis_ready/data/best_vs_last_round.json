@@ -1,0 +1,35 @@
+{
+  "description": "Validation macro-F1 at peak round vs final round, comparing overfitting dynamics between FedAvg and FedProx.",
+  "n_seeds_per_algo": 10,
+  "summary": {
+    "fedavg": {
+      "n": 10,
+      "mean_peak_round": 126.8,
+      "median_peak_round": 133.5,
+      "mean_peak_val_f1": 0.5188206077998554,
+      "sd_peak_val_f1": 0.017399890005142225,
+      "mean_final_val_f1": 0.47288231100696754,
+      "sd_final_val_f1": 0.03350035358209024,
+      "mean_drop": 0.045938296792887835,
+      "sd_drop": 0.035689838604538865,
+      "mean_drop_pct": 0.08787762783425827
+    },
+    "fedprox": {
+      "n": 10,
+      "mean_peak_round": 118.2,
+      "median_peak_round": 121.5,
+      "mean_peak_val_f1": 0.5539542186415454,
+      "sd_peak_val_f1": 0.027087808225275137,
+      "mean_final_val_f1": 0.5114226966734856,
+      "sd_final_val_f1": 0.041520869891184566,
+      "mean_drop": 0.04253152196805969,
+      "sd_drop": 0.03385566482471981,
+      "mean_drop_pct": 0.07663023869437229
+    },
+    "paired_drop_test": {
+      "wilcoxon_p_two_sided": 0.921875,
+      "mean_paired_diff": -0.0034067748248281403,
+      "interpretation": "Negative mean = FedProx drops less than FedAvg (more stable post-peak)"
+    }
+  }
+}

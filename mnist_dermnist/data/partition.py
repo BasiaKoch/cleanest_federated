@@ -489,6 +489,73 @@ def quantity_skew_improved(
     return clients, df
 
 
+def iid_7_clients(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Uniform random sharding into 7 clients (IID falsification control).
+
+    Each client gets ~1/7 of the data drawn uniformly at random, so the
+    per-client class distribution matches the global prior in expectation.
+    Used as the IID control: FedProx should not significantly outperform
+    FedAvg under this partition (no client drift to constrain).
+    """
+    labels = np.asarray(labels)
+    _assert_labels_valid(labels)
+    n = len(labels)
+    rng = np.random.default_rng(seed)
+    perm = rng.permutation(n)
+    clients = [list(map(int, c)) for c in np.array_split(perm, 7)]
+    _validate(clients, labels)
+    df = _build_long_form(clients, labels)
+    return clients, df
+
+
+def dirichlet_7_clients(
+    labels: Sequence[int],
+    seed: int = 42,
+    alpha: float = 0.1,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Dirichlet-alpha partition (Hsu et al., 2019), 7 clients.
+
+    For each class c, draw a 7-dim simplex p_c ~ Dir(alpha), then
+    distribute class-c samples to clients according to p_c. Lower alpha
+    -> more heterogeneous; alpha -> infty recovers IID. We default to
+    alpha=0.1 (severely non-IID, standard in FL benchmarks).
+
+    A re-draw safeguard avoids producing any empty client.
+    """
+    labels = np.asarray(labels)
+    _assert_labels_valid(labels)
+    rng = np.random.default_rng(seed)
+    n_clients = 7
+
+    for _attempt in range(50):
+        clients: List[List[int]] = [[] for _ in range(n_clients)]
+        for c in range(NUM_CLASSES):
+            class_idx = np.where(labels == c)[0]
+            rng.shuffle(class_idx)
+            p = rng.dirichlet([alpha] * n_clients)
+            # Convert proportions to integer counts that sum to len(class_idx)
+            counts = np.floor(p * len(class_idx)).astype(int)
+            counts[0] += len(class_idx) - counts.sum()
+            cursor = 0
+            for k in range(n_clients):
+                take = int(counts[k])
+                if take > 0:
+                    clients[k].extend(map(int, class_idx[cursor:cursor + take]))
+                    cursor += take
+        if all(len(c) > 0 for c in clients):
+            break
+    else:
+        raise RuntimeError("dirichlet_7_clients: produced empty client after 50 attempts; "
+                           "consider a larger alpha")
+
+    _validate(clients, labels)
+    df = _build_long_form(clients, labels)
+    return clients, df
+
+
 # ----------------------------------------------------------------------------
 # Validation, table, IO
 # ----------------------------------------------------------------------------
