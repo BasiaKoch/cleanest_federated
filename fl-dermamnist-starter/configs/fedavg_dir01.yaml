@@ -1,3 +1,0 @@
-partition:
-  strategy: dirichlet
-  alpha: 0.1

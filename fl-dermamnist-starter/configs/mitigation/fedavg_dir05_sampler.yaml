@@ -1,5 +1,0 @@
-augmentation:
-  use_weighted_sampler: true
-partition:
-  strategy: dirichlet
-  alpha: 0.5

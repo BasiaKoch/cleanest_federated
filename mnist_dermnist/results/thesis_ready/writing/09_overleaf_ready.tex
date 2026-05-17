@@ -125,10 +125,14 @@ global parameters:
 \mathcal{L}_i^{\text{FedProx}}(w) = \mathcal{L}_i^{\text{FedAvg}}(w)
 + \tfrac{\mu}{2}\, \lVert w - w^t \rVert_2^2.
 \]
-When $\mu = 0$, FedProx reduces to FedAvg. We use $\mu = 0.01$, selected
-on a three-seed pilot sweep over $\{0.001, 0.01, 0.1\}$. The proximal
-anchor $w^t$ is snapshotted at the start of each round and detached from
-the autograd graph; the term is summed over all trainable parameters.
+When $\mu = 0$, FedProx reduces to FedAvg. We use $\mu = 0.01$, selected on
+a held-out three-seed pilot sweep over $\{0.001, 0.01, 0.1\}$ on a different,
+discarded partition design; $\mu$ was \emph{not} tuned on the test set of
+the final 10-seed sweep nor on the \texttt{balanced\_paired\_7\_clients}
+partition reported here. This protects the headline test comparison from
+hyperparameter selection bias. The proximal anchor $w^t$ is snapshotted at
+the start of each round and detached from the autograd graph; the term is
+summed over all trainable parameters.
 
 \subsection{Partition: \texttt{balanced\_paired\_7\_clients}}
 We use a custom non-IID partition designed to satisfy three desiderata:
@@ -206,12 +210,29 @@ reported descriptively.
 Across the 10 paired seeds, FedProx outperformed FedAvg on the primary
 outcome (Table~\ref{tab:headline}). The two-sided paired Wilcoxon
 signed-rank test on test macro-F1 yielded $p = 0.020$, with a
-rank-biserial effect size of $r_{rb} = +0.818$
-(``very large''; \citealt{Kerby, 2014}); the bootstrap 95\% confidence
-interval on the mean paired difference excludes zero. FedProx
-outperformed FedAvg on 9 of 10 paired seeds. The single losing seed
-(789) yielded $\Delta = -0.020$, small in magnitude and consistent with
-random initialisation variance.
+rank-biserial effect size of $r_{rb} = +0.818$ (``very large'';
+\citealt{Kerby, 2014}). FedProx outperformed FedAvg on 9 of 10 paired
+seeds; an independent two-sided sign test on this proportion yields
+$p = 0.021$, corroborating the Wilcoxon result on direction alone. The
+Hodges-Lehmann robust estimate of the paired difference is $+0.0221$,
+slightly below the arithmetic mean $+0.0267$, indicating that the mean
+is influenced by two large positive seeds. The per-seed paired
+differences range from $-0.020$ (seed 789) to $+0.095$ (seed 8675309),
+with the mean partly driven by seeds 42 ($+0.069$) and 8675309
+($+0.095$); two of the nine positive seeds yield near-zero
+improvements ($+0.0014$ and $+0.0004$). The result is therefore best
+described as: FedProx improves test macro-F1 in 9 of 10 paired seeds,
+with substantial across-seed variability in the magnitude of the
+improvement.
+
+To verify that no single seed drives the headline result, we conducted a
+leave-one-seed-out (LOSO) re-analysis: removing each seed in turn and
+recomputing the paired Wilcoxon on the remaining nine. The result
+remained significant at $\alpha = 0.05$ in all 10 LOSO subsamples
+($p$ ranged from 0.004 to 0.039), including the case where the
+largest positive seed (8675309, $\Delta = +0.095$) is removed. The
+headline conclusion is therefore robust to the influence of any single
+seed.
 
 \begin{table}[h]
 \centering
@@ -225,10 +246,12 @@ Statistic & FedAvg & FedProx & $\Delta$ (FedProx $-$ FedAvg) \\
 Mean test macro-F1 ($\pm$ SD)         & $0.481 \pm 0.025$ & $0.508 \pm 0.014$ & $\mathbf{+0.027 \pm 0.035}$ \\
 Median test macro-F1                  & $0.479$           & $0.506$           & $+0.020$ \\
 Min / Max test macro-F1               & $0.441 / 0.522$   & $0.490 / 0.536$   & --- \\
-FedProx wins                          & ---               & ---               & $\mathbf{9 / 10}$ \\
+Hodges-Lehmann robust estimate        & ---               & ---               & $+0.0221$ \\
+FedProx win rate                      & ---               & ---               & $\mathbf{9 / 10}$ \\
 Paired Wilcoxon $p$ (two-sided)       & ---               & ---               & $\mathbf{0.020}$ \\
-Paired Wilcoxon $p$ (one-sided)       & ---               & ---               & $0.010$ \\
+Sign test $p$ (two-sided, direction only) & ---           & ---               & $0.021$ \\
 Rank-biserial $r_{rb}$                & ---               & ---               & $\mathbf{+0.818}$ \\
+LOSO Wilcoxon: subsamples sig.\ at $\alpha=0.05$ & ---    & ---               & $\mathbf{10/10}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -268,35 +291,51 @@ Seed & FedAvg & FedProx & $\Delta$ & FedProx wins \\
 \end{table}
 
 \subsection{Per-Class Test Performance}
-The class-wise breakdown (Table~\ref{tab:per-class}) localises the
-macro-F1 advantage to two classes: \textit{melanoma}, with the largest
-mean improvement ($\Delta = +0.114$, $p = 0.006$), and \textit{actinic
-keratoses} ($\Delta = +0.067$, $p = 0.020$). These are also the two
-most-represented minority classes. No class showed a statistically
-significant regression: the largest mean per-class regression was on
-\textit{vascular lesions} ($\Delta = -0.012$, $p = 0.70$), well within
-the pre-registered safety tolerance of $\pm 0.05$. The majority class
-(\textit{melanocytic nevi}, 67\% prevalence) was statistically
-unchanged ($\Delta = +0.002$, $p = 0.38$), confirming that FedProx's
-regularisation did not degrade performance on the dominant class.
+The class-wise breakdown (Table~\ref{tab:per-class}) is reported as an
+\textbf{exploratory} analysis: seven paired Wilcoxon tests on the seven
+class-level F1 differences inflate the family-wise error rate, so we
+additionally report Holm-Bonferroni-corrected $p$-values. Under the
+uncorrected $\alpha = 0.05$ threshold, two classes show significant
+improvements: \textit{melanoma} ($\Delta = +0.114$, $p_{\text{raw}} =
+0.006$) and \textit{actinic keratoses} ($\Delta = +0.067$, $p_{\text{raw}}
+= 0.020$). After Holm correction across the seven tests, only
+\textit{melanoma} remains significant ($p_{\text{Holm}} = 0.041$);
+\textit{actinic keratoses} loses significance ($p_{\text{Holm}} = 0.117$).
+The strongest class-level signal is therefore the melanoma improvement,
+which is robust to multiple-comparison correction.
+
+Regarding per-class regression, no class shows a mean regression of
+meaningful magnitude (largest: \textit{vascular lesions} $\Delta = -0.012$,
+$p = 0.70$), and none exceeds the pre-registered $\pm 0.05$ design
+tolerance on the across-seed mean. However, the per-class paired Wilcoxon
+test with $n = 10$ is underpowered to rule out smaller per-class harms;
+this analysis cannot exclude regressions on the order of $\pm 0.03$ that
+might emerge in a larger sweep. The majority class \textit{melanocytic
+nevi} (67\% prevalence) shows essentially no change ($\Delta = +0.002$,
+$p = 0.375$), consistent with the partition design in which every client
+holds nevi training samples and the proximal anchor therefore has no
+inter-client drift to constrain on this class.
 
 \begin{table}[h]
 \centering
-\caption{Per-class test F1 across 10 paired seeds, with paired Wilcoxon $p$-values.
-Bold values are significant at $\alpha = 0.05$ (uncorrected).}
+\caption{Per-class test F1 across 10 paired seeds, with raw and
+Holm-Bonferroni-adjusted paired Wilcoxon $p$-values. \textbf{Bold} indicates
+significance at $\alpha = 0.05$ after the indicated correction. Per-class
+tests are \emph{exploratory}; only \textit{melanoma} survives correction
+across the seven class-level comparisons.}
 \label{tab:per-class}
 \small
-\begin{tabular}{lrcccc}
+\begin{tabular}{lrccccc}
 \toprule
-Class                              & Prev.\ (\%) & FedAvg & FedProx & $\Delta$ & Wilcoxon $p$ \\
+Class                              & Prev.\ (\%) & FedAvg & FedProx & $\Delta$ & $p_{\text{raw}}$ & $p_{\text{Holm}}$ \\
 \midrule
-Melanocytic nevi (majority)        & 67.05 & 0.884 & 0.886 & $+0.002$           & $0.375$ \\
-Melanoma                           & 11.11 & 0.187 & 0.301 & $\mathbf{+0.114}$  & $\mathbf{0.006}$ \\
-Benign keratosis-like              & 10.97 & 0.440 & 0.444 & $+0.004$           & $0.695$ \\
-Basal cell carcinoma               &  5.13 & 0.475 & 0.473 & $-0.001$           & $0.846$ \\
-Actinic keratoses                  &  3.27 & 0.404 & 0.471 & $\mathbf{+0.067}$  & $\mathbf{0.020}$ \\
-Vascular lesions                   &  1.41 & 0.698 & 0.686 & $-0.012$           & $0.695$ \\
-Dermatofibroma                     &  1.15 & 0.283 & 0.296 & $+0.013$           & $0.922$ \\
+Melanocytic nevi (majority)        & 67.05 & 0.884 & 0.886 & $+0.002$           & $0.375$           & $1.000$ \\
+Melanoma                           & 11.11 & 0.187 & 0.301 & $\mathbf{+0.114}$  & $\mathbf{0.006}$  & $\mathbf{0.041}$ \\
+Benign keratosis-like              & 10.97 & 0.440 & 0.444 & $+0.004$           & $0.695$           & $1.000$ \\
+Basal cell carcinoma               &  5.13 & 0.475 & 0.473 & $-0.001$           & $0.846$           & $1.000$ \\
+Actinic keratoses                  &  3.27 & 0.404 & 0.471 & $+0.067$           & $0.020$           & $0.117$ \\
+Vascular lesions                   &  1.41 & 0.698 & 0.686 & $-0.012$           & $0.695$           & $1.000$ \\
+Dermatofibroma                     &  1.15 & 0.283 & 0.296 & $+0.013$           & $0.922$           & $1.000$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -304,28 +343,33 @@ Dermatofibroma                     &  1.15 & 0.283 & 0.296 & $+0.013$           
 \subsection{Convergence Behaviour}
 Figure~\ref{fig:curves-main} presents the per-round validation
 trajectories aggregated as mean $\pm$ SEM across the 10 paired seeds.
-At round~1, both algorithms are statistically indistinguishable (mean
-val macro-F1 = 0.115 for both), confirming that the paired-seed
-protocol successfully equalises initial conditions. FedProx pulls
-ahead within five rounds and maintains a consistent advantage
-throughout training: the gap is largest near round~50 ($\Delta =
-+0.094$ on validation macro-F1) and narrows to $+0.039$ by round~150
-as FedAvg slowly closes the early-training difference. FedProx reaches
-val macro-F1 = 0.45 in 13 rounds on average, versus 39 rounds for
-FedAvg, representing an approximately threefold communication-efficiency
-gain. Validation loss reaches its minimum near round~30 for both
-algorithms and rises thereafter, indicating overfitting under the
-chosen $E = 20$ local-epoch regime; FedProx's validation loss
-nonetheless remains 0.10--0.18 below FedAvg's throughout the second
-half of training. The training-loss panel (log scale) provides
-mechanistic evidence that the proximal term is actively constraining
-local updates: FedAvg's training loss decays to approximately 0.002 by
-round~150, whereas FedProx's training loss is held above 0.004---a
-2.2$\times$ gap that persists because the proximal regulariser
-$\frac{\mu}{2}\lVert w - w^t \rVert_2^2$ contributes a strictly
-positive penalty whenever the local model diverges from the global
-anchor. Validation balanced accuracy (panel~D) closely tracks
-validation macro-F1, confirming that the result is not an artefact of
+These curves are reported as \textbf{descriptive secondary outcomes};
+per-round differences are correlated over rounds and we do not perform
+inferential significance tests on individual rounds. The two formal
+secondary metrics derived from the curves --- (a) rounds to reach a
+target val macro-F1 and (b) the AUC of the val macro-F1 curve --- are
+single scalars per run and may be tested across seeds; they are reported
+descriptively in Table~\ref{tab:curve-stats}.
+
+At round~1, both algorithms are essentially identical (mean val
+macro-F1 = 0.115 for both), confirming that the paired-seed protocol
+equalises initial conditions. FedProx then pulls ahead and maintains a
+visible advantage throughout training: the cross-algorithm gap is
+largest near round~50 ($\Delta_{\text{val}} = +0.094$ on validation
+macro-F1) and narrows to $+0.039$ by round~150 as FedAvg slowly closes
+the early-training difference. FedProx reaches val macro-F1 = 0.45 in
+13 rounds on average, versus 39 rounds for FedAvg, an approximately
+threefold rounds-to-target reduction. Validation loss reaches its
+minimum near round~30 for both algorithms and rises thereafter,
+indicating overfitting under the chosen $E = 20$ local-epoch regime;
+FedProx's validation loss nonetheless remains 0.10--0.18 below FedAvg's
+throughout the second half of training. The training-objective panel
+(log scale) is consistent with the proximal regulariser being active
+during training, but as discussed in the Discussion section, this panel
+is not a clean apples-to-apples comparison because the two algorithms
+plot the values of \emph{different} objectives. Validation balanced
+accuracy (panel~D) closely tracks validation macro-F1, confirming the
+result is not an artefact of
 the macro averaging.
 
 \begin{figure}[h]
@@ -335,14 +379,21 @@ the macro averaging.
 \caption{Convergence curves across 10 paired seeds. Validation metrics
 versus communication round, with mean (solid line) and $\pm$SEM
 (shaded band) computed across 10 paired seeds for each algorithm.
-\textbf{(A)} Validation macro-F1: FedProx maintains a consistent
-advantage over FedAvg from round $\sim$5 onwards. \textbf{(B)}
-Validation loss: both algorithms exhibit overfitting after round
-$\sim$30. \textbf{(C)} Training loss (log scale): FedAvg's training
-loss collapses to a lower asymptote, evidence that the proximal term
-actively prevents memorisation. \textbf{(D)} Validation balanced
-accuracy: tracks macro-F1 closely, confirming the result is not a
-metric artefact.}
+\textbf{(A)} Validation macro-F1: FedProx maintains a higher trajectory
+relative to FedAvg from round $\sim$5 onwards. \textbf{(B)} Validation
+loss: both algorithms exhibit overfitting after round $\sim$30.
+\textbf{(C)} Training objective (log scale; reported by each client and
+size-weighted across clients at the server). \emph{Important caveat:}
+this panel shows the value of each algorithm's \emph{own} local training
+objective, which for FedProx includes the proximal penalty
+$(\mu/2)\lVert w - w^t \rVert^2$. The two algorithms therefore minimise
+\emph{different} objectives and the curves are not a clean apples-to-apples
+test of memorisation. The higher FedProx value is partly attributable to
+the proximal penalty being non-negative whenever local parameters diverge
+from the global anchor. A direct measurement of client drift would require
+logging update norms $\lVert w_i^{t+1} - w^t \rVert$, which is identified
+as future work. \textbf{(D)} Validation balanced accuracy: tracks macro-F1
+closely, confirming the result is not a metric artefact.}
 \label{fig:curves-main}
 \end{figure}
 
@@ -504,21 +555,47 @@ Table~\ref{tab:robustness}.
 
 \begin{table}[h]
 \centering
-\caption{Robustness across partition regimes (10 paired seeds each;
-results pending HPC completion).}
+\caption{Robustness across partition regimes. Centralised baseline is a
+single non-federated run (upper bound). The IID and Dirichlet-$\alpha = 0.1$
+results are pending HPC completion. The headline row aggregates 10 paired
+seeds with paired Wilcoxon.}
 \label{tab:robustness}
 \small
 \begin{tabular}{lcccc}
 \toprule
 Regime & FedAvg test macro-F1 & FedProx test macro-F1 & $\Delta$ & Wilcoxon $p$ \\
 \midrule
-Centralised (upper bound)         & \multicolumn{2}{c}{[pending HPC]} & --- & --- \\
+Centralised (upper bound, $n=1$)  & \multicolumn{2}{c}{$\mathbf{0.555}$ (single seed)} & --- & --- \\
 IID (falsification check)         & [pending HPC] & [pending HPC] & [pending] & [pending] \\
 Dirichlet-$\alpha = 0.1$ (severe non-IID, Hsu 2019) & [pending HPC] & [pending HPC] & [pending] & [pending] \\
-\texttt{balanced\_paired\_7\_clients} (this work) & $0.481 \pm 0.025$ & $0.508 \pm 0.014$ & $+0.027$ & $0.020$ \\
+\texttt{balanced\_paired\_7\_clients} (this work) & $0.481 \pm 0.025$ & $0.508 \pm 0.014$ & $\mathbf{+0.027}$ & $\mathbf{0.020}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The centralised baseline (Table~\ref{tab:robustness}, row~1) provides the
+upper bound on macro-F1 achievable when all training data is pooled into
+a single non-federated run. Using the same architecture, hyperparameters,
+and evaluation protocol as the federated runs (early stopping on validation
+macro-F1; test evaluated once at the best-val epoch), centralised training
+reaches test macro-F1 $= 0.555$. \emph{Important caveat:} this is a single
+seed; we have not quantified across-seed centralised variance. The
+descriptive comparisons that follow should therefore be interpreted as
+approximate reference points rather than formal statistical contrasts
+against the 10-seed federated means. Relative to this single-seed upper
+bound, FedAvg recovers $86.7\%$ of centralised performance (federation
+tax: $-0.074$ macro-F1) and FedProx recovers $91.5\%$ (federation tax:
+$-0.047$); descriptively, \textbf{FedProx closes approximately $36\%$ of
+the FedAvg-to-centralised gap} without any cross-client data sharing.
+Additionally, the centralised run reached its best-val epoch at epoch 48
+of 50, indicating the model was still improving at the wall-clock cutoff;
+a longer centralised run would likely raise the upper bound modestly and
+correspondingly enlarge the federation tax for both algorithms. The
+per-class federation tax is heavily concentrated on melanoma (FedAvg
+loses $0.228$ F1 to centralised, FedProx loses $0.114$) and benign
+keratosis ($0.136$ and $0.132$ respectively); the universal majority
+class \textit{melanocytic nevi} reaches centralised-level performance
+under both algorithms ($\Delta$ to centralised $\leq 0.008$ for both).
 
 %==============================================================================
 \section{Discussion}
@@ -530,20 +607,26 @@ breakdown in Table~\ref{tab:per-specialty} and the
 peak-vs-final analysis in Table~\ref{tab:best-vs-last}, reveal a coherent
 mechanistic picture consistent with the theoretical motivation for FedProx.
 
-First, the training-loss panel of Figure~\ref{fig:curves-main} provides
-direct evidence that the proximal regulariser is binding throughout
-training. By round~150, FedAvg's mean training loss has decayed to
-approximately~0.002---consistent with effective memorisation of each
-client's local data---while FedProx's training loss is held more than
-two-fold higher. This is not a side-effect of $\mu = 0.01$; it is the
-defining property of the regularised objective. Under client
-heterogeneity, when each client minimises an unregularised local
-objective for $E = 20$ epochs, the resulting parameter vector drifts
-toward the local minimum of that client's data slice. The FedAvg
-size-weighted average of these drifted vectors is biased toward
-whichever clients have the largest local data and the most aggressive
-drift. FedProx's proximal anchor caps each client's drift magnitude,
-preserving minority-class signals during aggregation.
+First, the training-objective panel of Figure~\ref{fig:curves-main}
+(panel C) is \emph{consistent with} the proximal regulariser being
+active, but it does not by itself prove reduced memorisation. The
+quantity plotted is each algorithm's own local training objective,
+which for FedProx includes the proximal penalty
+$(\mu/2)\lVert w - w^t \rVert^2$. Because this penalty is non-negative
+whenever local parameters diverge from the global anchor, part of the
+~2$\times$ FedProx-vs-FedAvg gap in training-objective values is
+mechanical: the FedProx objective contains terms that the FedAvg
+objective does not. A formal test of whether FedProx genuinely reduces
+client drift (independent of the objective's structural difference)
+would require logging the per-round update norms
+$\lVert w_i^{t+1} - w^t \rVert$ at each client; this measurement was
+not retained in our logging and is identified as future work in the
+limitations section. The mechanistic claim is therefore supported by
+the convergence dynamics indirectly, but is not as cleanly demonstrated
+as the per-class and per-specialty results in
+Tables~\ref{tab:per-class} and~\ref{tab:per-specialty}, which provide
+direct test-set evidence that the FedProx advantage concentrates on
+the classes where the partition design predicts drift to exist.
 
 Second, the per-class trajectories in Figure~\ref{fig:curves-per-class}
 and the per-specialty results in Table~\ref{tab:per-specialty} show that

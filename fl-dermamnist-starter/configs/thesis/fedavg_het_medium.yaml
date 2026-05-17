@@ -1,8 +1,0 @@
-partition:
-  specialist_dominance: 0.4
-federation:
-  local_epochs: 10
-  num_rounds: 100
-  track_grad_variance: true
-client_objective:
-  proximal_mu: 0.0
