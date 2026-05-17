@@ -1,5 +1,0 @@
-client_objective:
-  proximal_mu: 0.01
-partition:
-  strategy: pathological
-  classes_per_client: 2

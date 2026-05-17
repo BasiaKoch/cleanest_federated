@@ -1,7 +1,0 @@
-loss:
-  type: focal
-  weight_strategy: none
-  focal_gamma: 2.0
-partition:
-  strategy: dirichlet
-  alpha: 0.5

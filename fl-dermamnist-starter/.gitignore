@@ -1,6 +1,0 @@
-results/
-logs/
-ray_tmp/
-*.npz
-*.pt
-*.pth

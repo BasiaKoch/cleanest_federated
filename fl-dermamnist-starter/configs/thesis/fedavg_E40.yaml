@@ -1,5 +1,0 @@
-federation:
-  local_epochs: 40
-  num_rounds: 100
-client_objective:
-  proximal_mu: 0.0

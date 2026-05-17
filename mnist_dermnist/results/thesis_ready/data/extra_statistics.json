@@ -1,0 +1,187 @@
+{
+  "description": "Additional statistical robustness analyses on the 10 paired seeds.",
+  "n_paired_seeds": 10,
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    999,
+    2024,
+    31337,
+    161803,
+    271828,
+    8675309
+  ],
+  "deltas": [
+    0.06845445893383356,
+    0.0014142243420569578,
+    0.0003861618772313946,
+    -0.020030806733578488,
+    0.027244807235462354,
+    0.03720228721501767,
+    0.04044597466543559,
+    0.012684046722197306,
+    0.0038043187030564196,
+    0.09532375385928471
+  ],
+  "sign_test": {
+    "wins": 9,
+    "n_effective": 10,
+    "p_two_sided": 0.021484375,
+    "interpretation": "Sign test ignores magnitude and is robust to outliers. p=0.020-ish from this test corroborates the Wilcoxon result based on direction alone."
+  },
+  "hodges_lehmann_estimate": {
+    "value": 0.022125146684246005,
+    "interpretation": "Hodges-Lehmann is the median of paired Walsh averages, more robust than the mean to extreme paired differences. Compare to the arithmetic mean \u0394 = +0.0267."
+  },
+  "leave_one_seed_out": {
+    "rows": [
+      {
+        "seed": 42,
+        "dropped_seed_idx": 0,
+        "dropped_delta": 0.06845445893383356,
+        "mean_remaining": 0.022052751987351547,
+        "wilcoxon_p": 0.0390625,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 123,
+        "dropped_seed_idx": 1,
+        "dropped_delta": 0.0014142243420569578,
+        "mean_remaining": 0.029501666941993392,
+        "wilcoxon_p": 0.02734375,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 456,
+        "dropped_seed_idx": 2,
+        "dropped_delta": 0.0003861618772313946,
+        "mean_remaining": 0.029615896104751786,
+        "wilcoxon_p": 0.02734375,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 789,
+        "dropped_seed_idx": 3,
+        "dropped_delta": -0.020030806733578488,
+        "mean_remaining": 0.03188444817261955,
+        "wilcoxon_p": 0.00390625,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 999,
+        "dropped_seed_idx": 4,
+        "dropped_delta": 0.027244807235462354,
+        "mean_remaining": 0.02663160217605946,
+        "wilcoxon_p": 0.0390625,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 2024,
+        "dropped_seed_idx": 5,
+        "dropped_delta": 0.03720228721501767,
+        "mean_remaining": 0.025525215511664423,
+        "wilcoxon_p": 0.0390625,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 31337,
+        "dropped_seed_idx": 6,
+        "dropped_delta": 0.04044597466543559,
+        "mean_remaining": 0.025164805794951322,
+        "wilcoxon_p": 0.0390625,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 161803,
+        "dropped_seed_idx": 7,
+        "dropped_delta": 0.012684046722197306,
+        "mean_remaining": 0.02824946445531113,
+        "wilcoxon_p": 0.02734375,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 271828,
+        "dropped_seed_idx": 8,
+        "dropped_delta": 0.0038043187030564196,
+        "mean_remaining": 0.02923610090188234,
+        "wilcoxon_p": 0.02734375,
+        "still_significant_at_05": true
+      },
+      {
+        "seed": 8675309,
+        "dropped_seed_idx": 9,
+        "dropped_delta": 0.09532375385928471,
+        "mean_remaining": 0.01906727477341253,
+        "wilcoxon_p": 0.0390625,
+        "still_significant_at_05": true
+      }
+    ],
+    "n_still_significant_at_05": 10,
+    "interpretation": "LOSO Wilcoxon: removing any single seed from the 10-seed sweep leaves 10 of 10 subsamples significant at \u03b1=0.05. This tests whether the result depends on any single influential seed."
+  },
+  "per_class_holm": {
+    "alpha": 0.05,
+    "k_tests": 7,
+    "classes": [
+      {
+        "class": "actinic",
+        "delta_mean": 0.06736944114833834,
+        "raw_p": 0.01953125,
+        "holm_adjusted_p": 0.1171875,
+        "significant_raw": true,
+        "significant_holm": false
+      },
+      {
+        "class": "basal",
+        "delta_mean": -0.0014457045312183947,
+        "raw_p": 0.845703125,
+        "holm_adjusted_p": 1.0,
+        "significant_raw": false,
+        "significant_holm": false
+      },
+      {
+        "class": "benign_kerat",
+        "delta_mean": 0.0036190324589775004,
+        "raw_p": 0.6953125,
+        "holm_adjusted_p": 1.0,
+        "significant_raw": false,
+        "significant_holm": false
+      },
+      {
+        "class": "dermato",
+        "delta_mean": 0.013145899436355251,
+        "raw_p": 0.921875,
+        "holm_adjusted_p": 1.0,
+        "significant_raw": false,
+        "significant_holm": false
+      },
+      {
+        "class": "melanoma",
+        "delta_mean": 0.11407791475312276,
+        "raw_p": 0.005859375,
+        "holm_adjusted_p": 0.041015625,
+        "significant_raw": true,
+        "significant_holm": true
+      },
+      {
+        "class": "mel_nevi",
+        "delta_mean": 0.0019281178804850141,
+        "raw_p": 0.375,
+        "holm_adjusted_p": 1.0,
+        "significant_raw": false,
+        "significant_holm": false
+      },
+      {
+        "class": "vascular",
+        "delta_mean": -0.011844242372062186,
+        "raw_p": 0.6953125,
+        "holm_adjusted_p": 1.0,
+        "significant_raw": false,
+        "significant_holm": false
+      }
+    ],
+    "interpretation": "Holm step-down correction is more powerful than Bonferroni while preserving family-wise error rate at 0.05 across 7 per-class tests."
+  }
+}

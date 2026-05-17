@@ -1,3 +1,0 @@
-partition:
-  strategy: pathological
-  classes_per_client: 2

@@ -1,4 +1,0 @@
-partition:
-  strategy: dirichlet_quantity
-  alpha: 0.5
-  quantity_alpha: 0.5

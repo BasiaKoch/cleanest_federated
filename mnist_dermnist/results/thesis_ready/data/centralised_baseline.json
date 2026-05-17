@@ -1,0 +1,54 @@
+{
+  "description": "Centralised (non-federated) training baseline on the pooled DermaMNIST training set. Single seed; serves as the upper-bound anchor for the FL comparison.",
+  "regime": "centralised",
+  "seed": 42,
+  "num_epochs_total": 50,
+  "selected_epoch": 48,
+  "elapsed_seconds": 86.9,
+  "test": {
+    "macro_f1": 0.5552,
+    "balanced_accuracy": 0.5447,
+    "accuracy": 0.7671,
+    "loss": 0.7665,
+    "per_class_f1": {
+      "actinic": 0.4330,
+      "basal": 0.5478,
+      "benign_kerat": 0.5758,
+      "dermato": 0.3200,
+      "melanoma": 0.4150,
+      "mel_nevi": 0.8914,
+      "vascular": 0.7037
+    },
+    "best_val_macro_f1": 0.6098,
+    "n_test_samples": 2005
+  },
+  "federation_tax": {
+    "description": "Centralised macro-F1 minus federated macro-F1; how much performance is lost by federating instead of pooling data.",
+    "vs_fedavg": {
+      "fedavg_macro_f1":  0.4814,
+      "tax": 0.0738,
+      "pct_of_centralised_achieved": 86.7
+    },
+    "vs_fedprox": {
+      "fedprox_macro_f1": 0.5081,
+      "tax": 0.0471,
+      "pct_of_centralised_achieved": 91.5
+    },
+    "fedprox_closes_pct_of_fedavg_gap": 36.2,
+    "interpretation": "FedProx recovers 91.5% of centralised macro-F1 vs FedAvg's 86.7%, closing 36% of the gap between FedAvg and the centralised upper bound."
+  },
+  "per_class_federation_tax": {
+    "actinic":      {"centralised": 0.433, "fedavg": 0.404, "fedprox": 0.471, "cen_minus_fa": 0.029, "cen_minus_fp": -0.038},
+    "basal":        {"centralised": 0.548, "fedavg": 0.475, "fedprox": 0.473, "cen_minus_fa": 0.073, "cen_minus_fp": 0.075},
+    "benign_kerat": {"centralised": 0.576, "fedavg": 0.440, "fedprox": 0.444, "cen_minus_fa": 0.136, "cen_minus_fp": 0.132},
+    "dermato":      {"centralised": 0.320, "fedavg": 0.283, "fedprox": 0.296, "cen_minus_fa": 0.037, "cen_minus_fp": 0.024},
+    "melanoma":     {"centralised": 0.415, "fedavg": 0.187, "fedprox": 0.301, "cen_minus_fa": 0.228, "cen_minus_fp": 0.114},
+    "mel_nevi":     {"centralised": 0.891, "fedavg": 0.884, "fedprox": 0.886, "cen_minus_fa": 0.008, "cen_minus_fp": 0.006},
+    "vascular":     {"centralised": 0.704, "fedavg": 0.698, "fedprox": 0.686, "cen_minus_fa": 0.006, "cen_minus_fp": 0.018}
+  },
+  "caveats": [
+    "Single seed for centralised — across-seed variance not quantified. Comparisons to FL means are descriptive, not statistically inferential.",
+    "Convergence at epoch 48 of 50 — model was still improving at wall-clock cutoff. A 100-epoch run might push centralised macro-F1 to ~0.58–0.60.",
+    "FedProx-on-actinic appears to exceed centralised-on-actinic (0.471 vs 0.433), but actinic has only ~67 test samples; this difference is within seed noise and should not be interpreted as FL beating centralised."
+  ]
+}
