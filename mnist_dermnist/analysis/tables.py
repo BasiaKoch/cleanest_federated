@@ -33,7 +33,24 @@ CLASS_NAMES = (
     "vascular_lesions",
 )
 
-_PAT = re.compile(r"test_at_best_(?P<algo>fedavg|fedprox)_mu(?P<mu>[0-9.]+)_E(?P<E>\d+)_s(?P<seed>\d+)\.json")
+# Filename schema (see fl/server_loop.py:save_run_outputs and the Flower runners):
+#   test_at_best_<algo>_mu<mu>_E<E>[_sh-<sh_mode>][_C<frac>]_s<seed>.json
+# where:
+#   - <algo>     ∈ {fedavg, fedprox, fednova}
+#   - _sh-<...>  is present only for non-uniform system-het modes
+#   - _C<frac>   is present only for fraction_fit ≠ 1.0
+# A regex that requires `_s<seed>` immediately after `E<E>` (an earlier
+# version of this file) silently skipped every system-het and FedNova
+# JSON, so paired_compare returned empty results without any error.
+_PAT = re.compile(
+    r"test_at_best_"
+    r"(?P<algo>fedavg|fedprox|fednova)"
+    r"_mu(?P<mu>[0-9.]+)"
+    r"_E(?P<E>\d+)"
+    r"(?:_sh-(?P<sh>[a-z_]+))?"
+    r"(?:_C(?P<C>[0-9.]+))?"
+    r"_s(?P<seed>\d+)\.json"
+)
 
 
 def _discover(results_dir: Path) -> pd.DataFrame:
@@ -49,6 +66,8 @@ def _discover(results_dir: Path) -> pd.DataFrame:
             "algorithm": m["algo"],
             "mu": float(m["mu"]),
             "local_epochs": int(m["E"]),
+            "sh_mode": m["sh"] or "uniform",
+            "fraction_fit": float(m["C"]) if m["C"] else 1.0,
             "seed": int(m["seed"]),
             "test_macro_f1": float(data["macro_f1"]),
             "test_balanced_accuracy": float(data["balanced_accuracy"]),

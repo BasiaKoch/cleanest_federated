@@ -28,16 +28,28 @@ from mnist_dermnist.models import DermMNISTCNN
 
 
 def set_seed(seed: int) -> None:
+    # Match fl/server_loop.py:set_all_seeds so centralised runs are as
+    # reproducible as the FL runs (audit P2 fix). Python's `random`
+    # module is seeded too, even though centralised doesn't use it
+    # directly, in case downstream sklearn or third-party utilities do.
+    import random
+    random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
-def evaluate(model, loader, device):
+def evaluate(model, loader, device, num_classes: int = 7):
+    """Same metric set as fl/evaluation.py, with explicit `labels` so a
+    class absent from predictions still contributes 0 to macro-F1
+    rather than being silently dropped (audit P2 fix)."""
     from sklearn.metrics import f1_score, accuracy_score, balanced_accuracy_score
     model.eval()
     ys, preds, total_loss, n = [], [], 0.0, 0
     crit = nn.CrossEntropyLoss(reduction="sum")
+    labels = list(range(num_classes))
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device); y = y.to(device).view(-1).long()
@@ -50,8 +62,10 @@ def evaluate(model, loader, device):
         "loss": total_loss / n,
         "accuracy": float(accuracy_score(y_true, y_pred)),
         "balanced_accuracy": float(balanced_accuracy_score(y_true, y_pred)),
-        "macro_f1": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
-        "per_class_f1": f1_score(y_true, y_pred, average=None, zero_division=0).tolist(),
+        "macro_f1": float(f1_score(y_true, y_pred, average="macro",
+                                   labels=labels, zero_division=0)),
+        "per_class_f1": f1_score(y_true, y_pred, average=None,
+                                 labels=labels, zero_division=0).tolist(),
         "n": int(n),
     }
 

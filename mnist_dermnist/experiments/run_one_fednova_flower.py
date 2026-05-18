@@ -155,30 +155,40 @@ def main():
     best_val_macro_f1 = {"value": -1.0, "round": -1,
                          "params": [a.copy() for a in initial_params]}
     history_rows: List[Dict] = []
+    # Populated post-simulation from history_obj.metrics_distributed_fit
+    # so the FedNova CSV has the same `train_loss` column as the pure-
+    # PyTorch path (audit fix B3). PairedFedNovaStrategy.aggregate_fit
+    # already returns size-weighted train_loss in its metrics_agg dict;
+    # we just need to wire it back to the per-round rows.
+    train_loss_by_round: Dict[int, float] = {}
 
     def evaluate_fn(server_round: int, parameters: List[np.ndarray], config):
         eval_model = DermMNISTCNN(num_classes=7, dropout=0.2).to(device)
         numpy_to_state_dict(eval_model, parameters)
         metrics = evaluate(eval_model, val_loader, device, num_classes=7)
-        row = {
-            "seed": seed,
-            "algorithm": "fednova",
-            "mu": 0.0,
-            "local_epochs": args.local_epochs,
-            "round": server_round,
-            "val_loss": metrics["loss"],
-            "val_accuracy": metrics["accuracy"],
-            "val_balanced_accuracy": metrics["balanced_accuracy"],
-            "val_macro_f1": metrics["macro_f1"],
-        }
-        for c, f1c in enumerate(metrics["per_class_f1"]):
-            row[f"val_f1_class_{c}"] = float(f1c)
-        history_rows.append(row)
 
-        if metrics["macro_f1"] > best_val_macro_f1["value"]:
-            best_val_macro_f1["value"] = float(metrics["macro_f1"])
-            best_val_macro_f1["round"] = int(server_round)
-            best_val_macro_f1["params"] = [a.copy() for a in parameters]
+        # Skip round 0 to match the pure-PyTorch reference loop's
+        # rounds-1..R convention; see run_one_flower.py for rationale.
+        if int(server_round) >= 1:
+            row = {
+                "seed": seed,
+                "algorithm": "fednova",
+                "mu": 0.0,
+                "local_epochs": args.local_epochs,
+                "round": server_round,
+                "val_loss": metrics["loss"],
+                "val_accuracy": metrics["accuracy"],
+                "val_balanced_accuracy": metrics["balanced_accuracy"],
+                "val_macro_f1": metrics["macro_f1"],
+            }
+            for c, f1c in enumerate(metrics["per_class_f1"]):
+                row[f"val_f1_class_{c}"] = float(f1c)
+            history_rows.append(row)
+
+            if metrics["macro_f1"] > best_val_macro_f1["value"]:
+                best_val_macro_f1["value"] = float(metrics["macro_f1"])
+                best_val_macro_f1["round"] = int(server_round)
+                best_val_macro_f1["params"] = [a.copy() for a in parameters]
 
         return metrics["loss"], {
             "val_macro_f1": metrics["macro_f1"],
@@ -235,7 +245,7 @@ def main():
                         if device_str == "cuda" else {"num_cpus": 1, "num_gpus": 0.0})
 
     t0 = time.time()
-    fl.simulation.start_simulation(
+    history_obj = fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=args.num_rounds),
@@ -244,11 +254,23 @@ def main():
     )
     elapsed = time.time() - t0
 
+    # Back-fill train_loss from PairedFedNovaStrategy's aggregated fit metrics.
+    if hasattr(history_obj, "metrics_distributed_fit"):
+        for r, v in history_obj.metrics_distributed_fit.get("train_loss", []):
+            train_loss_by_round[int(r)] = float(v)
+    for row in history_rows:
+        row["train_loss"] = train_loss_by_round.get(int(row["round"]), float("nan"))
+
     test_model = DermMNISTCNN(num_classes=7, dropout=0.2).to(device)
     numpy_to_state_dict(test_model, best_val_macro_f1["params"])
-    test_metrics = evaluate(test_model, test_loader, device, num_classes=7)
+    test_metrics = evaluate(
+        test_model, test_loader, device, num_classes=7,
+        return_predictions=True,
+    )
     test_metrics["selected_round"] = best_val_macro_f1["round"]
     test_metrics["best_val_macro_f1"] = best_val_macro_f1["value"]
+    _preds = test_metrics.pop("predictions", None)
+    _targets = test_metrics.pop("targets", None)
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -258,9 +280,21 @@ def main():
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
+    predictions_file = None
+    if _preds is not None and _targets is not None:
+        predictions_file = f"test_predictions_{stem}.npz"
+        np.savez_compressed(
+            out_dir / predictions_file,
+            predictions=np.asarray(_preds, dtype=np.int64),
+            targets=np.asarray(_targets, dtype=np.int64),
+            selected_round=int(test_metrics["selected_round"]),
+            seed=int(seed),
+            algorithm="fednova",
+        )
     with open(out_dir / f"test_at_best_{stem}.json", "w") as f:
         json.dump({
             **test_metrics,
+            "predictions_file": predictions_file,
             "seed": seed, "algorithm": "fednova", "mu": 0.0,
             "local_epochs": args.local_epochs, "num_rounds": args.num_rounds,
             "lr": args.lr, "momentum": args.momentum, "weight_decay": args.weight_decay,

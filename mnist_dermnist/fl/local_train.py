@@ -32,6 +32,7 @@ def local_train(
     proximal_mu: float,
     global_weights_frozen: Sequence[torch.Tensor] | None,
     device: torch.device | str,
+    criterion: nn.Module | None = None,
 ) -> dict:
     """One client's local training pass.
 
@@ -47,13 +48,18 @@ def local_train(
                                change during local training. Pass None when
                                proximal_mu == 0 (the branch is gated off).
         device: torch device.
+        criterion: optional loss module. Defaults to standard CrossEntropyLoss
+                   (the headline FedAvg/FedProx configuration). Pass a
+                   class-weighted CE or FocalLoss to evaluate loss-side
+                   imbalance baselines (mnist_dermnist.fl.class_imbalance).
 
     Returns:
         {'train_loss': avg loss over local steps, 'n_batches': int}
     """
     device = torch.device(device)
     model = model.to(device).train()
-    criterion = nn.CrossEntropyLoss()
+    if criterion is None:
+        criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(
         model.parameters(),
         lr=lr,

@@ -39,7 +39,10 @@ def class_weights_inverse_freq(
 
     w_c = (N / n_c) * (1 / num_classes), with safety floor on n_c = 1.
     """
-    arr = np.asarray(labels)
+    # np.bincount requires integer input. The DermMNIST dataset stores
+    # int64 labels, but be defensive: cast explicitly so this function
+    # also works when called from a notebook with float labels.
+    arr = np.asarray(labels).astype(np.int64, casting="unsafe")
     counts = np.bincount(arr, minlength=num_classes).astype(np.float64)
     counts = np.maximum(counts, 1.0)  # avoid div-by-zero
     inv_freq = 1.0 / counts
