@@ -4,7 +4,10 @@
 #   - IID falsification control (FedProx should not significantly differ from FedAvg) — 20 jobs
 #
 # Same 10 seeds, E=20, R=150 as the headline sweep. Total: ~40 jobs ~50 GPU-h.
-# If you only want one of these, comment out the loop you don't need.
+# Runtime: Flower 1.x simulation framework (slurm_template_flower.sh).
+# All robustness sweeps use the Flower runtime; equivalence to the
+# original pure-PyTorch loop (which produced the headline 10-seed data)
+# is verified by submit_equivalence_check.sh.
 set -uo pipefail
 
 REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
@@ -17,7 +20,7 @@ submit() {
   local algo="$1" mu="$2" seed="$3" out="$4" part="$5"
   if ! sbatch \
     --job-name="mn_${algo}_${part}_mu${mu}_E${LOCAL_EPOCHS}_s${seed}" \
-    "$REPO_ROOT/mnist_dermnist/scripts/slurm_template.sh" \
+    "$REPO_ROOT/mnist_dermnist/scripts/slurm_template_flower.sh" \
     "$algo" "$mu" "$seed" "$LOCAL_EPOCHS" "$out" "$part"; then
     echo "  FAILED to submit: algo=$algo mu=$mu seed=$seed part=$part"
     FAILED+=("$algo $mu $seed $part")

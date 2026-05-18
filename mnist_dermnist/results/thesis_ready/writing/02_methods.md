@@ -40,15 +40,24 @@ Images are loaded from the official `dermamnist_64.npz` archive at 64×64 resolu
 
 ## 3 Model architecture
 
-The classifier is a 4-block convolutional network (`DermMNISTCNN`, ≈ 423K parameters):
+The classifier is a 4-block convolutional network (`DermMNISTCNN`, ≈ 423K
+parameters). Each block contains a single 3×3 convolution (padding=1)
+followed by GroupNorm, ReLU, and a 2×2 max-pool (or adaptive global
+average pool for the final block). The exact computational graph
+implemented in `mnist_dermnist/models/dermmnist_cnn.py` is:
 
 ```
-Conv(3→32, k=3) → GN(8)  → ReLU → Conv(32→32)  → GN(8)  → ReLU → MaxPool
-Conv(32→64)    → GN(16) → ReLU → Conv(64→64)  → GN(16) → ReLU → MaxPool
-Conv(64→128)   → GN(32) → ReLU → Conv(128→128) → GN(32) → ReLU → MaxPool
-Conv(128→256)  → GN(32) → ReLU → GlobalAvgPool → Dropout(0.2)
-Linear(256→128) → ReLU → Dropout(0.2) → Linear(128→7)
+Conv(3→32,   k=3, p=1) → GN(groups=4,  channels=32)  → ReLU → MaxPool(2)
+Conv(32→64,  k=3, p=1) → GN(groups=8,  channels=64)  → ReLU → MaxPool(2)
+Conv(64→128, k=3, p=1) → GN(groups=16, channels=128) → ReLU → MaxPool(2)
+Conv(128→256,k=3, p=1) → GN(groups=16, channels=256) → ReLU → AdaptiveAvgPool(1×1)
+Flatten → Linear(256→128) → ReLU → Dropout(0.2) → Linear(128→7)
 ```
+
+Parameter count: 423,175 (verified at runtime). The use of
+`AdaptiveAvgPool2d((1, 1))` in the final block allows the same
+architecture to accept any spatial input size from 28×28 upwards without
+modification.
 
 ### Why GroupNorm rather than BatchNorm
 

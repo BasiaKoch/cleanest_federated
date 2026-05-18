@@ -1,0 +1,133 @@
+{
+  "description": "Communication / runtime metrics derived from the existing headline-sweep history CSVs. No additional compute required.",
+  "model_params": 423000,
+  "model_size_mb_per_snapshot": 1.613616943359375,
+  "n_clients": 7,
+  "rounds_per_run": 150,
+  "bytes_per_round_mb": 12.908935546875,
+  "total_bytes_per_run_gb": 1.8909573554992676,
+  "rounds_to_threshold": [
+    {
+      "threshold": 0.3,
+      "fedavg_mean_rounds": 6.8,
+      "fedprox_mean_rounds": 5.9,
+      "speedup": 1.1525423728813557,
+      "fedavg_per_seed_rounds": [
+        6,
+        7,
+        7,
+        7,
+        6,
+        11,
+        6,
+        6,
+        6,
+        6
+      ],
+      "fedprox_per_seed_rounds": [
+        5,
+        6,
+        6,
+        7,
+        5,
+        5,
+        7,
+        6,
+        6,
+        6
+      ]
+    },
+    {
+      "threshold": 0.4,
+      "fedavg_mean_rounds": 12.7,
+      "fedprox_mean_rounds": 9.8,
+      "speedup": 1.2959183673469385,
+      "fedavg_per_seed_rounds": [
+        10,
+        18,
+        17,
+        19,
+        7,
+        14,
+        9,
+        15,
+        10,
+        8
+      ],
+      "fedprox_per_seed_rounds": [
+        9,
+        8,
+        12,
+        10,
+        8,
+        13,
+        11,
+        10,
+        8,
+        9
+      ]
+    },
+    {
+      "threshold": 0.45,
+      "fedavg_mean_rounds": 38.8,
+      "fedprox_mean_rounds": 13.1,
+      "speedup": 2.9618320610687023,
+      "fedavg_per_seed_rounds": [
+        84,
+        27,
+        42,
+        75,
+        16,
+        55,
+        13,
+        23,
+        23,
+        30
+      ],
+      "fedprox_per_seed_rounds": [
+        10,
+        11,
+        15,
+        19,
+        10,
+        14,
+        12,
+        17,
+        14,
+        9
+      ]
+    },
+    {
+      "threshold": 0.5,
+      "fedavg_mean_rounds": 88.0,
+      "fedprox_mean_rounds": 32.55555555555556,
+      "speedup": 2.7030716723549486,
+      "fedavg_per_seed_rounds": [
+        111,
+        129,
+        90,
+        86,
+        31,
+        108,
+        50,
+        99
+      ],
+      "fedprox_per_seed_rounds": [
+        20,
+        21,
+        58,
+        28,
+        24,
+        20,
+        55,
+        54,
+        13
+      ]
+    }
+  ],
+  "notes": [
+    "Communication cost is IDENTICAL between FedAvg and FedProx; FedProx adds only LOCAL compute (proximal-term evaluation), not additional rounds or message exchanges.",
+    "By contrast, SCAFFOLD would approximately double communication (due to control-variate exchange), and FedLC adds none.",
+    "The communication-efficiency gain reported in the convergence section ('FedProx reaches val_macro_F1 = 0.45 in 13 rounds vs FedAvg's 39 rounds') translates to ~3x fewer round-trips per silo-side training run."
+  ]
+}

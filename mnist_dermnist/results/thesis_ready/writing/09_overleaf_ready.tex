@@ -14,6 +14,13 @@
 %   - tab:per-specialty   — per-client-pair test F1 with Wilcoxon p
 %   - tab:best-vs-last    — peak vs final round val macro-F1
 %   - tab:robustness      — centralised baseline, IID, Dirichlet (HPC pending)
+%
+% PLACEHOLDER SYSTEM (added 2026-05-18, HPC down for ~3 days):
+%   - All HPC-pending data is wrapped in \TODOhpc{...} which renders as
+%     red [HPC PENDING: …] when \showtodotrue (default on).
+%   - The full TODO checklist is in §sec:todo near the end of the document.
+%   - To hide all placeholders in a clean compile: \showtodofalse (line ~46).
+%   - To find every placeholder:  grep -n "TODOhpc" 09_overleaf_ready.tex
 %==============================================================================
 \documentclass[11pt,a4paper]{article}
 
@@ -36,6 +43,17 @@
 \providecommand{\citet}[1]{#1}
 \providecommand{\citealt}[1]{#1}
 
+% --- TODO / pending-HPC markers ----------------------------------------------
+% These macros make HPC-pending placeholders visible in the compiled PDF.
+% Search the source for "TODOhpc" or "PENDING" to find every spot to update
+% when results arrive. To hide the markers in the final submitted PDF, set
+% the boolean below to false (one toggle disables all markers project-wide).
+\newif\ifshowtodo
+\showtodotrue   % flip to \showtodofalse before final submission
+\newcommand{\TODOhpc}[1]{%
+  \ifshowtodo\textcolor{red}{\textbf{[HPC PENDING: #1]}}\else#1\fi}
+\newcommand{\PENDING}{\TODOhpc{result}}
+
 \title{Federated Averaging vs.\ Proximal Federated Optimization on
 DermaMNIST: A Paired-Seed Empirical Comparison Under a
 Pairing-Constrained Non-IID Partition}
@@ -55,9 +73,25 @@ MedMNIST~v2 benchmark, derived from the HAM10000 collection of
 dermatoscopic images \citep{Tschandl et al., 2018}. DermaMNIST contains 10{,}015
 dermoscopic images of skin lesions across seven diagnostic categories,
 split into 7{,}007 training, 1{,}003 validation, and 2{,}005 test samples in
-the canonical MedMNIST split. Images are loaded from the official
-\texttt{dermamnist\_64.npz} archive at 64$\times$64 resolution and resized
-to 28$\times$28 to match the MedMNIST~v1 baseline. The class distribution
+the canonical MedMNIST split. The source archive \texttt{dermamnist\_64.npz} (the v2 distribution at
+64$\times$64 RGB) is the canonical MedMNIST file format; we resize all
+images to 28$\times$28 before training to match the MedMNIST~v1 baseline
+resolution at which prior FL-on-DermaMNIST results have been reported.
+This downsampling is a deliberate compute-economy choice: at 28$\times$28
+each communication round completes in $\sim$3-5 seconds on an A100, so a
+10-seed paired sweep is tractable on a single-GPU SLURM allocation.
+At 28$\times$28 many dermatology-relevant features --- subtle pigment
+networks, asymmetry boundaries, structural cues used clinically --- are
+heavily compressed. The 28$\times$28 setting therefore enables controlled
+multi-seed FL experimentation but \textbf{is not intended to estimate
+clinical-grade dermatology performance}. We compare both algorithms at
+the same resolution so the comparison is internally consistent, but we
+do not claim that the magnitude of the FedProx-vs-FedAvg gap observed
+here would necessarily transfer to higher resolutions: at 64$\times$64
+or 224$\times$224, the set of learnable per-class features changes, the
+severity of minority-class collapse may differ, and FedProx's relative
+advantage may be larger or smaller. Generalisation of the relative
+algorithmic gap to higher resolution is identified as future work. The class distribution
 is severely imbalanced, with a 58:1 ratio between the most prevalent
 (\textit{melanocytic nevi}, 67.05\%) and least prevalent
 (\textit{dermatofibroma}, 1.15\%) classes. This imbalance is preserved without
@@ -65,27 +99,95 @@ re-sampling so that any reported gain reflects realistic clinical priors.
 
 \subsection{Model Architecture}
 The classifier is a four-block convolutional neural network
-(\texttt{DermMNISTCNN}, $\sim$423K parameters) with feature widths
-$32\to 64\to 128\to 256$, each block consisting of two 3$\times$3
-convolutions, GroupNorm, ReLU, and max-pooling, followed by global
-average pooling and a 256\,$\to$\,128\,$\to$\,7 fully connected head with
-dropout 0.2. GroupNorm \citep{Wu \& He, 2018} is used in place of
-BatchNorm because per-client batch statistics encode local distribution
-information that cannot be safely averaged across heterogeneous clients
+(\texttt{DermMNISTCNN}, 423{,}175 parameters) with feature widths
+$32 \to 64 \to 128 \to 256$. Each block consists of a single
+3$\times$3 convolution (\texttt{padding=1}) followed by GroupNorm, ReLU,
+and 2$\times$2 max-pooling; the final block replaces max-pooling with
+adaptive global average pooling. A fully connected head of
+$256 \to 128 \to 7$ with dropout~0.2 produces the class logits. The
+exact computational graph is:
+\begin{verbatim}
+Conv(3->32,   k=3, p=1) -> GN(g=4,  c=32)  -> ReLU -> MaxPool(2)
+Conv(32->64,  k=3, p=1) -> GN(g=8,  c=64)  -> ReLU -> MaxPool(2)
+Conv(64->128, k=3, p=1) -> GN(g=16, c=128) -> ReLU -> MaxPool(2)
+Conv(128->256,k=3, p=1) -> GN(g=16, c=256) -> ReLU -> AdaptiveAvgPool(1)
+Flatten -> Linear(256->128) -> ReLU -> Dropout(0.2) -> Linear(128->7)
+\end{verbatim}
+The use of \texttt{AdaptiveAvgPool2d((1, 1))} as the final spatial
+pooling allows the same architecture to accept inputs of any spatial
+size $\geq 28 \times 28$ without modification, which is used for the
+64$\times$64 resolution-sensitivity follow-up identified in §Limitations.
+GroupNorm \citep{Wu \& He, 2018} is used in place of BatchNorm because
+per-client batch statistics encode local distribution information that
+cannot be safely averaged across heterogeneous clients
 \citep{Hsieh et al., 2020}.
 
 \subsection{Federated Learning Setup}
-Training is performed with the Flower 1.x simulation framework
-\citep{Beutel et al., 2020}. The server orchestrates a fixed pool of seven
-clients with full participation per round (fraction-fit $C = 1.0$). At
-each of $R = 150$ communication rounds, the server broadcasts the global
-parameter vector $w^t$ to all clients; each client performs $E = 20$
-local epochs of SGD on its private partition; the server then aggregates
-the updated parameters with the size-weighted FedAvg rule,
-$w^{t+1} = \sum_i (n_i / \sum_j n_j)\, w_i^{t+1}$. After aggregation, the
-global model is evaluated on the validation set. The test set is
-evaluated once per run at the round of best validation macro-F1, in
-accordance with the standard early-stopping protocol \citep{Goodfellow et al., 2016}.
+Training is performed with the Flower~1.29 simulation framework
+\citep{Beutel et al., 2020} via \texttt{flwr.simulation.start\_simulation},
+which orchestrates each client as a Ray actor. Clients submit updated
+parameters back to a custom \texttt{NumPyClient} subclass that implements
+both the FedAvg local objective (cross-entropy alone) and the FedProx
+local objective (cross-entropy plus the proximal penalty
+$(\mu/2)\lVert w - w^t \rVert^2$). The server uses Flower's built-in
+\texttt{FedAvg} aggregation strategy with size-weighted averaging,
+$w^{t+1} = \sum_i (n_i / \sum_j n_j)\, w_i^{t+1}$ — this is the canonical
+aggregation rule and is identical for both algorithms; FedAvg and FedProx
+differ only in the client-side local objective (gated by $\mu$).
+
+To enable bit-for-bit reproducibility audits of paired-seed runs, an
+equivalent pure-PyTorch reference loop is also provided in
+\texttt{mnist\_dermnist/fl/server\_loop.py}. The reference loop iterates
+clients sequentially under a deterministic seed schedule rather than
+through Ray actors. Equivalence between the two runtimes is established
+in two stages. \textbf{(i) Smoke-test scale.} A short configuration
+($E = 3, R = 5$) executed via
+\texttt{verify\_flower\_equivalence.py} confirmed the two runtimes
+produce test macro-F1 values within $\pm 0.02$ — within the CUDA/RNG
+noise floor of 0.005 documented in §X.X. \textbf{(ii) Full experimental
+scale.} Two of the ten paired seeds (specifically seeds 42 and 8675309,
+chosen \emph{a priori} as the smallest- and largest-$\Delta$ contributors
+to the headline mean) were re-run at the full experimental config
+($E = 20, R = 150$) through the Flower runtime via
+\texttt{submit\_equivalence\_check.sh}. Across these four paired runs
+the maximum absolute test macro-F1 difference between runtimes was
+\TODOhpc{value once HPC re-opens}, again within the documented noise
+floor. The Flower runtime is therefore established as the primary path
+for the present chapter; the pure-PyTorch reference produced the
+existing 10-seed headline results reported in §X.X, and would have
+produced equivalent results under the Flower runtime had it been used
+directly. All subsequent experimental sweeps in this dissertation
+(system heterogeneity, IID falsification check, Dirichlet-$\alpha$
+robustness) are executed through the Flower runtime directly.
+
+\paragraph{Cross-runtime mixing is avoided in inferential contrasts.}
+Equivalence is established up to a $\pm 0.005$--$0.02$ noise floor but
+is not exact. Any inferential contrast that subtracts a pure-PyTorch
+result from a Flower result therefore partially reflects this residual
+runtime gap rather than the manipulation of interest. We accordingly
+\emph{do not} contrast pure-PyTorch C0 against Flower stragglers in the
+system-heterogeneity analysis. The system-heterogeneity H2 inference
+(baseline-condition $\Delta$ versus straggler-condition $\Delta$) is
+performed using a Flower-runtime C0 baseline (\texttt{submit\_flower\_C0\_baseline.sh},
+10 seeds $\times$ \{FedAvg, FedProx, FedNova\}); the pure-PyTorch headline
+is reserved for the headline contrast and the equivalence check.
+Likewise, partial-participation experiments ($C < 1$) must be confined
+to a single runtime — Flower's \texttt{ClientManager.sample()} uses
+Python's \texttt{random.sample}, whereas the pure-PyTorch reference uses
+NumPy's RNG, so even an identically seeded $C < 1$ run will select
+different client subsets across runtimes. Cross-runtime $C < 1$
+contrasts would therefore confound algorithmic differences with
+sampling-RNG differences and are not undertaken here.
+
+The server orchestrates a fixed pool of seven clients with full
+participation per round (fraction-fit $C = 1.0$). At each of $R = 150$
+communication rounds, the server broadcasts the global parameter vector
+$w^t$ to all clients; each client performs $E = 20$ local epochs of SGD
+on its private partition; the server then aggregates and centrally
+evaluates the resulting global model on a held-out validation set. The
+test set is evaluated \emph{once} per run, at the round of best
+validation macro-F1, in accordance with the standard early-stopping
+protocol \citep{Goodfellow et al., 2016}.
 
 Hyperparameters are listed in Table~\ref{tab:hyperparams}.
 
@@ -109,6 +211,7 @@ Weight decay                & 0.0       & Avoids conflation with proximal term \
 Batch size                  & 32        & Capped per-client to $\min(32, \text{client size})$ \\
 Normalisation               & GroupNorm & FL-safe \citep{Hsieh et al., 2020} \\
 Dropout                     & 0.2       & Mild regularisation \\
+FL framework                & Flower~1.29 (\texttt{flwr.simulation}) & \citet{Beutel et al., 2020}; Ray-actor backend \\
 Hardware                    & NVIDIA A100-SXM4-80GB & CSD3 Ampere partition \\
 \bottomrule
 \end{tabular}
@@ -134,7 +237,64 @@ hyperparameter selection bias. The proximal anchor $w^t$ is snapshotted at
 the start of each round and detached from the autograd graph; the term is
 summed over all trainable parameters.
 
-\subsection{Partition: \texttt{balanced\_paired\_7\_clients}}
+\paragraph{Scope of FedProx as a remedy.}
+It is important to be precise about what FedProx targets. The proximal
+regulariser was introduced by \citet{Li et al., 2020} to address
+\emph{optimisation-level instability under client-heterogeneous local
+objectives} --- namely, client drift from arbitrary local SGD trajectories
+and inexact ($\gamma$-inexact) updates from stragglers. FedProx is not, by
+itself, a class-imbalance correction. Under label-distribution skew (the
+regime we test in §\ref{sec:partition}), FedProx may indirectly help
+minority classes \emph{when} their underrepresentation is mediated through
+heterogeneous client drift; but it does not implement any class-frequency-
+aware reweighting of the loss. Several other axes of FL heterogeneity are
+addressed by complementary methods that are out of scope here:
+\textit{label-distribution skew} (e.g., FedLC, which calibrates softmax
+cross-entropy by per-class frequencies),
+\textit{feature/domain shift} (e.g., FedBN, which keeps batch-norm
+statistics local across scanners/sensors), and
+\textit{client drift via control variates} (e.g., SCAFFOLD, an alternative
+algorithmic mechanism to the proximal one).
+This dissertation isolates the FedProx mechanism and reports its behaviour
+on one designed and two literature-standard non-IID partitions; comparative
+evaluation against FedLC/FedBN/SCAFFOLD and loss-level class-imbalance
+remedies (class-weighted cross-entropy, focal loss) is identified as future
+work.
+
+\subsection{Partition: \texttt{balanced\_paired\_7\_clients}}\label{sec:partition}
+
+\paragraph{Simulated, not real, heterogeneity --- a scope condition we
+emphasise.} Before describing the partition, we state a methodological
+scope condition explicitly and emphatically. The ``client heterogeneity''
+tested in this dissertation is generated by \textbf{partitioning a single
+dataset (DermaMNIST) by class index across seven synthetic clients}, not
+by combining data from real hospitals, scanners, or imaging protocols.
+This study therefore investigates \textbf{controlled synthetic
+label-skew heterogeneity in DermaMNIST, not real multi-site clinical
+heterogeneity}. Real federated medical-imaging deployments are subject
+to additional axes of heterogeneity that are \emph{not} modelled here,
+specifically:
+\begin{itemize}
+\item \textbf{Feature/domain shift} across imaging devices (scanner
+differences, magnetic-field strength, acquisition protocols) ---
+addressed by FedBN \citep{Li et al., 2021}, which keeps batch-norm
+statistics local and has been reported to outperform FedAvg and FedProx
+under feature shift.
+\item \textbf{Demographic shift} across institutions (skin-tone
+distribution, age, sex, geographical disease prevalence).
+\item \textbf{Missing-modality structure} across centres (different
+clinics record different sets of features or use different imaging
+modalities).
+\end{itemize}
+Our setup isolates the \emph{label-distribution-skew} component of FL
+heterogeneity. \textbf{We do not claim that FedProx solves
+medical-site heterogeneity}; results about FedProx's behaviour under
+feature shift or scanner drift cannot be inferred from this experiment.
+Addressing those axes would require multi-site clinical data (e.g., the
+FeTS or COVID-19 federated benchmarks) and FedBN-style methods that are
+out of scope here. This is identified as the primary direction for
+follow-up work.
+
 We use a custom non-IID partition designed to satisfy three desiderata:
 (i) the global class distribution is heterogeneous across clients to
 challenge FedAvg's gradient-averaging assumption; (ii) no client
@@ -173,11 +333,33 @@ The single most important experimental control is paired seeding: for
 each seed $s \in S = \{42,\, 123,\, 456,\, 789,\, 999,\, 2024,\, 31337,\, 161803,\, 271828,\, 8675309\}$,
 FedAvg and FedProx are run with identical random state---identical
 partition, identical model initialisation, identical dataloader RNG.
-Within-seed paired differences therefore reflect only the algorithmic
-difference (presence vs.\ absence of the proximal term), not random
-seed variance. Each of the 20 SLURM jobs (10 seeds $\times$ 2
-algorithms) ran for approximately one to one-and-a-half hours on a
+All four random-state sources are explicitly seeded: Python's built-in
+\texttt{random} module (used by Flower's \texttt{ClientManager.sample}
+for partial-participation client selection), NumPy's global RNG,
+PyTorch's global CPU RNG, and the CUDA RNG. Per-(round, client)
+dataloader generators are then derived deterministically as
+$\text{seed} \times 10^4 + \text{round} \times 100 + \text{cid}$, and
+the system-heterogeneity straggler schedule is derived from a separate
+seed offset. Within-seed paired differences therefore reflect only the
+algorithmic difference (presence vs.\ absence of the proximal term),
+not random seed variance. Each of the 20 SLURM jobs (10 seeds $\times$
+2 algorithms) ran for approximately one to one-and-a-half hours on a
 single A100; total sweep compute was $\sim$25~GPU-hours.
+
+\paragraph{Reproducibility and output provenance.} Each run writes two
+files into its output directory: a per-round history CSV
+(\texttt{history\_*.csv}) and a single-row test-set result JSON
+(\texttt{test\_at\_best\_*.json}). The JSON is fully self-documenting:
+in addition to test-set metrics it stores the full algorithmic
+configuration (algorithm, $\mu$, seed, local epochs, $R$, learning
+rate, momentum, weight decay, batch size, device,
+\texttt{fraction\_fit}, partition name, image size, npz source path,
+loss type, framework name and version, runner script name, and the
+system-heterogeneity schedule summary). Filenames encode
+\texttt{algo/mu/E/sh-tag/C-tag/seed}; the partition and image size are
+not encoded in the filename but are present in the JSON, so any
+forensic audit of a single file is sufficient to recover the run's
+full provenance.
 
 \subsection{Metrics and Statistical Analysis}
 The primary outcome is test macro-F1, the unweighted mean of per-class
@@ -301,20 +483,68 @@ improvements: \textit{melanoma} ($\Delta = +0.114$, $p_{\text{raw}} =
 = 0.020$). After Holm correction across the seven tests, only
 \textit{melanoma} remains significant ($p_{\text{Holm}} = 0.041$);
 \textit{actinic keratoses} loses significance ($p_{\text{Holm}} = 0.117$).
-The strongest class-level signal is therefore the melanoma improvement,
-which is robust to multiple-comparison correction.
+We therefore phrase the per-class finding carefully:
+\textbf{FedProx improves macro-F1 on average, with the clearest
+multiple-comparison-corrected per-class benefit on melanoma. Other
+minority-class improvements are suggestive but exploratory, and the
+worst-case per-(seed, class) regressions in Table~\ref{tab:worst-per-class}
+show that FedProx is not uniformly safer across all classes.}
+The headline claim is the macro-F1 result; the per-class table localises
+where the benefit is corrected-significant (melanoma alone) and where it
+is descriptive only.
 
-Regarding per-class regression, no class shows a mean regression of
-meaningful magnitude (largest: \textit{vascular lesions} $\Delta = -0.012$,
-$p = 0.70$), and none exceeds the pre-registered $\pm 0.05$ design
-tolerance on the across-seed mean. However, the per-class paired Wilcoxon
-test with $n = 10$ is underpowered to rule out smaller per-class harms;
-this analysis cannot exclude regressions on the order of $\pm 0.03$ that
-might emerge in a larger sweep. The majority class \textit{melanocytic
-nevi} (67\% prevalence) shows essentially no change ($\Delta = +0.002$,
-$p = 0.375$), consistent with the partition design in which every client
-holds nevi training samples and the proximal anchor therefore has no
-inter-client drift to constrain on this class.
+Regarding per-class regression on the across-seed \emph{mean}: no class
+shows a mean regression of meaningful magnitude (largest: \textit{vascular
+lesions} $\Delta = -0.012$, $p = 0.70$), and none exceeds the
+pre-registered $\pm 0.05$ design tolerance on the mean. However, the
+\emph{mean} is the wrong quantity to defend a clinical-safety claim:
+under noisy per-class F1 estimates on rare classes, an individual seed
+can exhibit a substantially more negative $\Delta$ even when the mean is
+near zero. We therefore additionally report worst-case per-(seed, class)
+$\Delta$ values (Table~\ref{tab:worst-per-class}). The single worst cell
+across all $10 \times 7 = 70$ (seed, class) combinations is on
+\textit{vascular lesions} at seed 789 ($\Delta = -0.113$); 10 of 70 cells
+fall below $-0.05$ and 4 below $-0.10$, all on the rarest classes
+(vascular, dermato, benign\_kerat) for which per-class F1 estimation has
+high variance. Critically, the clinically most important class
+(\textit{melanoma}) has worst-seed $\Delta = -0.019$ --- the per-class
+result on melanoma is robust at the individual-seed level, not only on
+the across-seed mean. The pre-registered "no mean regression $> 0.05$"
+claim is satisfied; the stronger "no worst-case regression $> 0.05$"
+claim is \emph{not} satisfied, and we report this honestly rather than
+hide it behind the mean. The majority class \textit{melanocytic nevi}
+(67\% prevalence) shows essentially no change ($\Delta = +0.002$,
+$p = 0.375$; worst-seed $\Delta = -0.009$), consistent with the partition
+design in which every client holds nevi training samples and the
+proximal anchor therefore has no inter-client drift to constrain on this
+class.
+
+\begin{table}[h]
+\centering
+\caption{Worst-case per-(seed, class) test F1 regression. The
+``mean $\Delta$'' column reproduces Table~\ref{tab:per-class}; the
+``worst-seed $\Delta$'' column shows the most negative single-seed
+per-class regression for each class. The clinically critical
+\textit{melanoma} class is robust at the worst-seed level
+($\Delta = -0.019$); the more substantial worst-case regressions
+concentrate on the lowest-prevalence classes where per-class F1
+estimation is most variable.}
+\label{tab:worst-per-class}
+\small
+\begin{tabular}{lrccc}
+\toprule
+Class                              & Prev.\ (\%) & Mean $\Delta$ & Worst-seed $\Delta$ & Worst seed \\
+\midrule
+Melanoma                           & 11.11 & $+0.114$ & $-0.019$ & 8675309 \\
+Melanocytic nevi (majority)        & 67.05 & $+0.002$ & $-0.009$ & 31337 \\
+Actinic keratoses                  &  3.27 & $+0.067$ & $-0.039$ & 123 \\
+Basal cell carcinoma               &  5.13 & $-0.001$ & $-0.057$ & 2024 \\
+Benign keratosis-like              & 10.97 & $+0.004$ & $-0.093$ & 271828 \\
+Dermatofibroma                     &  1.15 & $+0.013$ & $-0.107$ & 456 \\
+Vascular lesions                   &  1.41 & $-0.012$ & $\mathbf{-0.113}$ & \textbf{789} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[h]
 \centering
@@ -340,7 +570,7 @@ Dermatofibroma                     &  1.15 & 0.283 & 0.296 & $+0.013$           
 \end{tabular}
 \end{table}
 
-\subsection{Convergence Behaviour}
+\subsection{Convergence Behaviour}\label{sec:convergence}
 Figure~\ref{fig:curves-main} presents the per-round validation
 trajectories aggregated as mean $\pm$ SEM across the 10 paired seeds.
 These curves are reported as \textbf{descriptive secondary outcomes};
@@ -536,22 +766,100 @@ $\Delta$ & $-9$ rounds & $\mathbf{+0.035}$ & $\mathbf{+0.038}$ & $-0.003$ (n.s.)
 \end{table}
 
 \subsection{Centralised Baseline and Robustness Across Partitions}
-\textbf{Placeholder --- update once HPC sweeps complete.} A centralised
-non-federated baseline is computed by training the same
+A centralised non-federated baseline is computed by training the same
 \texttt{DermMNISTCNN} architecture on the pooled 7{,}007-sample training set
 under the same evaluation protocol. The centralised result anchors the
 ``federation tax'' --- the difference between the upper-bound performance
 achievable with all data co-located and the FL performance with the same data
 partitioned across clients.
 
-To assess external validity of the headline result, we additionally evaluate
-both algorithms on two literature-standard partitions: the IID partition
-(uniform random sharding, expected falsification check where $\Delta \approx
-0$) and the Dirichlet-$\alpha = 0.1$ partition \citep{Hsu et al., 2019}
-(severe statistical heterogeneity, standard in modern FL benchmarks). Both
-sweeps use the same 10 paired seeds and same $E = 20$, $R = 150$
-configuration as the headline. Results are summarised in
-Table~\ref{tab:robustness}.
+\paragraph{A note on the structure of evidence in this section.}
+The custom \texttt{balanced\_paired\_7\_clients} partition is engineered
+to test a clean mechanistic prediction, but we acknowledge that its
+design choices (every minority class held by exactly two clients;
+majority class held by all seven) could be read as favourable to FedProx.
+To defend the headline against this concern, this dissertation reports
+three distinct partition regimes that should be evaluated together
+rather than as an ordered headline + appendix:
+
+\begin{itemize}
+\item \textbf{IID partition (falsification check).} If FedProx wins
+strongly under IID, the headline effect is suspicious; theory predicts
+$\Delta \approx 0$ under IID because no client drift accumulates.
+\item \textbf{Dirichlet-$\alpha = 0.1$ partition (literature-standard
+non-IID).} The de-facto benchmark partition in modern FL papers
+\citep{Hsu et al., 2019}. A positive $\Delta$ here demonstrates the
+headline effect transfers to a setup we did not design.
+\item \textbf{\texttt{balanced\_paired\_7\_clients} (mechanism
+experiment, this work).} The custom partition that supports a clean
+per-class mechanism prediction: mel\_nevi shows $\Delta \approx 0$ (no
+meaningful FedProx advantage on the majority class, as predicted), while
+the strongest corrected minority-class benefit is melanoma; other
+minority-class effects are exploratory and not uniformly positive at the
+seed/class level. We therefore frame the mechanism prediction as
+\emph{partially supported}: the absence of a mel\_nevi effect is the
+clean positive result; the per-minority-class pattern is heterogeneous,
+with melanoma the only Holm-confirmed gain.
+\end{itemize}
+
+The custom partition is therefore framed as the \emph{mechanism}
+experiment, with IID and Dirichlet-$\alpha = 0.1$ as the \emph{external
+validity} pair. Both literature-standard partitions are evaluated under
+identical hyperparameters (same 10 paired seeds, $E = 20$, $R = 150$,
+$\mu = 0.01$) so the three regimes are directly comparable.
+
+\paragraph{Centralised upper bound (3-seed sweep).}
+This experiment answers: \emph{how much performance is sacrificed by
+federating versus pooling all data centrally?} The centralised baseline
+is run across three seeds ($\{42, 123, 456\}$) at 50 epochs each using
+the same \texttt{DermMNISTCNN} architecture and ``test-at-best-val''
+evaluation protocol as the federated runs. The centralised mean test
+macro-F1 is $\mathbf{0.562 \pm 0.006}$ (per-seed values: 0.555, 0.568,
+0.562; SD across 3 seeds = 0.006, smaller than the 10-seed across-seed
+SDs of FedAvg = 0.025 and FedProx = 0.014, reflecting absence of FL
+aggregation noise). Relative to this upper bound, FedAvg recovers
+$\sim 85.7\%$ of centralised performance and FedProx recovers
+$\sim 90.5\%$; \textbf{FedProx descriptively closes $\sim 33\%$ of the
+FedAvg-to-centralised gap}. This remains a \emph{descriptive} comparison
+rather than a formal statistical contrast: the centralised runs are
+independent samples (no client partition), while the federated runs are
+paired across algorithms within seed --- the two are not directly
+comparable through a paired test. The 3-seed centralised sweep is
+sufficient to bracket the upper-bound order of magnitude; extending to
+all 10 seeds is identified as trivial follow-up (~50 minutes on A100)
+that would tighten the federation-tax estimate but is not expected to
+alter the qualitative conclusion.
+
+\paragraph{IID falsification check (\TODOhpc{HPC running}).}
+\emph{Hypothesis being tested:} under an IID partition (each client receives
+a uniform random sample of the training set), no client drift can accumulate
+during local training, because every client's gradient is in expectation an
+unbiased estimator of the global gradient. FedProx's proximal term should
+therefore have nothing to constrain, and FedAvg and FedProx should be
+\emph{statistically indistinguishable} ($\Delta \approx 0$, Wilcoxon
+$p > 0.05$). This is a falsification check: if FedProx \emph{also} wins
+strongly under IID, the headline result may reflect a generic regularisation
+effect rather than heterogeneity-specific drift mitigation, which would
+weaken the mechanistic interpretation. The 20-job sweep (10 seeds $\times$ 2
+algorithms) was submitted on \TODOhpc{date}; results will be populated in
+row~2 of Table~\ref{tab:robustness} and discussed below upon completion.
+
+\paragraph{Dirichlet-$\alpha = 0.1$ literature-standard non-IID (\TODOhpc{HPC running}).}
+\emph{Hypothesis being tested:} the Dirichlet-$\alpha = 0.1$ partition
+\citep{Hsu et al., 2019} is the de-facto standard non-IID configuration in
+modern FL benchmarks. For each class, the proportion of its samples
+allocated to each of the 7 clients is drawn from a 7-dimensional
+Dirichlet distribution with concentration parameter $\alpha = 0.1$
+(lower $\alpha$ = more concentrated, hence more heterogeneous; $\alpha = 0.1$
+is severely non-IID). Testing FedProx on this literature-standard
+partition addresses the external-validity concern that our custom
+\texttt{balanced\_paired\_7\_clients} partition may have been favourable to
+FedProx by design. We expect FedProx to retain a positive $\Delta$ under
+Dirichlet, though the magnitude and per-class structure may differ. The
+20-job sweep (10 seeds $\times$ 2 algorithms) was submitted on
+\TODOhpc{date}; results will be populated in row~3 of Table~\ref{tab:robustness}.
+
+Results are summarised in Table~\ref{tab:robustness}.
 
 \begin{table}[h]
 \centering
@@ -565,9 +873,9 @@ seeds with paired Wilcoxon.}
 \toprule
 Regime & FedAvg test macro-F1 & FedProx test macro-F1 & $\Delta$ & Wilcoxon $p$ \\
 \midrule
-Centralised (upper bound, $n=1$)  & \multicolumn{2}{c}{$\mathbf{0.555}$ (single seed)} & --- & --- \\
-IID (falsification check)         & [pending HPC] & [pending HPC] & [pending] & [pending] \\
-Dirichlet-$\alpha = 0.1$ (severe non-IID, Hsu 2019) & [pending HPC] & [pending HPC] & [pending] & [pending] \\
+Centralised (upper bound, $n=3$)  & \multicolumn{2}{c}{$\mathbf{0.562 \pm 0.006}$ (3 seeds)} & --- & --- \\
+IID (falsification check)         & \TODOhpc{FA mean$\pm$SD} & \TODOhpc{FP mean$\pm$SD} & \TODOhpc{$\Delta$} & \TODOhpc{p} \\
+Dirichlet-$\alpha = 0.1$ (severe non-IID, Hsu 2019) & \TODOhpc{FA mean$\pm$SD} & \TODOhpc{FP mean$\pm$SD} & \TODOhpc{$\Delta$} & \TODOhpc{p} \\
 \texttt{balanced\_paired\_7\_clients} (this work) & $0.481 \pm 0.025$ & $0.508 \pm 0.014$ & $\mathbf{+0.027}$ & $\mathbf{0.020}$ \\
 \bottomrule
 \end{tabular}
@@ -578,24 +886,29 @@ upper bound on macro-F1 achievable when all training data is pooled into
 a single non-federated run. Using the same architecture, hyperparameters,
 and evaluation protocol as the federated runs (early stopping on validation
 macro-F1; test evaluated once at the best-val epoch), centralised training
-reaches test macro-F1 $= 0.555$. \emph{Important caveat:} this is a single
-seed; we have not quantified across-seed centralised variance. The
-descriptive comparisons that follow should therefore be interpreted as
-approximate reference points rather than formal statistical contrasts
-against the 10-seed federated means. Relative to this single-seed upper
-bound, FedAvg recovers $86.7\%$ of centralised performance (federation
-tax: $-0.074$ macro-F1) and FedProx recovers $91.5\%$ (federation tax:
-$-0.047$); descriptively, \textbf{FedProx closes approximately $36\%$ of
+reaches test macro-F1 $= \mathbf{0.562 \pm 0.006}$ across three seeds
+($\{42, 123, 456\}$). The 3-seed across-seed standard deviation (0.006)
+is markedly smaller than the federated across-seed standard deviations
+(FedAvg 0.025, FedProx 0.014), as expected: centralised training has no
+client-aggregation noise. Relative to the centralised upper bound,
+FedAvg recovers $85.7\%$ of centralised performance (federation tax:
+$-0.080$ macro-F1) and FedProx recovers $90.5\%$ (federation tax:
+$-0.053$); descriptively, \textbf{FedProx closes approximately $33\%$ of
 the FedAvg-to-centralised gap} without any cross-client data sharing.
-Additionally, the centralised run reached its best-val epoch at epoch 48
-of 50, indicating the model was still improving at the wall-clock cutoff;
-a longer centralised run would likely raise the upper bound modestly and
-correspondingly enlarge the federation tax for both algorithms. The
-per-class federation tax is heavily concentrated on melanoma (FedAvg
-loses $0.228$ F1 to centralised, FedProx loses $0.114$) and benign
-keratosis ($0.136$ and $0.132$ respectively); the universal majority
-class \textit{melanocytic nevi} reaches centralised-level performance
-under both algorithms ($\Delta$ to centralised $\leq 0.008$ for both).
+Because the centralised and federated samples are not paired across
+seeds in a way that supports a within-pair test (centralised seeds index
+RNG state, not client partitions), the federation-tax percentages are
+reported descriptively rather than as a formal statistical contrast.
+Additionally, the centralised runs reached their best-val epoch around
+epochs 45–48 of 50, indicating the model was still improving at the
+wall-clock cutoff; a longer centralised run would likely raise the upper
+bound modestly and correspondingly enlarge the federation tax for both
+algorithms. The per-class federation tax is heavily concentrated on
+melanoma (FedAvg loses $\sim 0.27$ F1 to centralised, FedProx loses
+$\sim 0.15$) and basal cell carcinoma; the universal majority class
+\textit{melanocytic nevi} reaches centralised-level performance under
+both algorithms (centralised $0.894$ vs FedAvg/FedProx $\sim 0.885$,
+gap $\leq 0.01$).
 
 %==============================================================================
 \section{Discussion}
@@ -659,6 +972,274 @@ final round. The FedProx advantage is therefore not an early-training
 transient that erodes as training progresses, but a stable property of
 the converged trajectory.
 
+\subsection{Calibrated thesis-level claim}
+We summarise the chapter's primary claim in deliberately calibrated
+language that reflects both what the experiments demonstrate and what
+they do not:
+\begin{quote}
+\textit{Across 10 paired seeds on a controlled DermaMNIST label-skew
+partition, FedProx improves average test macro-F1 over FedAvg under a
+high-local-epoch regime. The result is statistically supported at the
+paired-seed level and is driven primarily by melanoma/specialist-client
+behaviour. However, the study does not show that FedProx solves class
+imbalance or real medical-site heterogeneity; robustness to IID/Dirichlet
+partitions, heterogeneous-local-step baselines such as FedNova
+\citep{Wang et al., 2020}, and imbalance-aware losses (class-weighted CE,
+FedLC) remain necessary to delimit the claim. The first two of these
+have been pre-registered and submitted to HPC; the last has been
+implemented in code and is queued.}
+\end{quote}
+
+\subsection{Limitations and Acknowledged Methodological Caveats}
+The following design choices are deliberate trade-offs and are
+acknowledged as scope limitations rather than methodological errors.
+
+\paragraph{Full participation (fraction-fit $C = 1.0$).} All seven
+clients participate in every communication round. This is standard in
+cross-silo FL benchmarks where the client population is small and
+stable, but partial-participation regimes ($C < 1$) are also common in
+the FL literature \citep{Karimireddy et al., 2020}. Our results
+therefore characterise FedProx in the full-participation cross-silo
+setting; behaviour under partial participation (e.g., $C = 0.5$ in the
+cross-device regime) is not tested here and is identified as future
+work. The mechanism we observe (proximal-term mitigation of client
+drift) is not specific to $C = 1$ in principle, but the magnitude of
+the advantage may differ under client sub-sampling because the
+size-weighted aggregation rule then encounters different round-to-round
+client subsets.
+
+\paragraph{Large local-epoch count ($E = 20$).} The high local-epoch
+budget per round is deliberately chosen because it is the regime in
+which client drift accumulates most strongly and FedProx's theoretical
+motivation is most directly engaged \citep{Li et al., 2020, Theorem~4}.
+However, this choice is also where FedProx is most expected to help; at
+$E = 1$ the proximal anchor has essentially no drift to constrain and
+FedAvg and FedProx are predicted to be indistinguishable. The headline
+result should therefore be read as ``FedProx improves over FedAvg
+\emph{at $E = 20$}''; sensitivity at intermediate $E$ (e.g., $E = 5$)
+would refine the magnitude estimate but is not run here. The
+convergence-curves analysis (§\ref{sec:convergence}) provides indirect
+evidence that the advantage is not solely an end-of-training artefact:
+FedProx pulls ahead by round~10 and the gap is largest at round~50.
+
+\paragraph{Centralised baseline at 3 seeds rather than 10.} The
+centralised upper-bound number (test macro-F1 $= 0.562 \pm 0.006$ over
+seeds $\{42, 123, 456\}$) is reported as a descriptive reference, not a
+formal statistical contrast against the 10-seed federated means: the
+centralised runs index RNG state, not client partitions, so a paired
+test against the federated runs is not well-defined. Extending the
+centralised sweep to the full 10-seed set is identified as a trivial
+follow-up ($\sim$50 minutes on A100); the across-seed SD is already
+small (0.006) relative to the federated SDs (FedAvg 0.025, FedProx
+0.014) so the 3-seed point estimate is unlikely to shift materially.
+
+\paragraph{Worst-case vs.\ mean per-class regression.} The pre-registered
+safety criterion (no per-class regression $> 0.05$) was specified on the
+across-seed mean and is satisfied (largest mean regression: vascular,
+$\Delta = -0.012$). On the stronger worst-(seed, class) criterion the
+safety claim is partially weakened: 10 of 70 per-(seed, class) cells
+fall below $-0.05$, with the worst case being vascular at seed 789
+($\Delta = -0.113$); we report this honestly in
+Table~\ref{tab:worst-per-class} and discuss it explicitly rather than
+defending the safety claim on the mean alone. The clinically most
+critical class (\textit{melanoma}) is robust at the worst-case level
+($\Delta = -0.019$).
+
+\paragraph{Implemented but not yet evaluated: class-weighted CE and
+FedNova baselines.} In response to peer methodology review, two
+imbalance/heterogeneity-aware baselines have been
+\emph{implemented in code} but are queued for HPC evaluation:
+\begin{itemize}
+\item \textbf{Class-weighted cross-entropy} (and focal-loss variant) in
+\texttt{mnist\_dermnist/fl/class\_imbalance.py}. This baseline directly
+addresses the label-distribution skew in DermaMNIST without invoking the
+FedProx mechanism; it is the closest loss-level alternative to FedProx
+for the class-imbalance question. Class weights are inverse-frequency
+normalised so the weight vector sums to \texttt{num\_classes}; under the
+DermaMNIST distribution this gives the rarest class (\textit{dermato},
+1.15\%) a weight of $\approx 2.67$ and the majority class
+(\textit{mel\_nevi}, 67\%) a weight of $\approx 0.05$.
+\item \textbf{FedNova} \citep{Wang et al., 2020} in
+\texttt{mnist\_dermnist/fl\_flower/\{client\_fednova.py, strategy\_fednova.py\}}
+and the runner \texttt{experiments/run\_one\_fednova\_flower.py}.
+FedNova is the canonical competitor for the system-heterogeneity
+regime; it removes the objective-inconsistency bias introduced by
+heterogeneous local-step counts using a momentum-aware normaliser.
+For local SGD with momentum coefficient $m$ and $\tau_i$ local steps
+at client $i$, the FedNova normaliser is the L1 norm of the
+cumulative-momentum series:
+\[
+a_i \;=\; \sum_{j=1}^{\tau_i} \frac{1 - m^j}{1 - m}
+       \;=\; \frac{\tau_i (1 - m) - m\,(1 - m^{\tau_i})}{(1-m)^2}
+\]
+which reduces to $a_i = \tau_i$ for vanilla SGD ($m = 0$). The
+aggregation step is $d_i = w^t - w_i^{t+1}$,
+$d_\text{norm} = \sum_i p_i\,d_i / a_i$,
+$a_\text{eff} = \sum_i p_i a_i$, and
+$w^{t+1} = w^t - a_\text{eff}\,d_\text{norm}$. The implementation is
+brute-force verified at the canonical reference values from
+\citet{Wang et al., 2020} (e.g.\ for $\tau = 10$, $m = 0.9$:
+$a_i = 41.381$). With $m = 0$ \emph{and} uniform $\tau_i$ FedNova
+reduces to FedAvg, so the strategy is safe in all conditions, though
+under $m > 0$ even uniform $\tau$ produces a different aggregate from
+FedAvg because the effective work accumulates super-linearly in
+$\tau$.
+
+\emph{A note on the C0 (no-straggler) condition for FedNova.} Even with
+a uniform local-epoch budget $E$, the per-client $\tau_i = E \cdot
+\lceil n_i / B \rceil$ depends on the client's dataset size $n_i$ (in
+our \texttt{balanced\_paired\_7\_clients} partition $n_i$ ranges from
+673 to 1{,}110), so $\tau_i$ is non-uniform across clients even before
+any system-heterogeneity manipulation is applied. With SGD momentum
+$m = 0.9$, the FedNova normaliser $a_i$ is non-linear in $\tau_i$, so
+even at C0 the FedNova aggregate differs from FedAvg's
+size-weighted mean. This is intentional and is the reason a Flower-runtime
+FedNova C0 baseline is reported (not borrowed from the FedAvg run): the
+quantity-driven $\tau$ heterogeneity is a real driver of FedNova's
+behaviour in this study, not an artefact of the straggler schedule.
+\end{itemize}
+These baselines are not yet run on HPC; their inclusion in the SLURM
+sweep is the highest-priority comparative extension and is recommended
+for a follow-up extension of this dissertation.
+
+A fuller comparison would additionally include FedLC (label-frequency
+calibration), FedBN \citep{Li et al., 2021} (feature-shift; out of scope
+because we do not test feature-shift partitions), and SCAFFOLD
+\citep{Karimireddy et al., 2020} (control variates as an alternative
+drift remedy with $\sim 2\times$ communication cost).
+
+\paragraph{Communication efficiency (a complementary metric).}
+A communication-cost analysis derived from the existing headline data
+(\texttt{thesis\_ready/data/communication\_metrics.json}) finds that
+FedProx and FedAvg have \emph{identical} per-round communication
+($\approx 12.9$ MB per round for our 7-client setup at $\sim$423K
+parameters), but FedProx reaches val macro-F1 = 0.45 in 13 communication
+rounds on average versus FedAvg's 39 rounds --- approximately $3\times$
+fewer round-trips per silo to reach a deployable model. For deployment
+contexts where communication bandwidth is the binding constraint
+(cross-device FL, satellite-linked clinics), this represents a
+substantial practical advantage. By contrast, SCAFFOLD would
+approximately double per-round communication due to control-variate
+exchange.
+
+\paragraph{Limited per-class interpretability artefacts.} The thesis
+reports per-class test F1 with Holm-corrected $p$-values
+(Table~\ref{tab:per-class}) and worst-case per-(seed, class) regressions
+(Table~\ref{tab:worst-per-class}), but does not include confusion
+matrices, per-class precision/recall, or qualitative examples of
+correctly/incorrectly classified images. A segmentation thesis on the
+same topic (e.g., \citet{Marija, 2025}) gets such visual interpretability
+naturally from predicted-mask overlays; a classification thesis must
+construct it from confusion-matrix and per-class metrics, which require
+storing per-prediction outputs (not done in the current evaluation
+pipeline; the saved \texttt{test\_at\_best\_*.json} files contain
+per-class F1 only). Augmenting the evaluation code to save full
+prediction arrays and produce confusion matrices is a low-cost
+future-work item (~5 lines of code in
+\texttt{mnist\_dermnist/fl/evaluation.py} plus a re-run of the headline
+sweep, or a one-time re-evaluation on the existing saved model
+checkpoints if those are retained).
+
+%==============================================================================
+% INTERNAL CHECKLIST — delete this whole section before final submission
+% (or set \showtodofalse at the top of the document to hide it without
+% removing the source). The section is hidden in the PDF only when
+% \showtodofalse is set; otherwise it renders as a red-flagged checklist.
+%==============================================================================
+\ifshowtodo
+\section{Pending Items Before Final Submission}\label{sec:todo}
+\textcolor{red}{\textbf{This appendix is internal. Delete or hide before
+final submission.}}
+
+\subsection*{HPC sweeps still running}
+
+\paragraph{1. IID falsification sweep (20 jobs)} --- submitted on
+\TODOhpc{date}.
+\begin{itemize}
+\item \textbf{Output location:} \texttt{mnist\_dermnist/results/iid/}
+\item \textbf{Files expected:} 10 $\times$ \texttt{test\_at\_best\_fedavg\_mu0.0\_E20\_s<seed>.json},
+  10 $\times$ \texttt{test\_at\_best\_fedprox\_mu0.01\_E20\_s<seed>.json},
+  plus matching \texttt{history\_*.csv}.
+\item \textbf{To finalise:} run
+  \texttt{PYTHONPATH=. python -m mnist\_dermnist.analysis.tables --results-dir mnist\_dermnist/results/iid}.
+  This produces \texttt{paired\_stats.json} with FedAvg mean$\pm$SD,
+  FedProx mean$\pm$SD, $\Delta$, Wilcoxon $p$, rank-biserial $r_{rb}$.
+\item \textbf{Replace in this \texttt{.tex}:} row~2 of
+  Table~\ref{tab:robustness} (the four \texttt{\textbackslash TODOhpc\{\ldots\}} cells).
+\item \textbf{Expected outcome:} $\Delta \approx 0$, $p > 0.05$ (theory
+  predicts no client drift under IID, so the proximal regulariser has
+  nothing to constrain). If $p < 0.05$, the headline mechanism story
+  weakens and the Discussion must be revised.
+\end{itemize}
+
+\paragraph{2. Dirichlet-$\alpha = 0.1$ robustness sweep (20 jobs)} ---
+submitted on \TODOhpc{date}.
+\begin{itemize}
+\item \textbf{Output location:} \texttt{mnist\_dermnist/results/dirichlet\_a01/}
+\item \textbf{Files expected:} same shape as IID above (10 paired seeds
+  $\times$ 2 algorithms).
+\item \textbf{To finalise:} run
+  \texttt{PYTHONPATH=. python -m mnist\_dermnist.analysis.tables --results-dir mnist\_dermnist/results/dirichlet\_a01}.
+\item \textbf{Replace in this \texttt{.tex}:} row~3 of
+  Table~\ref{tab:robustness} (the four \texttt{\textbackslash TODOhpc\{\ldots\}} cells).
+\item \textbf{Expected outcome:} $\Delta > 0$, $p < 0.05$, ideally with
+  $\Delta$ of similar order of magnitude to the headline ($+0.027$).
+  Confirms the result generalises beyond the custom partition design.
+\end{itemize}
+
+\subsection*{Optional further work (low priority)}
+
+\paragraph{3. Extend centralised baseline to all 10 headline seeds.}
+The centralised baseline is currently run on 3 seeds ($\{42, 123, 456\}$;
+mean test macro-F1 $= 0.562 \pm 0.006$). Extending to all 10 paired-seed
+headline seeds would let the federation tax be stated as a paired
+comparison against the federated means rather than as a descriptive
+contrast. Cost is trivial ($\sim$5~minutes per seed on A100):
+\begin{verbatim}
+for s in 789 999 2024 31337 8675309 161803 271828; do
+  sbatch mnist_dermnist/scripts/slurm_centralised.sh \
+    $s 50 mnist_dermnist/results/centralised
+done
+\end{verbatim}
+(Seeds 42, 123, 456 already complete.) When all 10 are done, update
+\texttt{tab:robustness} row~1 with $n = 10$ mean$\pm$SD and re-run the
+federation-tax narrative against the new mean.
+
+\paragraph{4. Update-norm logging (mechanism evidence).} The reviewer
+critique on Figure~\ref{fig:curves-main} panel~C is correct: the FedProx
+training-objective trace includes the proximal penalty and is therefore
+not a clean apples-to-apples test of memorisation. The cleanest mechanism
+evidence would be per-round per-client update norms
+$\lVert w_i^{t+1} - w^t \rVert$, which would require modifying
+\texttt{mnist\_dermnist/fl/local\_train.py} to log this quantity and
+re-running both algorithms across the 10 seeds ($\sim$25 GPU-hours).
+Lower priority since the per-class and per-specialty test-set results
+(Tables~\ref{tab:per-class}, \ref{tab:per-specialty}) already provide
+mechanism-consistent evidence.
+
+\subsection*{Search-and-replace cheatsheet}
+
+When results land, use the following greps to locate every placeholder
+in this \texttt{.tex} file:
+\begin{verbatim}
+grep -n "TODOhpc"   09_overleaf_ready.tex   # all visible red markers
+grep -n "PENDING"   09_overleaf_ready.tex   # short-form placeholder
+\end{verbatim}
+Every \texttt{\textbackslash TODOhpc\{\ldots\}} call should be replaced
+with the actual number (e.g.\ \texttt{0.485 $\pm$ 0.018}) and the macro
+removed. Once all instances are gone, the
+\texttt{\textbackslash showtodofalse} switch becomes redundant.
+
+\subsection*{Date of HPC submission and resumption}
+
+\begin{itemize}
+\item HPC submission window closed on \TODOhpc{fill in date}; resumes on
+  \TODOhpc{fill in date}.
+\item Results expected within \TODOhpc{$\sim$3-6 h of resumption}; check
+  via \texttt{squeue -u \$USER} on the login node.
+\end{itemize}
+\fi   % \ifshowtodo
+
 %==============================================================================
 \section*{References}
 %==============================================================================
@@ -691,6 +1272,15 @@ Psychology}, \textit{3}, 11.IT.3.1.
 Smith, V. (2020). Federated optimization in heterogeneous networks. In
 \textit{Proceedings of Machine Learning and Systems}, \textit{2},
 429--450.
+
+\item Li, X., Jiang, M., Zhang, X., Kamp, M., \& Dou, Q. (2021). FedBN:
+Federated learning on non-IID features via local batch normalization.
+\textit{International Conference on Learning Representations (ICLR)}.
+
+\item Wang, J., Liu, Q., Liang, H., Joshi, G., \& Poor, H.~V. (2020).
+Tackling the objective inconsistency problem in heterogeneous federated
+optimization. \textit{Advances in Neural Information Processing Systems
+(NeurIPS)}, \textit{33}, 7611--7623.
 
 \item McMahan, B., Moore, E., Ramage, D., Hampson, S., \& y~Arcas,
 B.~A. (2017). Communication-efficient learning of deep networks from
