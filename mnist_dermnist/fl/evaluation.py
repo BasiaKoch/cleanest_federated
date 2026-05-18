@@ -15,7 +15,14 @@ from torch.utils.data import DataLoader
 
 
 @torch.no_grad()
-def evaluate(model: nn.Module, loader: DataLoader, device: torch.device | str, num_classes: int = 7) -> Dict:
+def evaluate(
+    model: nn.Module,
+    loader: DataLoader,
+    device: torch.device | str,
+    num_classes: int = 7,
+    *,
+    return_predictions: bool = False,
+) -> Dict:
     """Run inference and compute classification metrics.
 
     Returns dict with:
@@ -25,6 +32,13 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device | str, n
       - macro_f1           : sklearn f1_score(average='macro')
       - per_class_f1       : list of length num_classes
       - n                  : total samples seen
+
+    If `return_predictions` is True, additionally returns:
+      - predictions        : list[int] of argmax predictions
+      - targets            : list[int] of ground-truth labels
+    These are needed by downstream confusion-matrix / per-prediction
+    analyses (audit P2 fix) and are kept off the default path so the
+    serialised metric JSON stays the same shape for existing analyses.
     """
     device = torch.device(device)
     model = model.to(device).eval()
@@ -48,7 +62,7 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device | str, n
     targets_arr = np.asarray(targets_all)
     labels = list(range(num_classes))
 
-    return {
+    out = {
         "loss": total_loss / max(n_total, 1),
         "accuracy": float(np.mean(preds_arr == targets_arr)) if n_total else float("nan"),
         "balanced_accuracy": float(balanced_accuracy_score(targets_arr, preds_arr)) if n_total else float("nan"),
@@ -56,3 +70,7 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device | str, n
         "per_class_f1": f1_score(targets_arr, preds_arr, average=None, labels=labels, zero_division=0).tolist() if n_total else [float("nan")] * num_classes,
         "n": int(n_total),
     }
+    if return_predictions:
+        out["predictions"] = preds_all
+        out["targets"] = targets_all
+    return out

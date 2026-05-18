@@ -26,5 +26,13 @@
   "weight_decay": 0.0,
   "batch_size": 32,
   "num_classes": 7,
-  "device": "cuda"
+  "device": "cuda",
+  "partition": "balanced_paired_7_clients",
+  "image_size": 28,
+  "npz_path": "/Users/basiakoch/cleanest_federated/dermamnist_64.npz",
+  "framework": "pure-pytorch",
+  "framework_version": "n/a",
+  "runner_script": "run_one.py",
+  "loss_type": "cross_entropy",
+  "provenance_note": "backstamped-2026-05-18"
 }

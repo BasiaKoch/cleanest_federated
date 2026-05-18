@@ -82,11 +82,40 @@ class FLConfig:
     # heterogeneity experiments. Other modes simulate stragglers; see
     # mnist_dermnist.fl.system_het.
     system_het: SystemHetConfig = field(default_factory=SystemHetConfig)
+    # Loss-side imbalance baselines (audit HV2). 'ce' = standard cross-entropy
+    # (the headline configuration). 'class_weighted_ce' = inverse-frequency
+    # CE; 'focal' = focal loss (γ default 2). When set to anything other than
+    # 'ce', the caller must additionally pass `train_labels` to run_fl so the
+    # global class frequencies can be computed.
+    loss_type: str = "ce"
+    focal_gamma: float = 2.0
 
 
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
+
+def _build_criterion(cfg: "FLConfig", train_labels: Sequence[int] | None, device):
+    """Construct the local-training loss based on cfg.loss_type."""
+    if cfg.loss_type == "ce":
+        return nn.CrossEntropyLoss()
+    # Imbalance-aware variants need the global training labels for weights.
+    if train_labels is None:
+        raise ValueError(
+            f"loss_type={cfg.loss_type!r} requires train_labels (global) "
+            f"to compute inverse-frequency class weights."
+        )
+    from mnist_dermnist.fl.class_imbalance import (
+        make_class_weighted_ce, make_focal_loss,
+    )
+    if cfg.loss_type == "class_weighted_ce":
+        return make_class_weighted_ce(train_labels, num_classes=cfg.num_classes,
+                                      device=str(device))
+    if cfg.loss_type == "focal":
+        return make_focal_loss(gamma=cfg.focal_gamma, labels=train_labels,
+                               num_classes=cfg.num_classes, device=str(device))
+    raise ValueError(f"Unknown loss_type: {cfg.loss_type!r}")
+
 
 def run_fl(
     cfg: FLConfig,
@@ -95,6 +124,8 @@ def run_fl(
     val_loader: DataLoader,
     test_loader: DataLoader,
     client_indices: Sequence[Sequence[int]],
+    *,
+    train_labels: Sequence[int] | None = None,
 ) -> Dict:
     """Run one FL experiment. Returns a dict with `history` (per-round) and
     `test_metrics` (computed only at the best-val checkpoint).
@@ -110,6 +141,11 @@ def run_fl(
     """
     set_all_seeds(cfg.seed)
     device = torch.device(cfg.device)
+
+    # Construct local-training loss (CE by default; CW-CE or focal under
+    # cfg.loss_type). Built once before client RNG state diverges so it
+    # doesn't perturb the paired-seed protocol.
+    criterion = _build_criterion(cfg, train_labels, device)
 
     # 1) GLOBAL MODEL INITIALIZATION — single source of randomness, IDENTICAL
     # for any pair of (FedAvg, FedProx) runs that share cfg.seed.
@@ -201,6 +237,7 @@ def run_fl(
                 proximal_mu=float(cfg.mu),
                 global_weights_frozen=(global_weights_frozen if cfg.mu > 0 else None),
                 device=device,
+                criterion=criterion,
             )
 
             local_state_dicts.append({k: v.detach().clone() for k, v in client_model.state_dict().items()})
@@ -247,7 +284,15 @@ def run_fl(
     if best_state_dict is not None:
         test_model = model_builder().to(device)
         test_model.load_state_dict(best_state_dict)
-        test_metrics = evaluate(test_model, test_loader, device, num_classes=cfg.num_classes)
+        # `return_predictions=True` keeps the per-sample argmax + target
+        # arrays in test_metrics for downstream confusion-matrix analysis
+        # (audit P2 fix). save_run_outputs splits these out into a sibling
+        # .npz so they don't bloat the JSON payload.
+        test_metrics = evaluate(
+            test_model, test_loader, device,
+            num_classes=cfg.num_classes,
+            return_predictions=True,
+        )
         test_metrics["selected_round"] = best_round
         test_metrics["best_val_macro_f1"] = best_val_macro_f1
 
@@ -315,5 +360,20 @@ def save_run_outputs(
         if extra_metadata:
             for k, v in extra_metadata.items():
                 payload.setdefault(k, v)
+        # Predictions and targets (when present) go to a sibling .npz so
+        # they don't inflate the JSON. Drop them from the JSON payload.
+        preds = payload.pop("predictions", None)
+        targs = payload.pop("targets", None)
+        if preds is not None and targs is not None:
+            import numpy as _np
+            _np.savez_compressed(
+                out / f"test_predictions_{stem}.npz",
+                predictions=_np.asarray(preds, dtype=_np.int64),
+                targets=_np.asarray(targs, dtype=_np.int64),
+                selected_round=int(payload.get("selected_round", -1)),
+                seed=int(cfg.get("seed", -1)),
+                algorithm=str(cfg.get("algorithm", "")),
+            )
+            payload["predictions_file"] = f"test_predictions_{stem}.npz"
         with open(out / f"test_at_best_{stem}.json", "w") as f:
             json.dump(payload, f, indent=2)

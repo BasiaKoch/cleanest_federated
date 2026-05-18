@@ -98,6 +98,12 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--straggler-epochs", type=int, default=5)
     ap.add_argument("--fixed-straggler-ids", default=None)
     ap.add_argument("--straggler-fraction", type=float, default=0.5)
+    # Loss-side imbalance baselines (audit HV2). 'ce' = headline. Set to
+    # 'class_weighted_ce' or 'focal' for the imbalance-aware comparators.
+    ap.add_argument("--loss-type",
+                    choices=["ce", "class_weighted_ce", "focal"],
+                    default="ce")
+    ap.add_argument("--focal-gamma", type=float, default=2.0)
     return ap
 
 
@@ -164,7 +170,10 @@ def main():
     best_val_macro_f1 = {"value": -1.0, "round": -1,
                          "params": [arr.copy() for arr in initial_params]}
     history_rows: List[Dict] = []
-    fit_metrics_by_round: Dict[int, List[Dict]] = {}
+    # Populated by fit_metrics_aggregation_fn (below), keyed by 1-based round.
+    # Read out post-simulation to back-fill the train_loss column in
+    # history_rows so the Flower CSV matches the pure-PyTorch CSV schema.
+    train_loss_by_round: Dict[int, float] = {}
 
     # --- Centralised evaluation function called every round by the server ---
     def evaluate_fn(server_round: int, parameters: List[np.ndarray], config):
@@ -172,29 +181,34 @@ def main():
         eval_model = DermMNISTCNN(num_classes=7, dropout=0.2).to(device)
         numpy_to_state_dict(eval_model, parameters)
         metrics = evaluate(eval_model, val_loader, device, num_classes=7)
-        # Record row for the history CSV
-        # We don't have train loss yet — fit_metrics may be aggregated in
-        # `aggregate_fit`. Populate train_loss lazily via fit_metrics_by_round.
-        row = {
-            "seed": seed,
-            "algorithm": args.algorithm,
-            "mu": mu,
-            "local_epochs": args.local_epochs,
-            "round": server_round,
-            "val_loss": metrics["loss"],
-            "val_accuracy": metrics["accuracy"],
-            "val_balanced_accuracy": metrics["balanced_accuracy"],
-            "val_macro_f1": metrics["macro_f1"],
-        }
-        for c, f1c in enumerate(metrics["per_class_f1"]):
-            row[f"val_f1_class_{c}"] = float(f1c)
-        history_rows.append(row)
 
-        # Update best-val checkpoint
-        if metrics["macro_f1"] > best_val_macro_f1["value"]:
-            best_val_macro_f1["value"] = float(metrics["macro_f1"])
-            best_val_macro_f1["round"] = int(server_round)
-            best_val_macro_f1["params"] = [arr.copy() for arr in parameters]
+        # Flower invokes evaluate_fn once at server_round=0 with the
+        # untrained initial parameters AND after every fit round 1..R.
+        # The pure-PyTorch reference loop (fl/server_loop.py) only
+        # evaluates after rounds 1..R, so we skip writing the round-0
+        # row here to keep history CSVs cross-runtime comparable.
+        # The best-val tracker is also skipped for round 0; untrained
+        # params would not beat any trained checkpoint in practice.
+        if int(server_round) >= 1:
+            row = {
+                "seed": seed,
+                "algorithm": args.algorithm,
+                "mu": mu,
+                "local_epochs": args.local_epochs,
+                "round": server_round,
+                "val_loss": metrics["loss"],
+                "val_accuracy": metrics["accuracy"],
+                "val_balanced_accuracy": metrics["balanced_accuracy"],
+                "val_macro_f1": metrics["macro_f1"],
+            }
+            for c, f1c in enumerate(metrics["per_class_f1"]):
+                row[f"val_f1_class_{c}"] = float(f1c)
+            history_rows.append(row)
+
+            if metrics["macro_f1"] > best_val_macro_f1["value"]:
+                best_val_macro_f1["value"] = float(metrics["macro_f1"])
+                best_val_macro_f1["round"] = int(server_round)
+                best_val_macro_f1["params"] = [arr.copy() for arr in parameters]
 
         return metrics["loss"], {
             "val_macro_f1": metrics["macro_f1"],
@@ -206,6 +220,22 @@ def main():
     def on_fit_config_fn(server_round: int) -> Dict:
         # Note: server_round is 1-based in Flower
         return {"round": server_round}
+
+    # --- Aggregate per-client train_loss so it lands in the history CSV.
+    # FedAvg's default strategy DROPS client fit-metrics unless we provide
+    # an aggregator. Without this, the Flower history would lack train_loss
+    # entirely (the pure-PyTorch CSV has it; the cross-runtime mismatch was
+    # the original B3 from the audit).
+    def fit_metrics_aggregation_fn(metrics):
+        total_n = sum(int(n) for n, _ in metrics)
+        if total_n <= 0:
+            return {}
+        return {
+            "train_loss": float(
+                sum(float(m.get("train_loss", 0.0)) * int(n) for n, m in metrics)
+                / total_n
+            ),
+        }
 
     # --- Strategy: standard FedAvg aggregation (FedProx uses same aggregation;
     #     the proximal term is applied client-side in fit()) ---
@@ -219,6 +249,7 @@ def main():
         initial_parameters=fl.common.ndarrays_to_parameters(initial_params),
         evaluate_fn=evaluate_fn,
         on_fit_config_fn=on_fit_config_fn,
+        fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
         accept_failures=False,
     )
 
@@ -233,6 +264,21 @@ def main():
     # The full per-(round, client) epoch schedule is captured in the closure
     # and passed to each client at construction; no fragile config-string
     # round-tripping required.
+    # Build the local-training loss once and share across all clients
+    # (the inverse-frequency weights depend only on the global training
+    # labels, which all clients agree on by design).
+    def build_criterion():
+        if args.loss_type == "ce":
+            return torch.nn.CrossEntropyLoss()
+        from mnist_dermnist.fl.class_imbalance import (
+            make_class_weighted_ce, make_focal_loss,
+        )
+        if args.loss_type == "class_weighted_ce":
+            return make_class_weighted_ce(train.labels, num_classes=7,
+                                          device=device_str)
+        return make_focal_loss(gamma=args.focal_gamma, labels=train.labels,
+                               num_classes=7, device=device_str)
+
     def client_fn(context_or_cid) -> fl.client.Client:
         if hasattr(context_or_cid, "node_config"):
             cid_int = int(context_or_cid.node_config.get("partition-id", 0))
@@ -253,6 +299,7 @@ def main():
             proximal_mu=mu,
             device=device_str,
             epoch_schedule=epoch_schedule,
+            criterion=build_criterion(),
         ).to_client()
 
     # --- Launch Flower simulation ---
@@ -266,7 +313,7 @@ def main():
                         if device_str == "cuda" else {"num_cpus": 1, "num_gpus": 0.0})
 
     t0 = time.time()
-    fl.simulation.start_simulation(
+    history_obj = fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=args.num_rounds),
@@ -275,12 +322,30 @@ def main():
     )
     elapsed = time.time() - t0
 
+    # --- Back-fill train_loss into history_rows from the aggregated fit metrics.
+    # Flower stores aggregated fit metrics in `metrics_distributed_fit`:
+    # a dict {metric_name -> List[Tuple[round, value]]}.
+    if hasattr(history_obj, "metrics_distributed_fit"):
+        for r, v in history_obj.metrics_distributed_fit.get("train_loss", []):
+            train_loss_by_round[int(r)] = float(v)
+    for row in history_rows:
+        row["train_loss"] = train_loss_by_round.get(int(row["round"]), float("nan"))
+
     # --- Final test at best-val checkpoint ---
+    # `return_predictions=True` keeps per-sample argmax + target arrays
+    # for downstream confusion-matrix analysis (audit P2 fix). They're
+    # serialised to a sibling .npz, NOT inlined into the JSON.
     test_model = DermMNISTCNN(num_classes=7, dropout=0.2).to(device)
     numpy_to_state_dict(test_model, best_val_macro_f1["params"])
-    test_metrics = evaluate(test_model, test_loader, device, num_classes=7)
+    test_metrics = evaluate(
+        test_model, test_loader, device, num_classes=7,
+        return_predictions=True,
+    )
     test_metrics["selected_round"] = best_val_macro_f1["round"]
     test_metrics["best_val_macro_f1"] = best_val_macro_f1["value"]
+    # Extract predictions before constructing the JSON payload.
+    _preds = test_metrics.pop("predictions", None)
+    _targets = test_metrics.pop("targets", None)
 
     # --- Write outputs (mirror save_run_outputs from pure-PyTorch path) ---
     out_dir = Path(args.out_dir)
@@ -295,9 +360,21 @@ def main():
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
+    predictions_file = None
+    if _preds is not None and _targets is not None:
+        predictions_file = f"test_predictions_{stem}.npz"
+        np.savez_compressed(
+            out_dir / predictions_file,
+            predictions=np.asarray(_preds, dtype=np.int64),
+            targets=np.asarray(_targets, dtype=np.int64),
+            selected_round=int(test_metrics["selected_round"]),
+            seed=int(seed),
+            algorithm=args.algorithm,
+        )
     with open(out_dir / f"test_at_best_{stem}.json", "w") as f:
         json.dump({
             **test_metrics,
+            "predictions_file": predictions_file,
             "seed": seed, "algorithm": args.algorithm, "mu": mu,
             "local_epochs": args.local_epochs, "num_rounds": args.num_rounds,
             "lr": args.lr, "momentum": args.momentum, "weight_decay": args.weight_decay,
@@ -310,7 +387,8 @@ def main():
             "framework": "flower-simulation",
             "framework_version": fl.__version__,
             "runner_script": "run_one_flower.py",
-            "loss_type": "cross_entropy",
+            "loss_type": args.loss_type,
+            "focal_gamma": args.focal_gamma if args.loss_type == "focal" else None,
             "system_het": sh_cfg.to_dict(),
             "elapsed_s": elapsed,
         }, f, indent=2)

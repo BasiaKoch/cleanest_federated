@@ -76,6 +76,7 @@ class FlClient(fl.client.NumPyClient):
         proximal_mu: float,
         device: str = "cpu",
         epoch_schedule: "np.ndarray | None" = None,
+        criterion: nn.Module | None = None,
     ) -> None:
         self.cid = int(cid)
         self.indices = list(indices)
@@ -92,7 +93,11 @@ class FlClient(fl.client.NumPyClient):
 
         self.train_subset = Subset(train_dataset, self.indices)
         self.model = model_builder().to(self.device)
-        self.criterion = nn.CrossEntropyLoss()
+        # Local-training loss (audit HV2). CE by default; the runner can
+        # inject a class-weighted CE or FocalLoss to evaluate loss-side
+        # imbalance baselines without changing the FedAvg/FedProx
+        # aggregation rule.
+        self.criterion = criterion if criterion is not None else nn.CrossEntropyLoss()
 
     def get_parameters(self, config=None):
         return state_dict_to_numpy(self.model)
