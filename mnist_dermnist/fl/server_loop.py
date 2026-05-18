@@ -32,6 +32,11 @@ from torch.utils.data import DataLoader, Dataset, Subset
 from mnist_dermnist.fl.aggregation import weighted_average_state_dicts
 from mnist_dermnist.fl.evaluation import evaluate
 from mnist_dermnist.fl.local_train import freeze_global_weights, local_train
+from mnist_dermnist.fl.system_het import (
+    SystemHetConfig,
+    build_epoch_schedule,
+    summarise_schedule,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +69,7 @@ class FLConfig:
     algorithm: str                  # 'fedavg' or 'fedprox'
     mu: float                       # 0 for fedavg; >0 for fedprox
     num_rounds: int
-    local_epochs: int
+    local_epochs: int               # baseline E (used when system_het.mode='uniform')
     fraction_fit: float             # e.g. 1.0 for full participation
     lr: float
     momentum: float
@@ -72,6 +77,11 @@ class FLConfig:
     batch_size: int
     num_classes: int = 7
     device: str = "cpu"
+    # System-heterogeneity scenario. When mode='uniform' (default), every client
+    # performs local_epochs every round, matching the headline statistical-
+    # heterogeneity experiments. Other modes simulate stragglers; see
+    # mnist_dermnist.fl.system_het.
+    system_het: SystemHetConfig = field(default_factory=SystemHetConfig)
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +129,18 @@ def run_fl(
         chosen = sorted(sampling_rng.choice(num_clients, size=n_sample, replace=False).tolist())
         sampled_per_round.append(chosen)
 
+    # 2b) PER-(round, client) LOCAL-EPOCH SCHEDULE for system heterogeneity.
+    # Seeded with cfg.seed so paired FedAvg/FedProx runs see an identical
+    # schedule; within-pair Δ therefore reflects only the algorithm difference.
+    # When system_het.mode == "uniform", every entry equals cfg.local_epochs
+    # and behaviour is bit-identical to the pre-system-het code path.
+    epoch_schedule = build_epoch_schedule(
+        cfg.system_het,
+        num_clients=num_clients,
+        num_rounds=cfg.num_rounds,
+        seed=cfg.seed,
+    )
+
     # State trackers
     history_rows: List[Dict] = []
     best_val_macro_f1 = -1.0
@@ -164,10 +186,14 @@ def run_fl(
             # (e.g., Dropout). Same seed → same masks for both algorithms.
             torch.manual_seed(dataloader_generator_seed(cfg.seed, r, cid))
 
+            # Per-(round, cid) local epochs from the system-het schedule.
+            # When system_het.mode='uniform' this equals cfg.local_epochs.
+            client_local_epochs = int(epoch_schedule[r - 1, cid])
+
             stats = local_train(
                 client_model,
                 client_loader,
-                num_epochs=cfg.local_epochs,
+                num_epochs=client_local_epochs,
                 lr=cfg.lr,
                 momentum=cfg.momentum,
                 weight_decay=cfg.weight_decay,
@@ -231,6 +257,7 @@ def run_fl(
         "history": history_df,
         "test_metrics": test_metrics,
         "best_state_dict": best_state_dict,
+        "system_het_schedule_summary": summarise_schedule(epoch_schedule),
     }
 
 
@@ -238,20 +265,55 @@ def run_fl(
 # Convenience: dump per-round CSV + best-test JSON
 # ---------------------------------------------------------------------------
 
-def save_run_outputs(result: Dict, out_dir: str | "Path") -> None:
-    """Write history CSV and the (single) best-val test_metrics JSON."""
+def save_run_outputs(
+    result: Dict,
+    out_dir: str | "Path",
+    extra_metadata: Dict | None = None,
+) -> None:
+    """Write history CSV and the (single) best-val test_metrics JSON.
+
+    Parameters
+    ----------
+    result : dict
+        Output of `run_fl()`; contains `config`, `history`, `test_metrics`.
+    out_dir : str or Path
+        Directory to write into.
+    extra_metadata : dict, optional
+        Provenance fields that aren't carried inside FLConfig but that
+        the caller (CLI runner) knows. Merged into the test_at_best JSON
+        so each output file is fully self-documenting. Typical keys:
+        partition, image_size, npz_path, framework, framework_version,
+        loss_type. Keys override anything coming from `cfg` only when
+        they are missing; existing cfg keys are preserved otherwise.
+    """
     import json
     from pathlib import Path
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     cfg = result["config"]
-    stem = f"{cfg['algorithm']}_mu{cfg['mu']}_E{cfg['local_epochs']}_s{cfg['seed']}"
+    # If a non-trivial system-heterogeneity scenario is in use, tag the
+    # filename so system-het runs are distinguishable from the headline
+    # statistical-heterogeneity runs even when they share the same out-dir.
+    sh = cfg.get("system_het", {}) if isinstance(cfg, dict) else {}
+    sh_mode = sh.get("mode", "uniform") if isinstance(sh, dict) else "uniform"
+    sh_tag = "" if sh_mode == "uniform" else f"_sh-{sh_mode}"
+    stem = f"{cfg['algorithm']}_mu{cfg['mu']}_E{cfg['local_epochs']}{sh_tag}_s{cfg['seed']}"
 
     # Per-round history
     result["history"].to_csv(out / f"history_{stem}.csv", index=False)
-    # Best-val test metrics (single row)
+    # Best-val test metrics (single row) — include full provenance
     if result["test_metrics"] is not None:
-        # Strip non-JSON-serializable per_class_f1 (already list-of-floats; this is fine)
+        payload = {
+            **result["test_metrics"],
+            **cfg,
+            "system_het_schedule_summary":
+                result.get("system_het_schedule_summary"),
+        }
+        # Provenance fields not carried by FLConfig — partition, image
+        # size, dataset path, framework, loss choice. Set by the caller.
+        if extra_metadata:
+            for k, v in extra_metadata.items():
+                payload.setdefault(k, v)
         with open(out / f"test_at_best_{stem}.json", "w") as f:
-            json.dump({**result["test_metrics"], **cfg}, f, indent=2)
+            json.dump(payload, f, indent=2)

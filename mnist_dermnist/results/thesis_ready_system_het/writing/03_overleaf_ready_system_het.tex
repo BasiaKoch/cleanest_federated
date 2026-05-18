@@ -1,0 +1,315 @@
+%==============================================================================
+% System-Heterogeneity section — drop-in LaTeX for Overleaf
+% Sibling to thesis_ready/writing/09_overleaf_ready.tex (statistical het).
+% Copy this entire file as a separate .tex document in the same Overleaf
+% project, OR \input it into your main thesis document after the statistical
+% heterogeneity section.
+%
+% All HPC-pending values use \TODOhpcSH{} markers. Toggle \showtodoshtrue/false
+% near the top to render markers visibly (default) or hide them.
+%
+% Compiles standalone (with \documentclass etc. at top) or as an \input{...}
+% chunk (delete the document scaffolding).
+%==============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\providecommand{\citep}[1]{(#1)}
+\providecommand{\citet}[1]{#1}
+
+% --- TODO markers for HPC-pending system-het values -------------------------
+% These are deliberately distinct from \TODOhpc in the statistical-het file,
+% so the two sections can co-exist in the same Overleaf project without
+% macro collisions if you choose to merge them.
+\newif\ifshowtodosh
+\showtodoshtrue
+\newcommand{\TODOhpcSH}[1]{%
+  \ifshowtodosh\textcolor{red}{\textbf{[SH-HPC: #1]}}\else#1\fi}
+
+\title{System Heterogeneity: FedProx under Variable Client Compute Budgets}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+%==============================================================================
+\section{Motivation and Background}
+%==============================================================================
+
+The statistical-heterogeneity experiment of the preceding section
+demonstrated that FedProx \citep{Li et al., 2020} outperforms FedAvg
+\citep{McMahan et al., 2017} on a deliberately non-IID partition of
+DermaMNIST. That experiment isolated the data-distribution axis of
+federated heterogeneity. The present section isolates the second canonical
+axis identified by the original FedProx paper: \textbf{system
+heterogeneity} -- variability in the local computational budget each
+client can contribute per communication round.
+
+System heterogeneity is, in fact, the \emph{primary} motivation for
+FedProx's proximal regulariser. \citet{Li et al., 2020} proved (their
+Theorem~4) a convergence guarantee for FedProx under $\gamma$-inexact
+local updates: each client may submit a parameter vector $w_i^{t+1}$ that
+does not fully minimise its local objective, provided the residual
+inexactness is bounded. The proximal term $\frac{\mu}{2}\lVert w - w^t \rVert^2$
+constrains how far an inexact local update can drift from the global
+anchor $w^t$, making partial work from stragglers usable for aggregation
+without destabilising the global model. FedAvg has no such guarantee, and
+its size-weighted aggregation rule treats partial-work and full-work
+updates symmetrically -- which biases the global model toward whichever
+clients drifted furthest, regardless of how much work they actually
+completed.
+
+\subsection*{Why this complements the statistical-heterogeneity result}
+
+The preceding section answered: \emph{does FedProx help when clients have
+heterogeneous data distributions?} This section answers a logically
+distinct question: \emph{does FedProx help when clients have heterogeneous
+computational budgets?} Both are positive answers in the original Li et
+al.\ paper, but on different benchmarks (Synthetic, FEMNIST, Shakespeare,
+Sentiment140) -- not on medical imaging. Demonstrating both effects on
+DermaMNIST under the same partition, same paired-seed protocol, and same
+statistical machinery gives a coherent two-axis defence of FedProx's
+theoretical motivation.
+
+\subsection*{Scope: FedProx vs.\ FedNova for heterogeneous local steps}
+
+This section restricts itself to FedAvg vs.\ FedProx, matching the
+project brief and the protocol of the preceding statistical-heterogeneity
+section. We acknowledge that for the specific case of \emph{heterogeneous
+numbers of local update steps}, the more specialised competitor algorithm
+is \textbf{FedNova} \citep{Wang et al., 2020}, which argues that
+heterogeneous local steps create objective inconsistency under naïve
+weighted aggregation and proposes a normalised-averaging rule to address
+it. FedNova's mechanism is therefore directly engineered for the regime
+we test in this section, while FedProx's proximal-anchor mechanism is
+more general (it addresses both client-distribution heterogeneity and
+straggler inexactness). A direct FedNova comparison is identified as
+the most natural extension of this section and is recommended for
+follow-up work; we do not implement it here.
+
+%==============================================================================
+\section{Experimental Setting}
+%==============================================================================
+
+\subsection{Design choices held identical to the statistical-heterogeneity sweep}
+
+To isolate the system-heterogeneity contribution, every other experimental
+parameter is held identical to the headline statistical-heterogeneity
+sweep of the preceding section: same \texttt{balanced\_paired\_7\_clients}
+partition, same 10 paired seeds $\{42, 123, 456, 789, 999, 2024,$
+$31337, 8675309, 161803, 271828\}$, same \texttt{DermMNISTCNN}
+architecture, same hyperparameters ($R = 150$, $\mu = 0.01$, batch size
+32, SGD with $\eta = 0.01$, momentum $0.9$), and same evaluation
+protocol (test set evaluated once per run at the best-val checkpoint).
+The only variable is the per-client per-round local-epoch budget.
+
+\subsection{Three conditions}
+
+\paragraph{C0 (baseline, no system heterogeneity).} Every client performs
+$E = 20$ local epochs every round. This is identical to the headline
+statistical-heterogeneity sweep; its results are reported in the preceding
+section ($M_\text{FedAvg} = 0.481 \pm 0.025$, $M_\text{FedProx} = 0.508 \pm 0.014$,
+$\Delta = +0.027$, paired Wilcoxon $p = 0.020$, rank-biserial $r_{rb} = +0.818$).
+
+\paragraph{C1 (fixed stragglers --- a specialist + a generalist).} Two
+designated clients (C5 and C6 in the partition) always perform
+$E_\text{straggler} = 5$ local epochs; the remaining five clients perform
+$E = 20$. This models a deployment where specific institutions
+consistently have weaker compute infrastructure. The 5/20 ratio mirrors
+the configuration in \citet{Marija, 2025} §3.8.4 but adapted to a
+7-client partition.
+
+\emph{Important caveat on the C1 design.} C5 belongs to the
+melanoma/vascular specialty pair (the per-specialty pair that drives the
+headline FedProx advantage; see preceding section), and C6 is the
+nevi-only generalist. C1 therefore conflates ``system heterogeneity'' with
+``a particular clinical role configuration'' --- specifically, the
+combination of a high-Δ specialist client and the generalist client both
+running slow. Any C1 result must be interpreted as \emph{this particular
+configuration} rather than a clean isolation of the system-heterogeneity
+effect. The cleanly-isolating test is C2 below, which is also the
+canonical Li et al.\ (2020) setup. C1 is retained because of its
+operational realism (in real deployments, certain client identities
+have predictable hardware constraints), but the H2 (between-condition)
+inference in this section relies primarily on C2.
+
+\paragraph{C2 (random stragglers, Li et al.\ 2020 protocol).} Each
+communication round, half of the participating clients are randomly
+designated stragglers. Each straggler performs $E_i \sim
+\text{Uniform}[1, 19]$ local epochs; non-stragglers perform $E = 20$.
+The straggler schedule is seeded with the same seed as the rest of the
+run, so paired FedAvg/FedProx pairs share an identical schedule and the
+within-pair $\Delta$ reflects only the algorithmic difference. This
+matches the canonical FedProx experimental setup in \citet{Li et al., 2020} §5.2.
+
+\subsection{Pre-registered hypotheses}
+
+\paragraph{H1 (within-condition).} For each system-heterogeneity
+condition $c \in \{C1, C2\}$, FedProx outperforms FedAvg on test macro-F1
+under paired Wilcoxon ($\alpha = 0.05$, two-sided, $n = 10$).
+
+\paragraph{H2 (between-condition).} The within-pair $\Delta$ is larger
+under system heterogeneity than at baseline:
+$\mathbb{E}[\Delta_s^{C1}] > \mathbb{E}[\Delta_s^{C0}]$ and
+$\mathbb{E}[\Delta_s^{C2}] > \mathbb{E}[\Delta_s^{C0}]$. This is tested
+by paired Wilcoxon on the per-seed difference $\Delta_s^c - \Delta_s^{C0}$
+for each $c \in \{C1, C2\}$. A positive significant result supports the
+canonical FedProx claim that the proximal regulariser is most beneficial
+under inexact local updates. Because H2 comprises two related tests (one
+per condition), we report both raw and Bonferroni-corrected $p$-values
+($\alpha_\text{family} = 0.05$, corrected per-test threshold
+$\alpha / 2 = 0.025$); the canonical interpretation rests on C2 (the Li et
+al.\ 2020 setup) and is robust to whether C1 is also significant.
+
+%==============================================================================
+\section{Results}
+%==============================================================================
+
+\subsection{Headline test performance under system heterogeneity}
+
+\begin{table}[h]
+\centering
+\caption{Test macro-F1 under three conditions of system heterogeneity,
+10 paired seeds each. C0 (baseline) is reproduced from the preceding
+section; C1 and C2 are pending HPC sweep completion. The within-condition
+$\Delta$ tests H1; the between-condition $\Delta - \Delta_{C0}$ tests H2.}
+\label{tab:sh-headline}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Condition & FedAvg & FedProx & $\Delta$ & Wilcoxon $p$ (H1) & H2 test $p$ \\
+\midrule
+C0 (no system het, baseline)   & $0.481 \pm 0.025$ & $0.508 \pm 0.014$ & $+0.027$ & $0.020$ & (reference) \\
+C1 (fixed stragglers)          & \TODOhpcSH{FA mean$\pm$SD} & \TODOhpcSH{FP mean$\pm$SD} & \TODOhpcSH{$\Delta$} & \TODOhpcSH{p} & \TODOhpcSH{p} \\
+C2 (random stragglers)         & \TODOhpcSH{FA mean$\pm$SD} & \TODOhpcSH{FP mean$\pm$SD} & \TODOhpcSH{$\Delta$} & \TODOhpcSH{p} & \TODOhpcSH{p} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Straggler-tolerance ratio}
+
+To quantify how much each algorithm's performance degrades under system
+heterogeneity relative to the no-system-het baseline, we define the
+\emph{straggler-tolerance ratio} for algorithm $a$ in condition $c$:
+\[
+\rho_a^c = \frac{M_a^c}{M_a^{C0}},
+\]
+where $M$ is mean test macro-F1. Values close to 1 indicate the algorithm
+preserves its no-system-het performance; lower values indicate worse
+tolerance to stragglers.
+
+\begin{table}[h]
+\centering
+\caption{Straggler-tolerance ratios. Higher = more tolerant. The prediction
+$\rho_\text{FedProx}^c > \rho_\text{FedAvg}^c$ supports the original
+FedProx motivation.}
+\label{tab:sh-tolerance}
+\small
+\begin{tabular}{lcc}
+\toprule
+Condition & $\rho_\text{FedAvg}$ & $\rho_\text{FedProx}$ \\
+\midrule
+C0 (baseline) & $1.000$ & $1.000$ \\
+C1 (fixed stragglers)  & \TODOhpcSH{$\rho_{FA}^{C1}$} & \TODOhpcSH{$\rho_{FP}^{C1}$} \\
+C2 (random stragglers) & \TODOhpcSH{$\rho_{FA}^{C2}$} & \TODOhpcSH{$\rho_{FP}^{C2}$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Per-class effects under system heterogeneity}
+
+\TODOhpcSH{This subsection will report per-class test F1 for each condition,
+using the same Holm-corrected paired Wilcoxon protocol as the statistical-
+heterogeneity section. The expectation is that the minority classes most
+sensitive to client drift (melanoma in particular) will be most helped by
+FedProx under system heterogeneity, paralleling but exceeding the
+statistical-heterogeneity per-class result ($\Delta_\text{melanoma} = +0.114$,
+$p_{\text{Holm}} = 0.041$).}
+
+%==============================================================================
+\section{Discussion}
+%==============================================================================
+
+\TODOhpcSH{This section will discuss whether the H1 and H2 results match
+the pre-registered predictions:
+
+\begin{itemize}
+\item If H1 confirmed: FedProx's advantage under non-IID data extends to
+the system-heterogeneity regime; the proximal regulariser is broadly
+useful for federated medical-imaging deployment.
+\item If H2 confirmed: the system-heterogeneity advantage is larger than
+the statistical-heterogeneity advantage, consistent with FedProx's
+original theoretical motivation in \citet{Li et al., 2020} that the
+proximal term was introduced primarily to handle inexact local updates
+from stragglers.
+\item If H2 not confirmed but H1 confirmed: FedProx remains useful under
+system heterogeneity but the magnitude is similar to the
+statistical-heterogeneity regime --- the two effects do not combine
+multiplicatively, suggesting the proximal term's primary contribution is
+constraining drift regardless of its source.
+\item If H1 not confirmed: a substantive negative finding worth
+reporting; the statistical-heterogeneity claim is unaffected but the
+canonical system-heterogeneity FedProx claim does not transfer to medical
+imaging in our setup.
+\end{itemize}}
+
+%==============================================================================
+\section{Summary of Heterogeneity Experiments}
+%==============================================================================
+
+This section closes a two-experiment investigation:
+
+\begin{table}[h]
+\centering
+\caption{Summary of the two heterogeneity experiments. Each tests a
+distinct claim about FedProx and uses the same statistical machinery
+(paired Wilcoxon, 10 seeds, balanced\_paired\_7\_clients partition).}
+\label{tab:sh-summary}
+\small
+\begin{tabular}{lll}
+\toprule
+& Statistical heterogeneity (preceding section) & System heterogeneity (this section) \\
+\midrule
+What varies & Partition (class allocation) & Per-client local-epoch budget \\
+Tests FedProx claim & Drift mitigation under non-IID & $\gamma$-inexact updates from stragglers \\
+Headline result & $\Delta = +0.027$, $p = 0.020$ & \TODOhpcSH{pending} \\
+Effect size & $r_{rb} = +0.818$ & \TODOhpcSH{pending} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section*{References}
+%==============================================================================
+\begin{description}\setlength{\itemsep}{2pt}
+\item Li, T., Sahu, A.~K., Zaheer, M., Sanjabi, M., Talwalkar, A., \&
+Smith, V. (2020). Federated optimization in heterogeneous networks. In
+\textit{Proceedings of Machine Learning and Systems}, \textit{2},
+429--450.
+\item McMahan, B., Moore, E., Ramage, D., Hampson, S., \& y~Arcas,
+B.~A. (2017). Communication-efficient learning of deep networks from
+decentralized data. In \textit{Proceedings of AISTATS} (pp.\ 1273--1282).
+\item Wang, J., Liu, Q., Liang, H., Joshi, G., \& Poor, H.~V. (2020).
+Tackling the objective inconsistency problem in heterogeneous federated
+optimization. \textit{NeurIPS}, 33, 7611--7623.
+\item Karimireddy, S.~P., Kale, S., Mohri, M., Reddi, S.~J., Stich, S.~U.,
+\& Suresh, A.~T. (2020). SCAFFOLD: Stochastic controlled averaging for
+federated learning. In \textit{ICML} (pp.\ 5132--5143).
+\item Marija, N. (2025). Federated Learning and Class Imbalances: Breast
+Lesion Segmentation in DCE-MRI. MPhil dissertation, University of
+Cambridge.
+\end{description}
+
+\end{document}
