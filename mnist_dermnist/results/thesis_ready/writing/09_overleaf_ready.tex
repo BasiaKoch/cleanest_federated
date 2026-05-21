@@ -459,6 +459,84 @@ $\Delta > 0$ on Dirichlet $\alpha = 0.1$ (the result transfers) but with
 magnitude $\lvert\Delta_{\mathrm{Dir}}\rvert < \lvert\Delta_{\mathrm{paired}}\rvert$
 (the engineered partition still produces the largest effect).
 
+\subsection{Specialist-partition pre-registration}\label{sec:hyp-specialist}
+\paragraph{Motivation.}
+The headline partition \texttt{balanced\_paired\_7\_clients} holds every
+minority class on exactly two clients. The two clients holding the same
+class drift in different directions during local SGD, and the FedProx
+proximal anchor $(\mu/2)\lVert w - w^t\rVert_2^2$ pulls them back together
+at aggregation. This is the regime where the proximal anchor has the
+most to anchor against; an examiner can argue the +0.027 macro-F1
+advantage is therefore an artefact of the pairing structure rather than
+evidence of a general FedProx benefit under label skew. We pre-register
+a sister sweep that flips the pairing lever while holding every other
+confound constant.
+
+\paragraph{Design.}
+The sister partition \texttt{specialist\_7\_clients} (added to
+\texttt{mnist\_dermnist/data/partition.py} as
+\texttt{SPECIALIST\_7\_CLIENTS\_SPEC}, committed at SHA \texttt{5aba7ad} on
+2026-05-21) assigns every minority class to exactly \emph{one} client and
+distributes \texttt{nevi} across the six specialty clients in unequal
+shares chosen so that the per-client $n_i$ matches
+\texttt{balanced\_paired\_7\_clients} exactly:
+\{964, 963, 1095, 1094, 1110, 1108, 673\}. Everything else is held
+constant: 10 paired seeds, 7 clients, $C=1.0$, $R=150$, $E=20$,
+$\mu=0.01$, identical model + optimiser + Flower runtime + test-at-best-
+val protocol. The contrast $\Delta_{\mathrm{specialist}}$ vs
+$\Delta_{\mathrm{paired}}$ therefore isolates the pairing structure from
+quantity-skew, client-count, or global class-composition confounds.
+
+\paragraph{Pre-registered prediction.}
+We predict $\Delta_{\mathrm{specialist}} > 0$ \emph{and}
+$\lvert\Delta_{\mathrm{specialist}}\rvert < \lvert\Delta_{\mathrm{paired}}\rvert$
+on macro-F1. Mechanism: the proximal anchor still damps individual-client
+drift relative to the global model under specialist heterogeneity, but
+the effect is smaller without paired co-trained drifting clients for the
+anchor to reconcile.
+
+\paragraph{Interpretation of every possible outcome.}
+\begin{itemize}
+  \item $\Delta_{\mathrm{specialist}} \approx \Delta_{\mathrm{paired}}$ —
+    the pairing-mechanism story is wrong; the FedProx advantage is a more
+    general label-skew regularisation effect (likely implicit
+    learning-rate shrinkage on noisy updates). The headline claim must
+    be reframed as ``FedProx helps under label skew,'' without the
+    paired-drift causal narrative.
+  \item $\Delta_{\mathrm{specialist}} > 0$ but smaller in magnitude than
+    $\Delta_{\mathrm{paired}}$ — the mechanism story holds: specialist
+    drift is also controlled but pairing amplifies the gap. This is the
+    pre-registered outcome and the thesis stands as written.
+  \item $\Delta_{\mathrm{specialist}} \approx 0$ — FedProx's advantage
+    is specifically a co-trained-pair phenomenon; the thesis claim must
+    narrow to ``FedProx helps when clients holding the same minority
+    class drift apart'' rather than the broader ``FedProx helps under
+    label skew.''
+  \item $\Delta_{\mathrm{specialist}} < 0$ — unexpected. Report
+    honestly and discuss whether specialist heterogeneity creates a
+    regime where the proximal anchor harms learning, e.g.\ by over-
+    constraining clients whose local objective lies far from the global
+    consensus.
+\end{itemize}
+
+\paragraph{Inference.}
+Same paired Wilcoxon protocol as H1 ($n=10$ paired seeds, two-sided
+$\alpha = 0.05$). Effect size: Hodges--Lehmann estimator of
+median$(\Delta_{\mathrm{specialist}})$ with the \emph{exact} Walsh-
+average-inversion confidence interval at $\alpha = 0.05$
+(\emph{not} bootstrap; for $n=10$ the bounds are the 9th smallest and
+9th largest of the 55 Walsh averages). Magnitude comparison against
+$\Delta_{\mathrm{paired}}$ is descriptive: both effect sizes are reported
+with their HL point estimates and exact CIs and the reader is invited to
+make the magnitude judgement. Pre-written discussion paragraphs for each
+of the four outcomes above are kept in
+\texttt{mnist\_dermnist/results/thesis\_ready/writing/specialist\_partition\_scenarios.tex}
+so the eventual write-up does not get retro-fitted around the observed
+direction. Analysis script:
+\texttt{mnist\_dermnist/results/thesis\_ready/scripts/analyse\_specialist\_partition.py}.
+Submission script: \texttt{mnist\_dermnist/scripts/submit\_specialist\_partition.sh}
+(20 jobs, $\approx$25 GPU-h on A100).
+
 %==============================================================================
 \section{Related Work}\label{sec:related}
 %==============================================================================
