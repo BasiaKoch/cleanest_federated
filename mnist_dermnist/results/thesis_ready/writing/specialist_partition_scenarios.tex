@@ -1,0 +1,126 @@
+% specialist_partition_scenarios.tex
+%
+% Pre-written discussion paragraphs for each of the four possible outcomes
+% of the specialist-partition defensive sweep
+% (see \ref{sec:hyp-specialist} for the pre-registered hypothesis).
+%
+% Once submit_specialist_partition.sh has landed and
+% analyse_specialist_partition.py has produced numbers, paste the matching
+% paragraph below into \section{Discussion} of 09_overleaf_ready.tex and
+% replace the bracketed numerical placeholders. DO NOT cherry-pick the
+% paragraph that best fits the post-hoc narrative — the four scenarios were
+% pre-committed at SHA 9f2bb94 on 2026-05-21 and the operator MUST take
+% whichever paragraph matches the observed Δ_specialist.
+%
+% Numerical placeholders to fill (from analyse_specialist_partition.py):
+%   {DELTA_SP_HL}      Hodges–Lehmann estimate of median(Δ_specialist)
+%   {DELTA_SP_CI_LO}   exact Walsh-average CI lower bound
+%   {DELTA_SP_CI_HI}   exact Walsh-average CI upper bound
+%   {WILCOXON_P_SP}    paired Wilcoxon two-sided p-value
+%   {SIGN_P_SP}        paired sign-test two-sided p-value
+%   {DELTA_PAIRED_HL}  Hodges–Lehmann for paired (already known: +0.0221)
+%   {DELTA_DIR_HL}     Hodges–Lehmann for Dirichlet α=0.1 (from robustness sweep)
+%   {DELTA_IID_HL}     Hodges–Lehmann for IID anchor (from robustness sweep)
+
+% ============================================================================
+\subsection*{Scenario 1 — Pre-registered outcome:
+$\Delta_{\mathrm{specialist}} > 0$ but smaller than $\Delta_{\mathrm{paired}}$}
+% USE WHEN: HL(Δ_specialist) ∈ (0, HL(Δ_paired)) AND Wilcoxon p < 0.05.
+% ============================================================================
+The specialist sweep returns a positive within-pair difference,
+$\mathrm{HL}(\Delta_{\mathrm{specialist}}) = {DELTA_SP_HL}$ with exact
+Walsh-average-inversion 95\% CI $[{DELTA_SP_CI_LO}, {DELTA_SP_CI_HI}]$
+($n=10$, two-sided Wilcoxon $p = {WILCOXON_P_SP}$), confirming that
+FedProx's advantage transfers off the paired structure of
+\texttt{balanced\_paired\_7\_clients}. The effect size is smaller than
+on the engineered partition ($\mathrm{HL}(\Delta_{\mathrm{paired}}) =
+{DELTA_PAIRED_HL}$), consistent with the pre-registered mechanism
+prediction at \S\ref{sec:hyp-specialist}: the proximal anchor still
+damps individual-client drift under one-client-per-class specialisation,
+but the absence of co-trained clients holding the same class removes
+the largest source of disagreement at aggregation time and therefore
+removes the largest part of the proximal term's anchoring work. Placed
+in the four-point dose-response (IID $\approx 0$ $\to$ specialist
+$\to$ Dirichlet $\to$ paired), the specialist condition fits between
+IID and paired in both direction and magnitude, completing the monotone
+trend predicted by the drift-control account.
+
+% ============================================================================
+\subsection*{Scenario 2 — Mechanism story is wrong:
+$\Delta_{\mathrm{specialist}} \approx \Delta_{\mathrm{paired}}$}
+% USE WHEN: HL(Δ_specialist) ≈ HL(Δ_paired) AND CIs overlap.
+% ============================================================================
+The specialist sweep returns $\mathrm{HL}(\Delta_{\mathrm{specialist}}) =
+{DELTA_SP_HL}$ with 95\% CI $[{DELTA_SP_CI_LO}, {DELTA_SP_CI_HI}]$,
+indistinguishable in magnitude from $\mathrm{HL}(\Delta_{\mathrm{paired}})
+= {DELTA_PAIRED_HL}$. The pre-registered paired-co-training mechanism
+account at \S\ref{sec:hyp-specialist} therefore fails its falsification
+check: if the proximal anchor needed paired drifting clients to operate,
+the specialist condition should have produced a substantially smaller
+$\Delta$, and it did not. The honest reframing is that FedProx's
+advantage on \texttt{balanced\_paired\_7\_clients} is not a
+paired-co-training phenomenon at all — it is a more general
+regularisation effect on noisy non-IID updates, plausibly implicit
+learning-rate shrinkage via the quadratic anchor. We weaken the
+headline claim accordingly: FedProx improves macro-F1 on DermaMNIST
+under label skew, but the mechanism is more aligned with the
+$\gamma$-inexact-update bound of \citet{li2020fedprox} than with the
+paired-drift narrative that motivated the partition design. The four-
+point dose-response (IID $\approx 0$ $\to$ specialist $\approx$ paired
+$\to$ Dirichlet) collapses into a two-level pattern: any non-IID label
+skew produces a positive $\Delta$, regardless of structural specifics.
+
+% ============================================================================
+\subsection*{Scenario 3 — FedProx advantage is paired-specific:
+$\Delta_{\mathrm{specialist}} \approx 0$}
+% USE WHEN: HL(Δ_specialist) ≈ 0 AND Wilcoxon p > 0.05.
+% ============================================================================
+The specialist sweep returns $\mathrm{HL}(\Delta_{\mathrm{specialist}}) =
+{DELTA_SP_HL}$ with 95\% CI $[{DELTA_SP_CI_LO}, {DELTA_SP_CI_HI}]$ and
+$p = {WILCOXON_P_SP}$ (two-sided paired Wilcoxon, $n=10$). The CI
+includes zero and the test does not reject the null. We accept that
+under one-client-per-minority-class specialisation, FedProx and FedAvg
+are statistically indistinguishable on this dataset --- a finding that
+narrows the headline claim substantially. The proximal anchor's
+empirical benefit is specific to the regime where two or more clients
+hold the same minority class and drift apart during local SGD; under
+specialisation, every client's local objective lies far enough from
+the global consensus that the anchor either has nothing to reconcile
+(no paired drifting partner) or, if anything, slows learning by
+constraining what would otherwise be the dominant useful update
+direction. The thesis claim is reframed: FedProx helps when clients
+holding the same minority class drift apart, not whenever label skew
+is present. The four-point dose-response (IID $\approx$ specialist
+$\approx 0$ $\to$ Dirichlet $\to$ paired) reveals that the relevant
+axis is structural co-training overlap rather than label-skew intensity
+\emph{per se}.
+
+% ============================================================================
+\subsection*{Scenario 4 — Unexpected reversal:
+$\Delta_{\mathrm{specialist}} < 0$}
+% USE WHEN: HL(Δ_specialist) < 0 AND/OR upper CI bound < 0.
+% ============================================================================
+The specialist sweep returns $\mathrm{HL}(\Delta_{\mathrm{specialist}}) =
+{DELTA_SP_HL}$ (95\% CI $[{DELTA_SP_CI_LO}, {DELTA_SP_CI_HI}]$, paired
+Wilcoxon $p = {WILCOXON_P_SP}$, sign test $p = {SIGN_P_SP}$) — a
+negative within-pair difference, meaning FedProx \emph{underperforms}
+FedAvg under one-client-per-minority-class specialisation. This was not
+predicted at \S\ref{sec:hyp-specialist}; we report it honestly rather
+than dismissing it as noise. A plausible mechanism is that when each
+minority class is owned by a single client, that client's local
+objective is highly specialised and the proximal anchor $(\mu/2)
+\lVert w - w^t\rVert_2^2$ over-constrains its update toward the global
+parameters --- which encode mostly nevi --- and thereby slows the
+specialised client's progress on its own minority class. The paired
+condition has a natural escape from this trap: the proximal anchor of
+the two clients holding the same class pulls each toward a consensus
+that still includes the minority class, not toward a nevi-dominated
+global. The reframing for the thesis is more drastic than the other
+three scenarios: the proximal anchor is not uniformly beneficial under
+label skew; it has a regime of helpful effect (paired co-training) and
+a regime of harmful effect (single-owner specialisation), and the
+direction depends on the partition's structural geometry rather than
+on the amount of skew. The four-point dose-response (IID $\approx 0$
+$\to$ specialist $<0$ $\to$ Dirichlet $> 0$ $\to$ paired $> 0$) is
+non-monotone in the FedProx advantage, and the thesis discussion
+section must accommodate this.
