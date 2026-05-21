@@ -38,27 +38,11 @@ mkdir -p "$REPO_ROOT/$OUT_DIR" "$REPO_ROOT/mnist_dermnist/logs"
 FAILED=()
 submit() {
   local seed="$1"
-  # We submit via slurm_template_flower.sh, then patch in --loss-type
-  # by adding it to the runner's command line. Since the template
-  # doesn't accept extra args today, we use a thin inline sbatch
-  # invocation that calls the runner directly with --loss-type.
   if ! sbatch \
     --job-name="mn_cwce_s${seed}" \
-    --account=MPHIL-DIS-SL2-GPU \
-    --partition=ampere \
-    --nodes=1 --ntasks=1 --gres=gpu:1 --cpus-per-task=4 \
-    --time=08:00:00 \
-    --output="$REPO_ROOT/mnist_dermnist/logs/%x_%j.out" \
-    --error="$REPO_ROOT/mnist_dermnist/logs/%x_%j.err" \
-    --wrap "cd $REPO_ROOT && source /home/bk489/federated_clean/.venv/bin/activate && \
-            PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
-              --algorithm fedavg --mu 0.0 --seed $seed \
-              --local-epochs $LOCAL_EPOCHS --num-rounds 150 \
-              --lr 0.01 --batch-size 32 \
-              --partition $PARTITION --device cuda \
-              --npz-path $REPO_ROOT/dermamnist_64.npz \
-              --out-dir $OUT_DIR \
-              --loss-type class_weighted_ce"; then
+    "$REPO_ROOT/mnist_dermnist/scripts/slurm_template_flower.sh" \
+    fedavg 0.0 "$seed" "$LOCAL_EPOCHS" "$OUT_DIR" "$PARTITION" \
+    "--loss-type class_weighted_ce"; then
     echo "  FAILED: seed=$seed"
     FAILED+=("$seed")
   fi
