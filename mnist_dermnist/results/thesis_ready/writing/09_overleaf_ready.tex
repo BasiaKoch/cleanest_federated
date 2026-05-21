@@ -892,15 +892,22 @@ Flower~1.29 simulation runtime \citep{beutel2020flower} via
 \texttt{flwr.simulation.start\_simulation} (each client a Ray actor) is
 also implemented for the queued system-heterogeneity, IID, and Dirichlet
 sweeps; a full-scale Flower C0 equivalence sweep is queued for HPC
-(\texttt{scripts/submit\_flower\_C0\_baseline.sh}). Clients submit updated
-parameters back to a custom \texttt{NumPyClient} subclass that implements
+(\texttt{scripts/submit\_flower\_C0\_baseline.sh}).
+\emph{Within the Flower runtime}, clients submit updated parameters
+back to a custom \texttt{NumPyClient} subclass that implements
 both the FedAvg local objective (cross-entropy alone) and the FedProx
 local objective (cross-entropy plus the proximal penalty
-$(\mu/2)\lVert w - w^t \rVert^2$). The server uses Flower's built-in
-\texttt{FedAvg} aggregation strategy with size-weighted averaging,
-$w^{t+1} = \sum_i (n_i / \sum_j n_j)\, w_i^{t+1}$ — this is the canonical
-aggregation rule and is identical for both algorithms; FedAvg and FedProx
-differ only in the client-side local objective (gated by $\mu$).
+$(\mu/2)\lVert w - w^t \rVert^2$); the server uses Flower's
+built-in \texttt{FedAvg} aggregation strategy with size-weighted
+averaging, $w^{t+1} = \sum_i (n_i / \sum_j n_j)\, w_i^{t+1}$.
+\emph{The pure-PyTorch reference loop} implements the same two
+local objectives via \texttt{fl/local\_train.py} and the same
+size-weighted aggregation via
+\texttt{fl/aggregation.py:weighted\_average\_state\_dicts}. The
+aggregation rule is the canonical size-weighted mean and is
+identical across both runtimes and both algorithms. FedAvg and
+FedProx differ only in the client-side local objective, gated
+by $\mu$.
 
 To enable bit-for-bit reproducibility audits of paired-seed runs, an
 equivalent pure-PyTorch reference loop is also provided in
