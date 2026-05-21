@@ -24,6 +24,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from mnist_dermnist.data.load import load_dermmnist
+from mnist_dermnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
 from mnist_dermnist.models import DermMNISTCNN
 
 
@@ -71,6 +72,7 @@ def evaluate(model, loader, device, num_classes: int = 7):
 
 
 def main():
+    run_started_at = utc_now_iso()
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--num-epochs", type=int, default=50,
@@ -138,6 +140,12 @@ def main():
         "lr": args.lr, "momentum": args.momentum, "batch_size": args.batch_size,
         "device": args.device, "elapsed_s": elapsed,
         **test_metrics,
+        # Runtime provenance (CP3.2 / Rank-4 patch — git SHA, hostname,
+        # torch/python versions, timestamps, etc.) Note: centralised is
+        # not federated, so no framework / runner_script field is
+        # required — the "regime": "centralised" key already identifies
+        # this path.
+        **collect_runtime_provenance(run_started_at),
     }
     out_path = out_dir / f"centralised_seed{args.seed}.json"
     out_path.write_text(json.dumps(result, indent=2))
