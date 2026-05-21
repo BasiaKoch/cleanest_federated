@@ -984,7 +984,7 @@ Weight decay                & 0.0       & Avoids conflation with proximal term \
 Batch size                  & 32        & Capped per-client to $\min(32, \text{client size})$ \\
 Normalisation               & GroupNorm & FL-safe \citep{hsieh2020quagmire} \\
 Dropout                     & 0.2       & Mild regularisation \\
-FL framework                & Flower~1.29 (\texttt{flwr.simulation}) & \citet{beutel2020flower}; Ray-actor backend \\
+FL framework (headline)     & pure-PyTorch reference loop & Flower~1.29 equivalence sweep queued (\S\ref{sec:fl-setup}) \\
 Hardware                    & NVIDIA A100-SXM4-80GB & CSD3 Ampere partition \\
 \bottomrule
 \end{tabular}
