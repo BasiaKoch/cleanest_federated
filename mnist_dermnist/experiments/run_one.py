@@ -1,4 +1,26 @@
-"""CLI: one paired-fair FL run.
+"""CLI: one paired-fair FL run via the pure-PyTorch reference loop.
+
+LOCAL ONLY — NOT FOR HPC SUBMISSION.
+
+The project-wide rule is that every HPC submission uses the Flower
+runtime. This entry point invokes the pure-PyTorch reference loop in
+``mnist_dermnist/fl/server_loop.py`` and stamps output JSONs with
+``framework="pure-pytorch"``. It is preserved as:
+
+  - the implementation that produced the 20 backstamped headline JSONs
+    in ``results/headline/`` (the source-of-truth numbers cited
+    throughout the thesis),
+  - a local smoke-test entry point that exercises the FL loop without
+    requiring Flower or Ray,
+  - the reference implementation against which the Flower runtime's
+    full-scale equivalence is established
+    (``submit_equivalence_check.sh``).
+
+For new HPC sweeps, use ``experiments/run_one_flower.py`` (FedAvg /
+FedProx) or ``experiments/run_one_fednova_flower.py`` (FedNova). The
+canonical orphan SLURM template that previously invoked this script
+(``scripts/slurm_template.sh``) was deleted; no submit_*.sh now
+references this entry point.
 
 Reuses the partition (medical_skew_7_clients by default), model
 (DermMNISTCNN), and FL loop already in this package. Writes:
@@ -7,10 +29,10 @@ Reuses the partition (medical_skew_7_clients by default), model
 
 Examples
 --------
-# FedAvg, seed=42, E=20
+# FedAvg, seed=42, E=20  (local smoke test)
 python -m mnist_dermnist.experiments.run_one --algorithm fedavg  --seed 42 --local-epochs 20
 
-# FedProx, μ=0.1, seed=42, E=20
+# FedProx, μ=0.1, seed=42, E=20  (local smoke test)
 python -m mnist_dermnist.experiments.run_one --algorithm fedprox --mu 0.1 --seed 42 --local-epochs 20
 """
 from __future__ import annotations
