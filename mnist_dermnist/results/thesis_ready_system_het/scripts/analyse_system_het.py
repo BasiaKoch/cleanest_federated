@@ -24,10 +24,17 @@ reports a `framework` other than `flower-simulation`.
 
 Outputs:
   - thesis_ready_system_het/data/per_seed_results.csv
-  - thesis_ready_system_het/data/per_class_results.csv
-  - thesis_ready_system_het/data/system_het_vs_baseline.json (H2 test)
   - thesis_ready_system_het/data/summary_statistics.json
+    (contains both the per-condition H1 paired test and, when C0 has
+    landed, the H2 contrast Δ_C - Δ_C0; nests per-class F1 by condition)
   - prints a complete results table to stdout
+
+  Note: previous versions of this docstring also listed
+  ``per_class_results.csv`` and ``system_het_vs_baseline.json``; those
+  files are NOT written. Per-class F1 is preserved inside
+  ``summary_statistics.json`` and in every input
+  ``test_at_best_*.json``; the H2 contrast is the
+  ``h2_between_condition`` block of the same summary file.
 """
 from __future__ import annotations
 
