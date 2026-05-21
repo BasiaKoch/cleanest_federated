@@ -4,6 +4,7 @@ set -euo pipefail
 
 REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
 OUT_DIR=mnist_dermnist/results/e_sweep
+PARTITION=balanced_paired_7_clients   # explicit; template default is the same
 mkdir -p "$REPO_ROOT/$OUT_DIR" "$REPO_ROOT/mnist_dermnist/logs"
 
 SEEDS=(42 123 456)
@@ -15,7 +16,7 @@ submit() {
     --job-name="E${E}_${algo}_mu${mu}_s${seed}" \
     --time=10:00:00 \
     "$REPO_ROOT/mnist_dermnist/scripts/slurm_template_flower.sh" \
-    "$algo" "$mu" "$seed" "$E" "$OUT_DIR"
+    "$algo" "$mu" "$seed" "$E" "$OUT_DIR" "$PARTITION"
   sleep 1
 }
 
