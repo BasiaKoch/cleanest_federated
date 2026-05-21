@@ -89,6 +89,14 @@ class FLConfig:
     # global class frequencies can be computed.
     loss_type: str = "ce"
     focal_gamma: float = 2.0
+    # Mechanism diagnostic: log L2 norm of per-client parameter delta
+    # ||w_k^{t+1} - w^t||_2 per round, per client. Default False so existing
+    # paired-seed runs are byte-identical. When True, run_fl computes the
+    # norm after local training and before aggregation, and save_run_outputs
+    # writes a client_update_norms_*.csv with columns: round, client_id,
+    # update_norm. Used to support the "FedProx reduces client drift" claim
+    # directly rather than inferring it from per-class behaviour.
+    log_update_norms: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +190,8 @@ def run_fl(
     best_val_macro_f1 = -1.0
     best_state_dict: Dict[str, torch.Tensor] | None = None
     best_round: int = -1
+    # Per-(round, client) update-norm rows when cfg.log_update_norms is set.
+    update_norm_rows: List[Dict] = []
 
     # ------------------------------------------------------------------ rounds
     for r in range(1, cfg.num_rounds + 1):
@@ -245,6 +255,26 @@ def run_fl(
             round_train_losses.append(stats["train_loss"])
             round_train_sizes.append(len(client_indices[cid]))
 
+            # 4b) DRIFT DIAGNOSTIC — L2 norm of (post-training - anchor),
+            # computed over all floating-point parameter tensors. Computed
+            # BEFORE aggregation so each client's reading reflects its own
+            # drift, not the post-averaged residual. Gated on cfg.log_update_norms
+            # so default runs are byte-identical to the pre-flag behaviour.
+            if cfg.log_update_norms:
+                sq = 0.0
+                for k_param, v_global in global_state.items():
+                    if not v_global.dtype.is_floating_point:
+                        continue
+                    diff = (local_state_dicts[-1][k_param] - v_global).flatten()
+                    sq += float((diff.to(torch.float64) ** 2).sum())
+                update_norm_rows.append({
+                    "round": int(r),
+                    "client_id": int(cid),
+                    "update_norm": float(sq ** 0.5),
+                    "n_samples": int(len(client_indices[cid])),
+                    "local_epochs": int(client_local_epochs),
+                })
+
         # 5) AGGREGATION — weighted by client dataset size
         new_global_state = weighted_average_state_dicts(local_state_dicts, local_weights_for_agg)
         global_model.load_state_dict(new_global_state)
@@ -297,12 +327,14 @@ def run_fl(
         test_metrics["best_val_macro_f1"] = best_val_macro_f1
 
     history_df = pd.DataFrame(history_rows)
+    update_norm_df = pd.DataFrame(update_norm_rows) if update_norm_rows else None
     return {
         "config": asdict(cfg),
         "history": history_df,
         "test_metrics": test_metrics,
         "best_state_dict": best_state_dict,
         "system_het_schedule_summary": summarise_schedule(epoch_schedule),
+        "update_norms": update_norm_df,
     }
 
 
@@ -347,6 +379,10 @@ def save_run_outputs(
 
     # Per-round history
     result["history"].to_csv(out / f"history_{stem}.csv", index=False)
+    # Per-(round, client) update norms when log_update_norms was enabled.
+    un_df = result.get("update_norms")
+    if un_df is not None and len(un_df) > 0:
+        un_df.to_csv(out / f"client_update_norms_{stem}.csv", index=False)
     # Best-val test metrics (single row) — include full provenance
     if result["test_metrics"] is not None:
         payload = {

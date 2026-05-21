@@ -88,6 +88,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Comma-separated client ids for fixed stragglers (default: last 2)")
     ap.add_argument("--straggler-fraction", type=float, default=0.5,
                     help="Fraction of clients per round designated stragglers in random mode")
+    # Mechanism diagnostic — writes client_update_norms_*.csv alongside history/JSON.
+    ap.add_argument("--log-update-norms", action="store_true",
+                    help="Log per-(round, client) L2 update norm ||w_k^{t+1} - w^t||_2. "
+                         "Default off so paired-seed identity (μ=0 ≡ FedAvg) is preserved.")
     return ap
 
 
@@ -133,6 +137,7 @@ def main():
         num_classes=7,
         device=args.device,
         system_het=system_het_cfg,
+        log_update_norms=bool(args.log_update_norms),
     )
 
     print(f"\n=== {args.algorithm.upper()} (μ={mu}) seed={args.seed} E={args.local_epochs} ===")

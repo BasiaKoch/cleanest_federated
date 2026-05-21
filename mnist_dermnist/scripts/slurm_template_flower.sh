@@ -11,17 +11,20 @@
 #SBATCH --error=/home/bk489/federated_clean/cleanest_federated/mnist_dermnist/logs/%x_%j.err
 
 # Flower-runtime SLURM template (drop-in replacement for slurm_template.sh).
-# Same CLI as the pure-PyTorch template; routes the run through
+# Same CLI as the pure-PyTorch template (plus an optional 7th slot for
+# additional runner flags); routes through
 # `mnist_dermnist.experiments.run_one_flower` which uses
 # `flwr.simulation.start_simulation` under the hood.
 #
-# Args (identical to slurm_template.sh):
+# Args:
 #   $1 = algorithm  (fedavg | fedprox)
 #   $2 = mu         (0.0 for fedavg, e.g. 0.01 for fedprox)
 #   $3 = seed
 #   $4 = local_epochs
 #   $5 = out_dir
 #   $6 = partition
+#   $7 = extra args, passed verbatim to run_one_flower.py
+#        (e.g. "--log-update-norms" or "--loss-type class_weighted_ce")
 
 set -uo pipefail
 
@@ -37,6 +40,7 @@ SEED="${3:?seed required}"
 LOCAL_EPOCHS="${4:?local_epochs required}"
 OUT_DIR="${5:-mnist_dermnist/results/headline}"
 PARTITION="${6:-balanced_paired_7_clients}"
+EXTRA_ARGS="${7:-}"
 
 mkdir -p "$OUT_DIR" mnist_dermnist/logs
 
@@ -51,6 +55,7 @@ PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
     --partition "$PARTITION" \
     --device cuda \
     --npz-path "$REPO_ROOT/dermamnist_64.npz" \
-    --out-dir "$OUT_DIR"
+    --out-dir "$OUT_DIR" \
+    $EXTRA_ARGS
 
-echo "Job complete (Flower runtime): algo=$ALGO mu=$MU seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION"
+echo "Job complete (Flower runtime): algo=$ALGO mu=$MU seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION extra='$EXTRA_ARGS'"

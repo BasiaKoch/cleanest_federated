@@ -4,10 +4,17 @@
 #   2 seeds × 2 algorithms × full config (E=20, R=150) via the Flower runtime
 #   = 4 SLURM jobs at ~1 GPU-hour each.
 #
-# Seeds 42 and 8675309 were chosen a priori because they are the smallest-
-# and largest-Δ contributors to the existing 10-seed headline mean (Δ = +0.0685
-# and +0.0953 respectively), so any framework-induced divergence is most
-# detectable at these endpoints.
+# Seeds 42 and 8675309 are selected post hoc, after the 10-seed headline
+# sweep was complete, as the two LARGEST-Δ contributors in the headline
+# distribution: seed 8675309 (Δ = +0.0953, rank 10/10) and seed 42
+# (Δ = +0.0685, rank 9/10). They sit at the upper tail of the headline
+# Δ distribution. (For reference, the actual smallest-Δ contributor is
+# seed 789 at Δ = -0.0200, the only negative pair; the median is ≈ +0.020.)
+# Re-running both algorithms at these two top-Δ seeds via Flower at full
+# scale therefore provides a stress test of cross-runtime equivalence
+# precisely where the within-pair algorithmic signal is largest: any
+# framework-induced shift must be small relative to these strong signals
+# for the existing pure-PyTorch headline numbers to be safely cited.
 #
 # The Flower-produced test macro-F1 values for these 4 runs are then
 # compared to the existing pure-PyTorch results in

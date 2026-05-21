@@ -2,7 +2,10 @@
 # Status of headline + μ sweep + E sweep runs.
 set -euo pipefail
 
-REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
+# Resolve the repo root relative to this script's location so the script
+# works from any checkout (CSD3, laptop, CI). check_results.sh lives at
+# <REPO_ROOT>/mnist_dermnist/scripts/, so go two levels up.
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 count_complete() {
@@ -25,9 +28,46 @@ count_history() {
 
 echo "=== mnist_dermnist run status ==="
 echo ""
-echo "headline   : $(count_complete mnist_dermnist/results/headline)/20 complete  ($(count_history mnist_dermnist/results/headline) history CSVs)"
-echo "mu_sweep   : $(count_complete mnist_dermnist/results/mu_sweep)/15 complete"
-echo "e_sweep    : $(count_complete mnist_dermnist/results/e_sweep)/30 complete"
+# Track per-sweep progress. Tuples: <results-subdir> <expected job count>
+SWEEPS=(
+  "headline                       20"   # 10 seeds × {FedAvg, FedProx}
+  "mu_sweep                       18"   # 3 FedAvg + 5 μ × 3 seeds (Li 2020 grid)
+  "e_sweep                        30"   # 5 E × 2 algos × 3 seeds
+  "headline_flower_verify          4"   # 2 seeds × {FedAvg, FedProx} via Flower
+  "flower_C0_baseline             30"   # 10 seeds × {FedAvg, FedProx, FedNova}
+  "system_het_fixed               20"   # C1: 10 seeds × {FedAvg, FedProx}
+  "system_het_random              20"   # C2: 10 seeds × {FedAvg, FedProx}
+  "system_het_random_fednova      10"   # C2: 10 seeds × FedNova
+  "iid                            20"   # IID falsification
+  "dirichlet_a01                  20"   # Dirichlet-α=0.1 robustness
+  "class_weighted_baseline        10"   # FedAvg + CW-CE × 10 seeds
+)
+
+total_done=0
+total_expected=0
+for entry in "${SWEEPS[@]}"; do
+  # Split on whitespace
+  name=$(echo "$entry" | awk '{print $1}')
+  exp=$(echo "$entry" | awk '{print $2}')
+  # `wc -l` on macOS prints whitespace-padded counts; coerce to int via $(())
+  done=$(( $(count_complete "mnist_dermnist/results/$name") ))
+  hist=$(( $(count_history  "mnist_dermnist/results/$name") ))
+  status=" "
+  if   [ "$done" -ge "$exp" ]; then status="✓"
+  elif [ "$done" -eq 0       ]; then status=" "
+  else                              status="…"
+  fi
+  # Pad name to 30 chars for column alignment
+  printf "  %s  %-30s : %3d/%-3d complete   (%3d history CSVs)\n" \
+    "$status" "$name" "$done" "$exp" "$hist"
+  total_done=$((total_done + done))
+  total_expected=$((total_expected + exp))
+done
+
+echo ""
+printf "  ── total: %d / %d test_at_best JSONs across all sweeps ──\n" \
+  "$total_done" "$total_expected"
+
 echo ""
 echo "=== Queue ==="
 squeue -u "$USER" --format="%.12i %.40j %.2t %.10M" | head -25

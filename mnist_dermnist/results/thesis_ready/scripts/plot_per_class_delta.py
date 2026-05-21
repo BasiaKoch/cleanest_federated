@@ -15,6 +15,7 @@ Output: figures/per_class_delta.{png,pdf} and a data CSV.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -30,17 +31,17 @@ FIG_DIR = ROOT / "figures"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-HEADLINE = ROOT.parent / "headline"
+DEFAULT_RESULTS_DIR = ROOT.parent / "headline"
 
 CLASS_NAMES = ["actinic", "basal", "benign_kerat", "dermato",
                "melanoma", "mel_nevi", "vascular"]
 PREV_PCT = [3.27, 5.13, 10.97, 1.15, 11.11, 67.05, 1.41]
 
 
-def _load() -> tuple[dict, dict]:
+def _load(results_dir: Path) -> tuple[dict, dict]:
     fa, fp = {}, {}
     pat = re.compile(r"test_at_best_(fedavg|fedprox)_mu[0-9.]+_E20_s(\d+)\.json")
-    for f in sorted(HEADLINE.glob("test_at_best_*.json")):
+    for f in sorted(results_dir.glob("test_at_best_*.json")):
         m = pat.match(f.name)
         if not m:
             continue
@@ -60,10 +61,19 @@ def _bootstrap_ci(deltas: np.ndarray, n_boot: int = 10_000, alpha: float = 0.05)
 
 
 def main() -> int:
-    fa, fp = _load()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR),
+                    help=f"Directory containing test_at_best_*.json files. "
+                         f"Default: {DEFAULT_RESULTS_DIR}")
+    args = ap.parse_args()
+    results_dir = Path(args.results_dir)
+    if not results_dir.is_dir():
+        print(f"ERROR: results-dir not found: {results_dir}", file=sys.stderr)
+        return 1
+    fa, fp = _load(results_dir)
     seeds = sorted(set(fa) & set(fp))
     if len(seeds) < 2:
-        print(f"INFO: need at least 2 paired seeds, found {len(seeds)}.")
+        print(f"INFO: need at least 2 paired seeds, found {len(seeds)} in {results_dir}.")
         return 0
 
     # Per-class paired deltas across seeds
@@ -86,8 +96,14 @@ def main() -> int:
             "n_pairs": len(seeds),
         })
 
+    # Disambiguate by input-dir basename so multiple sweeps don't clobber
+    # each other's outputs. Headline keeps the historic stem unchanged.
+    out_basename = "per_class_delta"
+    if results_dir.name not in ("headline", "results"):
+        out_basename = f"{out_basename}_{results_dir.name}"
+
     df = pd.DataFrame(rows)
-    csv_path = DATA_DIR / "per_class_delta.csv"
+    csv_path = DATA_DIR / f"{out_basename}.csv"
     df.to_csv(csv_path, index=False)
     print(f"Wrote {csv_path}")
 
@@ -123,7 +139,7 @@ def main() -> int:
             transform=ax.transAxes, ha="right", va="bottom",
             fontsize=8, color="gray", style="italic")
 
-    out_stem = FIG_DIR / "per_class_delta"
+    out_stem = FIG_DIR / out_basename
     for ext in ("png", "pdf"):
         fig.savefig(out_stem.with_suffix(f".{ext}"), dpi=200, bbox_inches="tight")
     plt.close(fig)

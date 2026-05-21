@@ -42,6 +42,7 @@ be added before the system-het + FedNova sweep is run).
 """
 from __future__ import annotations
 
+import random
 from typing import Dict, List
 
 import flwr as fl
@@ -106,6 +107,8 @@ class FlClientFedNova(fl.client.NumPyClient):
         rng_seed = self.seed * 10_000 + round_num * 100 + self.cid
         gen = torch.Generator().manual_seed(rng_seed)
         torch.manual_seed(rng_seed)
+        random.seed(rng_seed)      # Defensive: Ray workers don't inherit driver-process RNG state
+        np.random.seed(rng_seed)   # Defensive: Ray workers don't inherit driver-process RNG state
 
         loader = DataLoader(
             self.train_subset,
@@ -142,6 +145,16 @@ class FlClientFedNova(fl.client.NumPyClient):
                       for p in self.model.parameters()]
         delta = [a - p for a, p in zip(anchor, new_params)]
 
+        # Mechanism diagnostic — L2 norm of (post-training - anchor),
+        # computed in float64 for numerical stability. Reported in the
+        # fit metrics so the strategy / runner can capture per (round,
+        # client) when --log-update-norms is set.
+        sq = 0.0
+        for a, p in zip(anchor, new_params):
+            d = (p.astype("float64") - a.astype("float64")).ravel()
+            sq += float((d * d).sum())
+        update_norm = float(sq ** 0.5)
+
         # The strategy will divide by tau and re-weight by client size.
         # We return the FULL state_dict via get_parameters() so Flower's
         # parameter handling is intact, and pass tau + the delta-of-params
@@ -157,6 +170,7 @@ class FlClientFedNova(fl.client.NumPyClient):
                 "tau": tau,
                 "cid": self.cid,
                 "local_epochs": local_epochs,
+                "update_norm": update_norm,
             },
         )
 

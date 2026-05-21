@@ -3,12 +3,17 @@
 #
 # FedNova (Wang et al., 2020, NeurIPS) is the canonical comparator for
 # the heterogeneous-local-step regime: it normalises client updates by
-# the momentum-aware effective coupling constant
-#   a_i = (1 - m^{tau_i}) / (1 - m)
-# so that clients running fewer local steps don't contribute disproportionately
-# small updates after the size-weighted aggregation. The thesis FedAvg-vs-FedProx
-# system-het sweep covers the proximal-anchor mechanism; this script adds
-# FedNova as the direct competitor.
+# the L1 norm of the cumulative-momentum series (Wang 2020, §3.3),
+#   a_i = sum_{j=1..tau_i} (1 - m^j) / (1 - m)
+#       = (tau_i*(1 - m) - m*(1 - m^{tau_i})) / (1 - m)^2
+# which reduces to a_i = tau_i at m = 0 (vanilla SGD). Clients running
+# fewer local steps then no longer contribute disproportionately small
+# updates after the size-weighted aggregation. (Earlier drafts of this
+# comment used a_i = (1 - m^{tau_i}) / (1 - m) — the last element of the
+# series, not its L1 norm — which is the wrong normaliser under m > 0;
+# see mnist_dermnist/fl_flower/strategy_fednova.py for the implementation.)
+# The thesis FedAvg-vs-FedProx system-het sweep covers the proximal-anchor
+# mechanism; this script adds FedNova as the direct competitor.
 #
 # Scope of this submission
 # ------------------------

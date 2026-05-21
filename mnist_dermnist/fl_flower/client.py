@@ -11,6 +11,7 @@ system-heterogeneity sweeps (varying E per round).
 """
 from __future__ import annotations
 
+import random
 from typing import Dict, List, Tuple
 
 import flwr as fl
@@ -127,6 +128,8 @@ class FlClient(fl.client.NumPyClient):
         rng_seed = self.seed * 10_000 + round_num * 100 + self.cid
         gen = torch.Generator().manual_seed(rng_seed)
         torch.manual_seed(rng_seed)
+        random.seed(rng_seed)      # Defensive: Ray workers don't inherit driver-process RNG state
+        np.random.seed(rng_seed)   # Defensive: Ray workers don't inherit driver-process RNG state
 
         loader = DataLoader(
             self.train_subset,
@@ -166,6 +169,20 @@ class FlClient(fl.client.NumPyClient):
                 total_loss += float(loss.item())
                 n_batches += 1
 
+        # Mechanism diagnostic — L2 norm of (post-training - anchor), computed
+        # over all trainable parameters before the server aggregates. Cheap
+        # (one pass over params); returned as a scalar in the fit metrics
+        # so the strategy / runner can capture it per (round, client) when
+        # --log-update-norms is set on the server side. Cost is negligible
+        # so we always compute and emit it; the runner decides whether to
+        # write a CSV.
+        with torch.no_grad():
+            sq = 0.0
+            for w, w_g in zip(self.model.parameters(), global_params):
+                diff = (w.detach() - w_g).flatten()
+                sq += float((diff.to(torch.float64) ** 2).sum())
+        update_norm = float(sq ** 0.5)
+
         return (
             self.get_parameters(),
             len(self.train_subset),
@@ -173,6 +190,7 @@ class FlClient(fl.client.NumPyClient):
                 "train_loss": total_loss / max(n_batches, 1),
                 "cid": self.cid,
                 "local_epochs": local_epochs,
+                "update_norm": update_norm,
             },
         )
 

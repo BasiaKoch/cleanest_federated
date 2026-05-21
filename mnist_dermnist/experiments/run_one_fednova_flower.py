@@ -10,8 +10,18 @@ aggregation is specifically designed to address.
 The local client is `FlClientFedNova` (in `mnist_dermnist/fl_flower/`),
 which is identical to the standard `FlClient` except that it reports
 `tau` (the local SGD step count) via the fit-metrics dict so the
-strategy can compute the momentum-aware normaliser
-`a_i = (1 - m^{tau_i}) / (1 - m)`.
+strategy can compute the momentum-aware normaliser — the L1 norm of
+the cumulative-momentum series (Wang et al. 2020, §3.3):
+
+    a_i = sum_{j=1..tau_i} (1 - m^j) / (1 - m)
+        = (tau_i*(1 - m) - m*(1 - m^{tau_i})) / (1 - m)^2
+
+which reduces to a_i = tau_i at m = 0 (vanilla SGD). NB: an earlier
+draft of this comment used `a_i = (1 - m^{tau_i}) / (1 - m)`, the last
+element of the cumulative series; that is NOT the L1 norm and gives
+the wrong normalisation under momentum > 0. See
+`mnist_dermnist/fl_flower/strategy_fednova.py:fednova_normaliser` for
+the implementation.
 
 CLI is identical to `run_one_flower.py`. Algorithm is hard-coded to
 "fednova" (no proximal term; same local objective as FedAvg, but with
@@ -103,6 +113,9 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--straggler-epochs", type=int, default=5)
     ap.add_argument("--fixed-straggler-ids", default=None)
     ap.add_argument("--straggler-fraction", type=float, default=0.5)
+    ap.add_argument("--log-update-norms", action="store_true",
+                    help="Capture per-(round, client) L2 update norm and "
+                         "write client_update_norms_*.csv alongside the JSON.")
     return ap
 
 
@@ -199,6 +212,9 @@ def main():
     def on_fit_config_fn(server_round: int) -> Dict:
         return {"round": int(server_round)}
 
+    # Per-(round, client) update-norm sink. The strategy appends one row
+    # per participating client per round whenever this list is not None.
+    update_norm_rows: List[Dict] = []
     n_fit = max(1, int(round(args.fraction_fit * num_clients)))
     strategy = PairedFedNovaStrategy(
         client_momentum=float(args.momentum),       # ← MF2: momentum-aware normaliser
@@ -211,6 +227,7 @@ def main():
         evaluate_fn=evaluate_fn,
         on_fit_config_fn=on_fit_config_fn,
         accept_failures=False,
+        update_norm_rows=(update_norm_rows if args.log_update_norms else None),
     )
 
     def client_fn(context_or_cid) -> fl.client.Client:
@@ -280,6 +297,10 @@ def main():
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
+    # Per-(round, client) update norms if --log-update-norms was set.
+    if args.log_update_norms and update_norm_rows:
+        pd.DataFrame(update_norm_rows).to_csv(
+            out_dir / f"client_update_norms_{stem}.csv", index=False)
     predictions_file = None
     if _preds is not None and _targets is not None:
         predictions_file = f"test_predictions_{stem}.npz"
@@ -311,7 +332,8 @@ def main():
             "client_momentum_for_fednova_normaliser": args.momentum,
             "fednova_normaliser_formula": "(tau*(1-m) - m*(1-m**tau)) / (1-m)**2  [L1 norm of cumulative momentum series; Wang 2020 §3.3]",
             "system_het": sh_cfg.to_dict(),
-            "elapsed_s": elapsed,
+            "elapsed_s": elapsed,            # legacy field name
+            "wall_clock_seconds": elapsed,   # canonical (audit fix)
         }, f, indent=2)
 
     print(f"\nTest @ best-val (round {test_metrics['selected_round']}, val_macro_f1={test_metrics['best_val_macro_f1']:.4f}):")

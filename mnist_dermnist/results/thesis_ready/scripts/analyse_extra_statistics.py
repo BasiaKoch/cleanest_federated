@@ -10,6 +10,7 @@ All operate on the existing 20 test_at_best JSONs. No new compute required.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import glob
 import re
@@ -27,16 +28,16 @@ except ImportError:
 
 ROOT     = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-HEADLINE = ROOT.parent / "headline"
+DEFAULT_RESULTS_DIR = ROOT.parent / "headline"
 
 CLASS_NAMES = ["actinic", "basal", "benign_kerat", "dermato",
                "melanoma", "mel_nevi", "vascular"]
 
 
-def load_pairs():
+def load_pairs(results_dir: Path):
     fa, fp = {}, {}
     pat = re.compile(r"test_at_best_(fedavg|fedprox)_mu([0-9.]+)_E20_s(\d+)\.json")
-    for f in sorted(HEADLINE.glob("test_at_best_*.json")):
+    for f in sorted(results_dir.glob("test_at_best_*.json")):
         m = pat.match(f.name)
         if not m: continue
         d = json.load(open(f))
@@ -113,9 +114,17 @@ def holm_correction(p_values, alpha=0.05):
 
 
 def main():
-    fa, fp, seeds = load_pairs()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR),
+                    help=f"Directory containing test_at_best_*.json files. "
+                         f"Default: {DEFAULT_RESULTS_DIR}")
+    args = ap.parse_args()
+    results_dir = Path(args.results_dir)
+    if not results_dir.is_dir():
+        raise SystemExit(f"results-dir not found: {results_dir}")
+    fa, fp, seeds = load_pairs(results_dir)
     n = len(seeds)
-    print(f"Loaded {n} paired seeds: {seeds}\n")
+    print(f"Loaded {n} paired seeds from {results_dir}: {seeds}\n")
 
     # Headline macro-F1 deltas
     deltas = [fp[s]["macro_f1"] - fa[s]["macro_f1"] for s in seeds]
@@ -235,7 +244,15 @@ def main():
             ),
         },
     }
-    out_path = DATA_DIR / "extra_statistics.json"
+    # Disambiguate the output filename by the input directory's basename
+    # so running this script on multiple sweeps (headline, iid,
+    # dirichlet_a01, etc.) doesn't have them silently overwrite each other.
+    # The headline case keeps the historic filename for backward compat
+    # with thesis text that references `thesis_ready/data/extra_statistics.json`.
+    stem = "extra_statistics"
+    if results_dir.name not in ("headline", "results"):
+        stem = f"{stem}_{results_dir.name}"
+    out_path = DATA_DIR / f"{stem}.json"
     out_path.write_text(json.dumps(out, indent=2))
     print(f"\nWrote {out_path}")
 

@@ -104,6 +104,13 @@ def build_parser() -> argparse.ArgumentParser:
                     choices=["ce", "class_weighted_ce", "focal"],
                     default="ce")
     ap.add_argument("--focal-gamma", type=float, default=2.0)
+    # Mechanism diagnostic — writes client_update_norms_*.csv beside the JSON.
+    ap.add_argument("--log-update-norms", action="store_true",
+                    help="Capture per-(round, client) L2 update norm "
+                         "||w_k^{t+1} - w^t||_2 and write to a sibling CSV. "
+                         "Off by default; clients always compute and return "
+                         "the value in fit metrics, but the runner only "
+                         "materialises the CSV when this flag is set.")
     return ap
 
 
@@ -174,6 +181,12 @@ def main():
     # Read out post-simulation to back-fill the train_loss column in
     # history_rows so the Flower CSV matches the pure-PyTorch CSV schema.
     train_loss_by_round: Dict[int, float] = {}
+    # Per-(round, client) update norms when --log-update-norms is set.
+    # The fit-metrics aggregation callback is invoked once per round in
+    # the order the rounds execute, so we track the round via a counter
+    # rather than relying on Flower exposing it to the callback.
+    update_norm_rows: List[Dict] = []
+    _round_counter = {"r": 0}
 
     # --- Centralised evaluation function called every round by the server ---
     def evaluate_fn(server_round: int, parameters: List[np.ndarray], config):
@@ -227,6 +240,21 @@ def main():
     # entirely (the pure-PyTorch CSV has it; the cross-runtime mismatch was
     # the original B3 from the audit).
     def fit_metrics_aggregation_fn(metrics):
+        # Flower invokes this callback exactly once per round, inside
+        # FedAvg.aggregate_fit, in round order. We use that ordering to
+        # tag each client's update_norm with the round it belongs to.
+        _round_counter["r"] += 1
+        r = _round_counter["r"]
+        if args.log_update_norms:
+            for n, m in metrics:
+                if "update_norm" in m and "cid" in m:
+                    update_norm_rows.append({
+                        "round": int(r),
+                        "client_id": int(m["cid"]),
+                        "update_norm": float(m["update_norm"]),
+                        "n_samples": int(n),
+                        "local_epochs": int(m.get("local_epochs", -1)),
+                    })
         total_n = sum(int(n) for n, _ in metrics)
         if total_n <= 0:
             return {}
@@ -360,6 +388,10 @@ def main():
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
+    # Per-(round, client) update norms if --log-update-norms was set.
+    if args.log_update_norms and update_norm_rows:
+        pd.DataFrame(update_norm_rows).to_csv(
+            out_dir / f"client_update_norms_{stem}.csv", index=False)
     predictions_file = None
     if _preds is not None and _targets is not None:
         predictions_file = f"test_predictions_{stem}.npz"
@@ -390,7 +422,8 @@ def main():
             "loss_type": args.loss_type,
             "focal_gamma": args.focal_gamma if args.loss_type == "focal" else None,
             "system_het": sh_cfg.to_dict(),
-            "elapsed_s": elapsed,
+            "elapsed_s": elapsed,            # legacy field name
+            "wall_clock_seconds": elapsed,   # canonical (audit fix)
         }, f, indent=2)
 
     print(f"\nTest @ best-val (round {test_metrics['selected_round']}, val_macro_f1={test_metrics['best_val_macro_f1']:.4f}):")

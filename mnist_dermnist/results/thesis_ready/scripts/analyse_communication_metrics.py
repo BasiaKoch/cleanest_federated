@@ -15,6 +15,7 @@ Outputs:
 """
 from __future__ import annotations
 
+import argparse
 import glob
 import json
 import re
@@ -25,7 +26,7 @@ import pandas as pd
 
 ROOT     = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-HEADLINE = ROOT.parent / "headline"
+DEFAULT_RESULTS_DIR = ROOT.parent / "headline"
 
 # DermMNISTCNN params ≈ 423K float32 = ~1.65 MB per parameter snapshot.
 PARAM_COUNT = 423_000
@@ -34,9 +35,18 @@ PARAM_BYTES = PARAM_COUNT * BYTES_PER_FLOAT  # ≈ 1.69 MB
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR),
+                    help=f"Directory containing history_*.csv files. "
+                         f"Default: {DEFAULT_RESULTS_DIR}")
+    args = ap.parse_args()
+    results_dir = Path(args.results_dir)
+    if not results_dir.is_dir():
+        raise SystemExit(f"results-dir not found: {results_dir}")
+
     histories = {"fedavg": [], "fedprox": []}
     pat = re.compile(r"history_(fedavg|fedprox)_mu[0-9.]+_E20_s(\d+)\.csv")
-    for f in sorted(HEADLINE.glob("history_*.csv")):
+    for f in sorted(results_dir.glob("history_*.csv")):
         m = pat.match(f.name)
         if not m:
             continue
@@ -123,7 +133,12 @@ def main():
             "silo-side training run.",
         ],
     }
-    out_path = DATA_DIR / "communication_metrics.json"
+    # Disambiguate by input-dir basename so running on multiple sweeps
+    # doesn't overwrite the headline file. Headline keeps the historic name.
+    stem = "communication_metrics"
+    if results_dir.name not in ("headline", "results"):
+        stem = f"{stem}_{results_dir.name}"
+    out_path = DATA_DIR / f"{stem}.json"
     out_path.write_text(json.dumps(out, indent=2))
     print(f"\nWrote {out_path}")
 

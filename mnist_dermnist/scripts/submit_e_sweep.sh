@@ -1,5 +1,5 @@
 #!/bin/bash
-# E sweep — 5 E values × 2 algos × 3 seeds = 30 jobs at the recommended μ=0.1.
+# E sweep — 5 E values × 2 algos × 3 seeds = 30 jobs at the headline μ=0.01.
 set -euo pipefail
 
 REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
@@ -14,7 +14,7 @@ submit() {
   sbatch \
     --job-name="E${E}_${algo}_mu${mu}_s${seed}" \
     --time=10:00:00 \
-    "$REPO_ROOT/mnist_dermnist/scripts/slurm_template.sh" \
+    "$REPO_ROOT/mnist_dermnist/scripts/slurm_template_flower.sh" \
     "$algo" "$mu" "$seed" "$E" "$OUT_DIR"
   sleep 1
 }
@@ -22,7 +22,7 @@ submit() {
 for E in "${ES[@]}"; do
   for s in "${SEEDS[@]}"; do
     submit fedavg  0.0 "$s" "$E"
-    submit fedprox 0.1 "$s" "$E"
+    submit fedprox 0.01 "$s" "$E"
   done
 done
 

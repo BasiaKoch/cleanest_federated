@@ -110,11 +110,18 @@ class PairedFedNovaStrategy(FedAvg):
     All other arguments are forwarded to flwr.server.strategy.FedAvg.
     """
 
-    def __init__(self, *args, client_momentum: float = 0.9, **kwargs):
+    def __init__(self, *args, client_momentum: float = 0.9,
+                 update_norm_rows: Optional[List[Dict]] = None,
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.client_momentum = float(client_momentum)
         # Tracks the most-recent global parameters (anchor) for delta computation.
         self._current_anchor: Optional[NDArrays] = None
+        # Optional sink for per-(round, client) update norms. When the runner
+        # passes a list reference, aggregate_fit appends one row per
+        # participating client per round. Default None = no logging
+        # (zero overhead, byte-identical to the pre-flag behaviour).
+        self._update_norm_rows = update_norm_rows
 
     def initialize_parameters(self, client_manager):
         params = super().initialize_parameters(client_manager)
@@ -159,6 +166,19 @@ class PairedFedNovaStrategy(FedAvg):
                 normalised_delta[k] += p_i * (d_i / a_i)
             a_eff += p_i * a_i
             per_client_a.append((int(fit_res.metrics.get("cid", -1)), tau, a_i))
+
+            # Mechanism diagnostic: capture the client's reported update norm.
+            # Clients always include it in fit metrics; we only persist when
+            # the runner has provided a sink list.
+            if self._update_norm_rows is not None and "update_norm" in fit_res.metrics:
+                self._update_norm_rows.append({
+                    "round": int(server_round),
+                    "client_id": int(fit_res.metrics.get("cid", -1)),
+                    "update_norm": float(fit_res.metrics["update_norm"]),
+                    "n_samples": int(n),
+                    "local_epochs": int(fit_res.metrics.get("local_epochs", -1)),
+                    "tau": int(tau),
+                })
 
         # Aggregated update: w_new = w_anchor - a_eff * normalised_delta
         new_global = [
