@@ -21,7 +21,7 @@
 #   $7 = system_het_mode  (fixed_stragglers | random_stragglers)
 #   $8 = extra args passed verbatim (e.g. "--straggler-epochs 5 --fixed-straggler-ids 5,6")
 
-set -uo pipefail
+set -euo pipefail
 
 REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
 VENV_DIR=/home/bk489/federated_clean/.venv
@@ -39,6 +39,17 @@ SH_MODE="${7:?system_het_mode required}"
 EXTRA_ARGS="${8:-}"
 
 mkdir -p "$OUT_DIR" mnist_dermnist/logs
+
+if [ ! -f "$REPO_ROOT/dermamnist_64.npz" ]; then
+    echo "ERROR: dataset not found at $REPO_ROOT/dermamnist_64.npz" >&2
+    exit 2
+fi
+
+python - <<'PY'
+import flwr
+import torch
+print(f"Preflight OK: flwr={flwr.__version__}, torch={torch.__version__}")
+PY
 
 PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
     --algorithm "$ALGO" \
