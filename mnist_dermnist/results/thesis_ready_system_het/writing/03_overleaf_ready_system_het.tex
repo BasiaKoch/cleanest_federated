@@ -49,8 +49,8 @@
 %==============================================================================
 
 The statistical-heterogeneity experiment of the preceding section
-demonstrated that FedProx \citep{Li et al., 2020} outperforms FedAvg
-\citep{McMahan et al., 2017} on a deliberately non-IID partition of
+demonstrated that FedProx \citep{li2020fedprox} outperforms FedAvg
+\citep{mcmahan2017fedavg} on a deliberately non-IID partition of
 DermaMNIST. That experiment isolated the data-distribution axis of
 federated heterogeneity. The present section isolates the second canonical
 axis identified by the original FedProx paper: \textbf{system
@@ -63,12 +63,12 @@ heterogeneity'' as shorthand for what is strictly
 local SGD steps each client performs per round. We do not simulate
 hardware speed, network latency, or device availability; the
 manipulation acts on the algorithm via heterogeneous $\tau_i$ only.
-Following \citet{Li et al., 2020}'s terminology is convenient but
+Following \citet{li2020fedprox}'s terminology is convenient but
 should not be read as a hardware claim.
 
 \paragraph{What FedProx's proximal regulariser was designed for.}
 System heterogeneity is, in fact, the \emph{primary} motivation for
-FedProx's proximal regulariser. \citet{Li et al., 2020} proved (their
+FedProx's proximal regulariser. \citet{li2020fedprox} proved (their
 Theorem~4) a convergence guarantee for FedProx under $\gamma$-inexact
 local updates: each client may submit a parameter vector $w_i^{t+1}$ that
 does not fully minimise its local objective, provided the residual
@@ -84,7 +84,7 @@ completed.
 \paragraph{One key implementation deviation from Li et al.\ (2020).}
 In our implementation, both FedAvg and FedProx aggregate over
 \emph{the same} client set every round, including stragglers, weighted
-by full dataset size $n_i$. This differs from \citet{Li et al., 2020}
+by full dataset size $n_i$. This differs from \citet{li2020fedprox}
 §5.2, where the canonical FedAvg straggler protocol \emph{drops}
 straggler updates entirely while FedProx \emph{includes} them. Our
 design therefore isolates the effect of the proximal term under
@@ -114,7 +114,7 @@ This section restricts itself to FedAvg vs.\ FedProx, matching the
 project brief and the protocol of the preceding statistical-heterogeneity
 section. We acknowledge that for the specific case of \emph{heterogeneous
 numbers of local update steps}, the more specialised competitor algorithm
-is \textbf{FedNova} \citep{Wang et al., 2020}, which argues that
+is \textbf{FedNova} \citep{wang2020fednova}, which argues that
 heterogeneous local steps create objective inconsistency under naïve
 weighted aggregation and proposes a normalised-averaging rule to address
 it. FedNova's mechanism is therefore directly engineered for the regime
@@ -143,17 +143,25 @@ The only variable is the per-client per-round local-epoch budget.
 \subsection{Three conditions}
 
 \paragraph{C0 (baseline, no system heterogeneity).} Every client performs
-$E = 20$ local epochs every round. This is identical to the headline
-statistical-heterogeneity sweep; its results are reported in the preceding
-section ($M_\text{FedAvg} = 0.481 \pm 0.025$, $M_\text{FedProx} = 0.508 \pm 0.014$,
-$\Delta = +0.027$, paired Wilcoxon $p = 0.020$, rank-biserial $r_{rb} = +0.818$).
+$E = 20$ local epochs every round. The \emph{design} is identical to
+the headline statistical-heterogeneity sweep (same partition, same 10
+paired seeds, same hyperparameters), but C0 is re-executed in the
+Flower runtime via \texttt{submit\_flower\_C0\_baseline.sh} so that
+the H2 contrast (Δ$_c -$ Δ$_{C0}$) consumes runtime-matched data
+rather than mixing the pure-PyTorch headline against Flower stragglers.
+As a cross-runtime reference, the pure-PyTorch headline produced
+$M_\text{FedAvg} = 0.481 \pm 0.025$, $M_\text{FedProx} = 0.508 \pm 0.014$,
+$\Delta = +0.027$, paired Wilcoxon $p = 0.020$, rank-biserial
+$r_{rb} = +0.818$; the Flower C0 numbers (queued, \TODOhpcSH{value once
+sweep lands}) are expected to fall within the documented $\sim 0.005$
+runtime noise floor of these values.
 
 \paragraph{C1 (fixed stragglers --- a specialist + a generalist).} Two
 designated clients (C5 and C6 in the partition) always perform
 $E_\text{straggler} = 5$ local epochs; the remaining five clients perform
 $E = 20$. This models a deployment where specific institutions
 consistently have weaker compute infrastructure. The 5/20 ratio mirrors
-the configuration in \citet{Marija, 2025} §3.8.4 but adapted to a
+the configuration in \citet{nedeljkovic2025fedprox} §3.8.4 but adapted to a
 7-client partition.
 
 \emph{Important caveat on the C1 design.} C5 belongs to the
@@ -165,7 +173,7 @@ combination of a high-Δ specialist client and the generalist client both
 running slow. Any C1 result must be interpreted as \emph{this particular
 configuration} rather than a clean isolation of the system-heterogeneity
 effect. The cleanly-isolating test is C2 below, which approximates
-the \citet{Li et al., 2020} §5.2 random-straggler protocol up to the
+the \citet{li2020fedprox} §5.2 random-straggler protocol up to the
 aggregation deviation noted above. C1 is retained as an
 \textbf{exploratory descriptive cross-check} because of its
 operational realism (in real deployments, certain client identities
@@ -173,7 +181,7 @@ have predictable hardware constraints), but the H2 (between-condition)
 inference in this section relies on C2 as the \textbf{primary
 condition}; C1 results are presented only descriptively.
 
-\paragraph{C2 (random stragglers, \citet{Li et al., 2020} §5.2-inspired
+\paragraph{C2 (random stragglers, \citet{li2020fedprox} §5.2-inspired
 protocol). PRIMARY condition for inference.} Each communication round,
 \textbf{4 of 7 clients per round (approximately 57\%)} are randomly
 designated stragglers (sampled without replacement; the fraction is
@@ -183,7 +191,7 @@ rounding). Each straggler performs $E_i \sim
 $E = 20$. The straggler schedule is seeded with the same seed as the
 rest of the run, so paired FedAvg/FedProx runs share an identical
 schedule and the within-pair $\Delta$ reflects only the algorithmic
-difference. This is inspired by the \citet{Li et al., 2020} §5.2
+difference. This is inspired by the \citet{li2020fedprox} §5.2
 random-straggler protocol with two implementation deviations: (i) the
 canonical setup includes $E_i = 0$ in the support; we forbid 0 epochs
 so every straggler does at least one optimiser step; (ii) the canonical
@@ -224,18 +232,21 @@ H2 result is reported descriptively, not as a confirmatory test.
 \begin{table}[h]
 \centering
 \caption{Test macro-F1 under three conditions of system heterogeneity,
-10 paired seeds each. C0 (baseline) is reproduced from the preceding
-section; C1 and C2 are pending HPC sweep completion. The within-condition
-$\Delta$ tests H1; the between-condition $\Delta - \Delta_{C0}$ tests H2.}
+10 paired seeds each. The C0 row is the Flower-runtime baseline
+produced by \texttt{submit\_flower\_C0\_baseline.sh}; numbers are
+expected within $\sim 0.005$ of the pure-PyTorch headline reference
+($0.481 / 0.508 / \Delta\!=\!+0.027 / p\!=\!0.020$). The within-condition
+$\Delta$ tests H1; the between-condition $\Delta - \Delta_{C0}$ tests
+H2 with Bonferroni correction across active conditions.}
 \label{tab:sh-headline}
 \small
 \begin{tabular}{lccccc}
 \toprule
-Condition & FedAvg & FedProx & $\Delta$ & Wilcoxon $p$ (H1) & H2 test $p$ \\
+Condition & FedAvg & FedProx & $\Delta$ & Wilcoxon $p$ (H1) & H2 test $p$ (Bonf.) \\
 \midrule
-C0 (no system het, baseline)   & $0.481 \pm 0.025$ & $0.508 \pm 0.014$ & $+0.027$ & $0.020$ & (reference) \\
-C1 (fixed stragglers)          & \TODOhpcSH{FA mean$\pm$SD} & \TODOhpcSH{FP mean$\pm$SD} & \TODOhpcSH{$\Delta$} & \TODOhpcSH{p} & \TODOhpcSH{p} \\
-C2 (random stragglers)         & \TODOhpcSH{FA mean$\pm$SD} & \TODOhpcSH{FP mean$\pm$SD} & \TODOhpcSH{$\Delta$} & \TODOhpcSH{p} & \TODOhpcSH{p} \\
+C0 (no system het, baseline, Flower) & \TODOhpcSH{FA mean$\pm$SD} & \TODOhpcSH{FP mean$\pm$SD} & \TODOhpcSH{$\Delta$} & \TODOhpcSH{p} & (reference) \\
+C1 (fixed stragglers, descriptive only)  & \TODOhpcSH{FA mean$\pm$SD} & \TODOhpcSH{FP mean$\pm$SD} & \TODOhpcSH{$\Delta$} & \TODOhpcSH{p} & \TODOhpcSH{p} \\
+C2 (random stragglers, primary)          & \TODOhpcSH{FA mean$\pm$SD} & \TODOhpcSH{FP mean$\pm$SD} & \TODOhpcSH{$\Delta$} & \TODOhpcSH{p} & \TODOhpcSH{p} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -293,7 +304,7 @@ the system-heterogeneity regime; the proximal regulariser is broadly
 useful for federated medical-imaging deployment.
 \item If H2 confirmed: the system-heterogeneity advantage is larger than
 the statistical-heterogeneity advantage, consistent with FedProx's
-original theoretical motivation in \citet{Li et al., 2020} that the
+original theoretical motivation in \citet{li2020fedprox} that the
 proximal term was introduced primarily to handle inexact local updates
 from stragglers.
 \item If H2 not confirmed but H1 confirmed: FedProx remains useful under

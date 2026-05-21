@@ -21,7 +21,7 @@
     "normalisation": "GroupNorm",
     "optimizer": "SGD with momentum",
     "device": "NVIDIA A100-SXM4-80GB",
-    "framework": "Flower 1.x simulation"
+    "framework": "pure-pytorch (run_one.py); Flower 1.29 equivalence pending HPC sweep submit_flower_C0_baseline.sh"
   },
   "algorithms": {
     "fedavg": {"mu": 0.0, "description": "Baseline federated averaging (McMahan 2017)"},
