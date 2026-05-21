@@ -65,7 +65,9 @@ BatchNorm computes running mean/variance statistics over each mini-batch. Under 
 
 ## 4 Federated learning setup
 
-**Framework.** Flower 1.x [Beutel 2020] in simulation mode. The server orchestrates a fixed pool of seven clients; each runs inside a Ray actor with one A100 GPU allocated (`num_gpus = 1.0`).
+**Framework.** The 20 headline FedAvg-vs-FedProx runs in this thesis were produced by the project's pure-PyTorch reference loop (`experiments/run_one.py`, `fl/server_loop.py`). A Flower 1.29 simulation runtime [Beutel 2020] is implemented (`run_one_flower.py`, `flwr.simulation.start_simulation`, each client a Ray actor) and used for the queued system-heterogeneity, IID, and Dirichlet sweeps; a full-scale Flower C0 equivalence sweep is queued.
+
+Framework provenance for the 20 headline runs was established by (i) a structural fingerprint on the paired `history_*.csv` files — the `n_sampled` column is written by `fl/server_loop.py:289` and is structurally absent from the Flower row builder, and is present in all 20 files; (ii) the absence of any `flwr` import in `run_one.py`; (iii) the disjoint output directories of the two runners; and (iv) the back-stamp script `scripts/backstamp_headline_provenance.py`, which writes `framework='pure-pytorch'` based on the directory contents at 2026-05-18. The hard-coded label is justified by (i)–(iii); future runs are stamped at run time (Rank-4 patch).
 
 **Communication round structure.** At each of R = 150 rounds:
 
