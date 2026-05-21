@@ -44,6 +44,7 @@ from mnist_dermnist.data.partition import (
     simple_pathological_3_clients,
 )
 from mnist_dermnist.fl.evaluation import evaluate
+from mnist_dermnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
 from mnist_dermnist.fl.system_het import SystemHetConfig, build_epoch_schedule
 from mnist_dermnist.fl_flower.client import FlClient, state_dict_to_numpy, numpy_to_state_dict
 from mnist_dermnist.models import DermMNISTCNN
@@ -115,6 +116,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main():
+    run_started_at = utc_now_iso()
     args = build_parser().parse_args()
     mu = 0.0 if args.algorithm == "fedavg" else float(args.mu)
     seed = int(args.seed)
@@ -424,6 +426,9 @@ def main():
             "system_het": sh_cfg.to_dict(),
             "elapsed_s": elapsed,            # legacy field name
             "wall_clock_seconds": elapsed,   # canonical (audit fix)
+            # Runtime provenance (CP3.2 / Rank-4 patch — git SHA,
+            # hostname, torch/python versions, timestamps, etc.)
+            **collect_runtime_provenance(run_started_at),
         }, f, indent=2)
 
     print(f"\nTest @ best-val (round {test_metrics['selected_round']}, val_macro_f1={test_metrics['best_val_macro_f1']:.4f}):")
