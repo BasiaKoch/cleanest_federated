@@ -30,6 +30,36 @@ MU=0.01                                  # ← from CPU sweep (replace if HPC μ
 
 mkdir -p "$REPO_ROOT/$OUT_DIR" "$REPO_ROOT/mnist_dermnist/logs"
 
+# Pre-flight: refuse to mix runtimes in the same output directory.
+# The 20 existing backstamped JSONs in results/headline/ carry
+# framework="pure-pytorch"; submitting Flower jobs here would mix
+# labels and break downstream analysis filters that compare on the
+# framework field (analyse_system_het.py, tables.py).
+shopt -s nullglob
+existing_jsons=("$REPO_ROOT/$OUT_DIR"/test_at_best_*.json)
+shopt -u nullglob
+non_flower_found=""
+for j in "${existing_jsons[@]}"; do
+  if ! grep -q '"framework": "flower-simulation"' "$j" 2>/dev/null; then
+    non_flower_found="$j"
+    break
+  fi
+done
+if [ -n "$non_flower_found" ]; then
+  echo "ERROR: $OUT_DIR already contains a JSON whose framework field is"
+  echo "       not 'flower-simulation':"
+  echo "         $non_flower_found"
+  echo ""
+  echo "Submitting this sweep would mix runtimes in the same directory."
+  echo "Options:"
+  echo "  (a) use submit_flower_C0_baseline.sh (writes to flower_C0_baseline/)"
+  echo "  (b) move or delete the existing JSONs before re-running this script"
+  echo "  (c) override the output dir explicitly:"
+  echo "      OUT_DIR=mnist_dermnist/results/flower_headline_<date> \\"
+  echo "        bash mnist_dermnist/scripts/submit_headline.sh"
+  exit 3
+fi
+
 SEEDS=(42 123 456 789 999 2024 31337 8675309 161803 271828)
 LOCAL_EPOCHS=20
 
