@@ -34,27 +34,69 @@ submit() {
   sleep 3
 }
 
-# --- C1: fixed_stragglers (clients 5,6 always E=5) ---
+# C1 and C2 are independent blocks. To run C2 only (e.g. when compute is
+# tight), comment out the entire C1 block below. The trailing summary
+# print at the bottom of this script adapts to which blocks executed.
+
+n_c1_submitted=0
+n_c2_submitted=0
+
+# === C1: Fixed stragglers (DESCRIPTIVE ONLY — confounded) ============
+# NOTE: C1 is confounded — clients 5,6 are structurally tied to the
+# melanoma/nevi class mechanism in balanced_paired_7_clients. C5 holds
+# the second melanoma-pair (389 melanoma + 49 vascular + 670 nevi);
+# C6 is the nevi-only generalist (673 nevi). Making C5 a permanent
+# straggler partially neutralises the per-class mechanism that drives
+# the headline result, so C1 will likely UNDER-report FedProx's
+# advantage relative to a non-confounded straggler choice. Treat C1
+# numbers as descriptive cross-check only; C2 is the primary
+# system-heterogeneity condition for inference.
+#
+# To skip C1 entirely (recommended if compute is tight or for the
+# "C2-only" plan), comment out lines 50-58 (the entire C1 block).
 C1_OUT=mnist_dermnist/results/system_het_fixed
 mkdir -p "$REPO_ROOT/$C1_OUT"
 for s in "${SEEDS[@]}"; do
-  submit fedavg  0.0  "$s" "$C1_OUT" fixed_stragglers "--straggler-epochs $STRAGGLER_EPOCHS --fixed-straggler-ids 5,6"
-  submit fedprox $MU  "$s" "$C1_OUT" fixed_stragglers "--straggler-epochs $STRAGGLER_EPOCHS --fixed-straggler-ids 5,6"
+  submit fedavg  0.0  "$s" "$C1_OUT" fixed_stragglers "--straggler-epochs $STRAGGLER_EPOCHS --fixed-straggler-ids 5,6 --log-update-norms"
+  submit fedprox $MU  "$s" "$C1_OUT" fixed_stragglers "--straggler-epochs $STRAGGLER_EPOCHS --fixed-straggler-ids 5,6 --log-update-norms"
+  n_c1_submitted=$((n_c1_submitted + 2))
 done
 
-# --- C2: random_stragglers (Li-style, 50% stragglers per round) ---
+# === C2: Random stragglers (PRIMARY condition) =======================
+# Li et al. (2020, MLSys) §5.2 random-straggler protocol:
+#   • Each round: 50% of the 7 clients (= 4 clients) are randomly
+#     designated stragglers (sampled without replacement).
+#   • Stragglers perform E_i ~ Uniform{1, 2, ..., 19} local epochs.
+#   • Non-stragglers perform E = 20 local epochs.
+#   • Straggler identity ROTATES per round (seed-deterministic).
+# Selection is independent of class composition — no structural
+# coupling with the per-class mechanism that drives the headline.
+# C2 is the primary system-heterogeneity condition; H2 = Δ_C2 - Δ_C0
+# is the inferentially primary test (see analyse_system_het.py).
 C2_OUT=mnist_dermnist/results/system_het_random
 mkdir -p "$REPO_ROOT/$C2_OUT"
 for s in "${SEEDS[@]}"; do
-  submit fedavg  0.0  "$s" "$C2_OUT" random_stragglers "--straggler-fraction 0.5"
-  submit fedprox $MU  "$s" "$C2_OUT" random_stragglers "--straggler-fraction 0.5"
+  submit fedavg  0.0  "$s" "$C2_OUT" random_stragglers "--straggler-fraction 0.5 --log-update-norms"
+  submit fedprox $MU  "$s" "$C2_OUT" random_stragglers "--straggler-fraction 0.5 --log-update-norms"
+  n_c2_submitted=$((n_c2_submitted + 2))
 done
 
 echo ""
 echo "Submitted system-heterogeneity sweep:"
-echo "  - fixed_stragglers (C5,C6 at E=$STRAGGLER_EPOCHS) × 10 seeds × 2 algos = 20 jobs → $C1_OUT"
-echo "  - random_stragglers (50% per round) × 10 seeds × 2 algos = 20 jobs → $C2_OUT"
-echo "  Total: 40 jobs ~40 GPU-hours."
+total=0
+if [ "$n_c1_submitted" -gt 0 ]; then
+  echo "  - C1 fixed_stragglers (C5,C6 at E=$STRAGGLER_EPOCHS, DESCRIPTIVE): $n_c1_submitted jobs → $C1_OUT"
+  total=$((total + n_c1_submitted))
+else
+  echo "  - C1: skipped"
+fi
+if [ "$n_c2_submitted" -gt 0 ]; then
+  echo "  - C2 random_stragglers (50% per round, PRIMARY): $n_c2_submitted jobs → $C2_OUT"
+  total=$((total + n_c2_submitted))
+else
+  echo "  - C2: skipped"
+fi
+echo "  Total: $total jobs (~$total GPU-hours on A100)"
 echo "Monitor with: squeue -u \$USER"
 
 if [ ${#FAILED[@]} -ne 0 ]; then

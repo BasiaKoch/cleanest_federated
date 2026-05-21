@@ -57,6 +57,16 @@ axis identified by the original FedProx paper: \textbf{system
 heterogeneity} -- variability in the local computational budget each
 client can contribute per communication round.
 
+\paragraph{Terminology.} Throughout this section we use ``system
+heterogeneity'' as shorthand for what is strictly
+\emph{computational-work heterogeneity}: variability in the number of
+local SGD steps each client performs per round. We do not simulate
+hardware speed, network latency, or device availability; the
+manipulation acts on the algorithm via heterogeneous $\tau_i$ only.
+Following \citet{Li et al., 2020}'s terminology is convenient but
+should not be read as a hardware claim.
+
+\paragraph{What FedProx's proximal regulariser was designed for.}
 System heterogeneity is, in fact, the \emph{primary} motivation for
 FedProx's proximal regulariser. \citet{Li et al., 2020} proved (their
 Theorem~4) a convergence guarantee for FedProx under $\gamma$-inexact
@@ -67,9 +77,24 @@ constrains how far an inexact local update can drift from the global
 anchor $w^t$, making partial work from stragglers usable for aggregation
 without destabilising the global model. FedAvg has no such guarantee, and
 its size-weighted aggregation rule treats partial-work and full-work
-updates symmetrically -- which biases the global model toward whichever
+updates symmetrically --- which biases the global model toward whichever
 clients drifted furthest, regardless of how much work they actually
 completed.
+
+\paragraph{One key implementation deviation from Li et al.\ (2020).}
+In our implementation, both FedAvg and FedProx aggregate over
+\emph{the same} client set every round, including stragglers, weighted
+by full dataset size $n_i$. This differs from \citet{Li et al., 2020}
+§5.2, where the canonical FedAvg straggler protocol \emph{drops}
+straggler updates entirely while FedProx \emph{includes} them. Our
+design therefore isolates the effect of the proximal term under
+heterogeneous local computation without confounding it with
+differential client participation. A consequence is that the original
+``FedProx tolerates dropping where FedAvg does not'' result of Li
+et al.\ (2020) is not directly tested here; what is tested is whether
+FedProx's headline statistical-heterogeneity advantage persists or
+widens when both algorithms see partial-work updates from a random
+subset of clients each round.
 
 \subsection*{Why this complements the statistical-heterogeneity result}
 
@@ -139,20 +164,34 @@ nevi-only generalist. C1 therefore conflates ``system heterogeneity'' with
 combination of a high-Δ specialist client and the generalist client both
 running slow. Any C1 result must be interpreted as \emph{this particular
 configuration} rather than a clean isolation of the system-heterogeneity
-effect. The cleanly-isolating test is C2 below, which is also the
-canonical Li et al.\ (2020) setup. C1 is retained because of its
+effect. The cleanly-isolating test is C2 below, which approximates
+the \citet{Li et al., 2020} §5.2 random-straggler protocol up to the
+aggregation deviation noted above. C1 is retained as an
+\textbf{exploratory descriptive cross-check} because of its
 operational realism (in real deployments, certain client identities
 have predictable hardware constraints), but the H2 (between-condition)
-inference in this section relies primarily on C2.
+inference in this section relies on C2 as the \textbf{primary
+condition}; C1 results are presented only descriptively.
 
-\paragraph{C2 (random stragglers, Li et al.\ 2020 protocol).} Each
-communication round, half of the participating clients are randomly
-designated stragglers. Each straggler performs $E_i \sim
-\text{Uniform}[1, 19]$ local epochs; non-stragglers perform $E = 20$.
-The straggler schedule is seeded with the same seed as the rest of the
-run, so paired FedAvg/FedProx pairs share an identical schedule and the
-within-pair $\Delta$ reflects only the algorithmic difference. This
-matches the canonical FedProx experimental setup in \citet{Li et al., 2020} §5.2.
+\paragraph{C2 (random stragglers, \citet{Li et al., 2020} §5.2-inspired
+protocol). PRIMARY condition for inference.} Each communication round,
+\textbf{4 of 7 clients per round (approximately 57\%)} are randomly
+designated stragglers (sampled without replacement; the fraction is
+$\mathrm{round}(0.5 \times 7) = 4$, slightly above 50\% due to integer
+rounding). Each straggler performs $E_i \sim
+\text{Uniform}\{1, 2, \ldots, 19\}$ local epochs; non-stragglers perform
+$E = 20$. The straggler schedule is seeded with the same seed as the
+rest of the run, so paired FedAvg/FedProx runs share an identical
+schedule and the within-pair $\Delta$ reflects only the algorithmic
+difference. This is inspired by the \citet{Li et al., 2020} §5.2
+random-straggler protocol with two implementation deviations: (i) the
+canonical setup includes $E_i = 0$ in the support; we forbid 0 epochs
+so every straggler does at least one optimiser step; (ii) the canonical
+FedAvg arm drops straggler updates while ours includes them (see the
+implementation-deviation paragraph above). C2 therefore tests the
+proximal-term effect under heterogeneous partial-work updates, not the
+straggler-dropping mechanism that distinguishes Li et al.'s FedAvg
+from their FedProx.
 
 \subsection{Pre-registered hypotheses}
 
@@ -170,8 +209,11 @@ canonical FedProx claim that the proximal regulariser is most beneficial
 under inexact local updates. Because H2 comprises two related tests (one
 per condition), we report both raw and Bonferroni-corrected $p$-values
 ($\alpha_\text{family} = 0.05$, corrected per-test threshold
-$\alpha / 2 = 0.025$); the canonical interpretation rests on C2 (the Li et
-al.\ 2020 setup) and is robust to whether C1 is also significant.
+$\alpha / 2 = 0.025$). Because C1 is confounded with class composition,
+the \textbf{primary interpretation rests on C2} (the Li et
+al.\ 2020-inspired protocol, modulo the implementation deviations noted
+above) and is robust to whether C1 also reaches significance; C1's
+H2 result is reported descriptively, not as a confirmatory test.
 
 %==============================================================================
 \section{Results}

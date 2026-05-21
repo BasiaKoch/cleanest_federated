@@ -47,7 +47,7 @@ submit() {
 OUT=mnist_dermnist/results/system_het_random_fednova
 mkdir -p "$REPO_ROOT/$OUT"
 for s in "${SEEDS[@]}"; do
-  submit "$s" "$OUT" random_stragglers "--straggler-fraction 0.5"
+  submit "$s" "$OUT" random_stragglers "--straggler-fraction 0.5 --log-update-norms"
 done
 
 echo ""
@@ -56,8 +56,9 @@ echo "  - random_stragglers × 10 seeds = 10 jobs → $OUT"
 echo "  Total: 10 jobs ~10 GPU-hours."
 echo ""
 echo "When complete, combine with the existing FedAvg / FedProx C2 results:"
-echo "  PYTHONPATH=. python mnist_dermnist/results/thesis_ready_system_het/scripts/analyse_three_way.py"
-echo "  (script to be written when the 10-job sweep lands)"
+echo "  PYTHONPATH=. python mnist_dermnist/results/thesis_ready_system_het/scripts/analyse_system_het.py"
+echo "  (auto-discovers system_het_random_fednova/ and emits FedNova arm of"
+echo "   summary_statistics.json with within-seed Δ vs FedAvg and FedProx)"
 echo ""
 echo "Monitor with:  squeue -u \$USER"
 

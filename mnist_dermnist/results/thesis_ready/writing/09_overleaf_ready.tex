@@ -238,13 +238,15 @@ extreme paired differences, we test whether the cross-runtime gap is
 itself stable in the regime where the headline result is most
 sensitive. Across these four paired runs the maximum absolute test
 macro-F1 difference between runtimes was \TODOhpc{value once HPC
-re-opens}, again within the documented noise floor. The Flower runtime
-is therefore established as the primary path for this dissertation;
-the pure-PyTorch reference produced the existing 10-seed headline
-results, and would have produced equivalent results under the Flower
-runtime had it been used directly. All subsequent experimental sweeps
-(system heterogeneity, IID falsification, Dirichlet-$\alpha$
-robustness) are executed through the Flower runtime directly.
+re-opens}, again within the documented noise floor. \textbf{Pending the
+4-job equivalence sweep landing} (\texttt{submit\_equivalence\_check.sh},
+queued), the Flower runtime is taken as the primary path for all new
+sweeps in this dissertation; the pure-PyTorch reference produced the
+existing 10-seed headline results, which are preserved as the
+cross-runtime validation reference rather than re-run on Flower. All
+subsequent experimental sweeps (computational-work heterogeneity, IID
+falsification, Dirichlet-$\alpha$ robustness) are executed through the
+Flower runtime directly.
 
 \paragraph{Cross-runtime mixing is avoided in inferential contrasts.}
 Equivalence is established up to a $\pm 0.005$--$0.02$ noise floor but
@@ -1266,26 +1268,55 @@ These baselines are not yet run on HPC; their inclusion in the SLURM
 sweep is the highest-priority comparative extension and is recommended
 for a follow-up extension of this dissertation.
 
+\paragraph{Terminology.} We refer to per-client variable local-epoch
+budgets as ``system heterogeneity'' following \citet{Li et al., 2020};
+strictly the manipulation is \emph{computational-work heterogeneity},
+since we do not simulate hardware or network latency. Wall-clock and
+hardware claims are therefore out of scope; the experiment isolates
+the algorithmic response to variable local-step counts $\tau_i$.
+
+\paragraph{Aggregation differs from Li et al.\ (2020) in one key respect.}
+In this implementation, both FedAvg and FedProx aggregate over
+\emph{the same} client set every round, including stragglers, with size-weighted
+$w^{t+1} = \sum_i (n_i / \sum_j n_j)\,w_i^{t+1}$. This differs from
+\citet{Li et al., 2020} §5.2, where FedAvg \emph{drops} straggler
+updates entirely while FedProx \emph{includes} them as $\gamma$-inexact
+partial work; the resulting comparison there is between different
+aggregation populations. Our design instead isolates the effect of the
+proximal term under heterogeneous local computation without the
+confound of differential client participation. A consequence is that
+the "FedProx tolerates straggler dropping where FedAvg does not"
+result of Li et al.\ (2020) is not directly tested here; what is
+tested is whether FedProx's headline advantage persists or widens when
+both algorithms see partial-work updates from a random subset of
+clients each round.
+
 \paragraph{System-heterogeneity conditions and a known C1 confound.}
 The system-heterogeneity sweep submits three conditions, all in the
-Flower runtime: C0 (uniform $E = 20$, no stragglers — the
+Flower runtime: C0 (uniform $E = 20$, no stragglers --- the
 runtime-matched baseline), C1 (\emph{fixed stragglers}, deterministic
-slow clients), and C2 (\emph{random stragglers}, half the participating
-clients are slow each round with $E_i \sim \mathrm{Uniform}[1, 19]$).
-C2 follows Li et al.\ (2020) §5.2 exactly. C1 is simpler and inspired
-by Marija (2025) §3.8.4 but carries an experimental-design caveat that
-we make explicit here. In the \texttt{balanced\_paired\_7\_clients}
-partition, the two clients fixed as stragglers (the last two by index,
-$C_5$ and $C_6$) happen to be the second melanoma/vascular client and
-the nevi-only generalist; making $C_5$ a permanent straggler partially
-removes the melanoma drift that the headline analysis identifies as
-the per-class driver of FedProx's advantage. C1 therefore likely
-\emph{over-estimates} the harm of stragglers to FedProx relative to a
-random straggler choice. C2 has no such structural coupling between
-straggler identity and the per-class mechanism and is reported as the
-primary system-heterogeneity condition; C1 is retained as a
-descriptive cross-check, and the H2 inference is reported separately
-for each condition under a Bonferroni $\alpha/2 = 0.025$ correction.
+slow clients) which is \textbf{descriptive only}, and C2 (\emph{random
+stragglers}, \textbf{the primary condition}: 4 of 7 clients per round
+(approximately 57\%) are randomly designated stragglers with
+$E_i \sim \mathrm{Uniform}\{1, 2, \ldots, 19\}$). C2 approximates the
+\citet{Li et al., 2020} §5.2 protocol up to the aggregation deviation
+described above and the additional constraint that $E_i \geq 1$
+(stragglers never do zero epochs in our setup). C1 is simpler and
+inspired by \citet{Marija, 2025} §3.8.4 but carries an
+experimental-design caveat that we make explicit here. In the
+\texttt{balanced\_paired\_7\_clients} partition, the two clients fixed
+as stragglers (the last two by index, $C_5$ and $C_6$) happen to be
+the second melanoma/vascular client and the nevi-only generalist;
+making $C_5$ a permanent straggler partially removes the melanoma drift
+that the headline analysis identifies as the per-class driver of
+FedProx's advantage. C1 therefore likely \emph{over-estimates} the
+harm of stragglers to FedProx relative to a random straggler choice.
+C2 has no such structural coupling between straggler identity and the
+per-class mechanism and is the \textbf{primary system-heterogeneity
+condition for inference}; C1 is retained as an exploratory descriptive
+cross-check, and the H2 inference (Δ$_c$ - Δ$_{C_0}$) is reported
+separately for each condition under a Bonferroni-corrected
+$\alpha/2 = 0.025$ threshold.
 
 A fuller comparison would additionally include FedLC (label-frequency
 calibration), FedBN \citep{Li et al., 2021} (feature-shift; out of scope
