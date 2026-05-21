@@ -69,6 +69,11 @@ Hsieh et al. 2020). This is one of the reasons we use GroupNorm.
 FedProx baseline; silent differences with BatchNorm models are avoided
 by the GroupNorm choice.
 
+This claim is established at smoke-test scale; the full-scale
+equivalence check (`scripts/submit_equivalence_check.sh`, 4 jobs) is
+queued for HPC. Until it lands, the headline numbers should be cited
+as pure-PyTorch.
+
 ---
 
 ## 3. FedNova (JYWa/FedNova)
@@ -183,7 +188,7 @@ identified.
 | Repository | Cross-check verdict |
 |---|---|
 | litian96/FedProx | ✓ Implementation matches canonical |
-| adap/flower | ✓ Matches Flower FedProx baseline; GroupNorm avoids known BN pitfall |
+| adap/flower | ✓ Matches Flower FedProx baseline; GroupNorm avoids known BN pitfall. Established at smoke-test scale; full-scale equivalence check (`scripts/submit_equivalence_check.sh`, 4 jobs) is queued for HPC. Until it lands, the headline numbers should be cited as pure-PyTorch. |
 | JYWa/FedNova | ✓ Core aggregation matches; server-side momentum deliberately omitted |
 | med-air/FedBN | ✓ Not implemented; non-implementation correctly justified |
 | Xtra-Computing/NIID-Bench | ✓ Methodology aligns with NIID-Bench's label-skew category |
