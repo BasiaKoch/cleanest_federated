@@ -169,7 +169,7 @@ def main():
         "partition": args.partition,
         "image_size": int(args.image_size),
         "npz_path": str(args.npz_path),
-        "framework": "pure-pytorch-reference-loop",
+        "framework": "pure-pytorch",
         "framework_version": None,
         "loss_type": "cross_entropy",
         "runner_script": "run_one.py",
