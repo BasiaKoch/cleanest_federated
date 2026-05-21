@@ -37,13 +37,10 @@
 \usepackage{setspace}
 \usepackage{tikz}
 \usetikzlibrary{positioning, shapes.geometric, arrows.meta, fit, backgrounds}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[authoryear,round]{natbib}
 \onehalfspacing
-
-% --- APA-style author-year citation macros (minimal, no apacite required) ---
-% Avoids redefining the built-in \cite and works without external .bib files.
-\providecommand{\citep}[1]{(#1)}
-\providecommand{\citet}[1]{#1}
-\providecommand{\citealt}[1]{#1}
 
 % --- TODO / pending-HPC markers ----------------------------------------------
 % These macros make HPC-pending placeholders visible in the compiled PDF.
@@ -56,14 +53,695 @@
   \ifshowtodo\textcolor{red}{\textbf{[HPC PENDING: #1]}}\else#1\fi}
 \newcommand{\PENDING}{\TODOhpc{result}}
 
-\title{Federated Averaging vs.\ Proximal Federated Optimization on
-DermaMNIST: A Paired-Seed Empirical Comparison Under a
-Pairing-Constrained Non-IID Partition}
+\title{Federated Optimisation on DermaMNIST: A Paired-Seed Empirical
+Comparison of FedAvg, FedProx, and FedNova Under Statistical and
+Computational-Work Heterogeneity}
 \author{}
 \date{}
 
 \begin{document}
 \maketitle
+
+\begin{abstract}
+Federated Learning (FL) trains models across data silos without
+centralising patient data, but the canonical FedAvg algorithm
+\citep{mcmahan2017fedavg} suffers under client heterogeneity. We
+evaluate FedProx \citep{li2020fedprox}, which adds a proximal
+regulariser to local objectives, on DermaMNIST --- a 7-class
+skin-lesion classification dataset with severe class imbalance
+(58:1 between majority and minority classes). We design a custom
+non-IID partition (\texttt{balanced\_paired\_7\_clients}) in which
+every minority class is held by exactly two clients, avoiding the
+catastrophic per-class regression observed under singleton-class
+partitions. Across 10 paired-seed runs ($R = 150$ rounds, $E = 20$
+local epochs, $\mu = 0.01$), FedProx achieves a mean test macro-F1
+of $0.508 \pm 0.014$ against FedAvg's $0.481 \pm 0.025$ --- a
+within-pair improvement of $\Delta = +0.027 \pm 0.035$ (paired
+Wilcoxon $p = 0.020$, rank-biserial $r = +0.818$). FedProx wins on
+9 of 10 paired seeds. The largest per-class gain is on melanoma
+($\Delta = +0.114$, $p = 0.006$), the most clinically critical
+lesion. No class regresses by more than $0.012$ F1, satisfying the
+pre-registered safety criterion. FedProx additionally reduces
+across-seed variance by 45\%, suggesting more stable convergence
+under non-IID conditions.
+\end{abstract}
+
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+%==============================================================================
+\section{Introduction}\label{sec:intro}
+%==============================================================================
+
+Skin cancer is one of the most common malignancies worldwide, and
+melanoma in particular accounts for the great majority of skin-cancer
+deaths despite representing fewer than 5\% of cases. The outcome of a
+melanoma diagnosis is exquisitely sensitive to the time at which the
+disease is detected: five-year survival rates exceed 99\% when the
+lesion is identified while still localised, falling to under 35\% once
+the disease has metastasised. This stark survival gradient has
+motivated a generation of computer-aided diagnostic systems based on
+dermoscopic images, and the recent availability of large-scale
+labelled image datasets has made deep learning the de facto
+methodology in this space. The HAM10000 collection
+\citep{tschandl2018ham10000}, assembled from multiple clinical sites
+and comprising 10{,}015 dermoscopic images across seven diagnostic
+categories, has become the standard benchmark for this class of
+system. The class distribution of HAM10000 --- and of clinical
+practice more generally --- is severely imbalanced: melanocytic nevi
+(benign moles) account for roughly two-thirds of the recorded cases,
+while clinically critical categories such as dermatofibroma and
+vascular lesions are each represented by under 2\%. The asymmetry of
+clinical cost matches but does not exactly mirror this distribution:
+a false negative on the rare melanoma class delays diagnosis of a
+lethal disease, while a false positive on a common nevus triggers an
+unnecessary but recoverable biopsy. Any deployable dermatology AI
+system must therefore demonstrate not only high overall accuracy but
+specifically strong recall on the clinically critical minority
+classes.
+
+The dataset-driven progress that has powered medical AI is, however,
+in tension with the patient-data privacy regimes that govern
+healthcare. The European Union's General Data Protection Regulation
+(GDPR) classifies medical images as ``special category'' personal data
+subject to strict consent and processing constraints; the United
+States Health Insurance Portability and Accountability Act (HIPAA)
+places equivalent obligations on covered entities. Multi-site clinical
+datasets are difficult to assemble in practice: each contributing
+institution must navigate its own institutional review board, secure
+individual patient consent for secondary research use, anonymise the
+source data, and negotiate transfer agreements that frequently forbid
+raw-image sharing entirely. Even when such pooling is legally
+feasible, the resulting datasets are slow to assemble and rarely
+updateable --- by the time the legal-administrative pipeline has
+closed, the underlying clinical practice may have moved on. Federated
+learning (FL) was introduced by \citet{mcmahan2017fedavg} precisely as
+a response to this class of problem. In an FL deployment, each
+participating site retains its raw data and trains a local model;
+only model parameters or gradient summaries cross the network. A
+central server aggregates these summaries, producing a global model
+that benefits from the union of the per-site cohorts without any
+patient image ever leaving its institution of origin. The
+federated-learning literature has expanded substantially in the years
+since \citeauthor{mcmahan2017fedavg}'s original proposal
+\citep{kairouz2021advances}, with applications now spanning radiology,
+histopathology, and ophthalmology; a particularly visible
+demonstration of FL deployed in clinical medical imaging is the
+multi-institutional brain-tumour segmentation work of
+\citet{sheller2020medicalfl}, which trained a single global U-Net
+across ten clinical sites without raw-image sharing and reported
+performance comparable to a centralised baseline.
+
+Federated learning has, however, exposed a methodological gap of its
+own. The canonical algorithm, federated averaging (FedAvg)
+\citep{mcmahan2017fedavg}, averages client parameters in proportion
+to local dataset size after each communication round. This rule was
+shown empirically to perform well when the data distributions held
+by different clients are statistically similar, but to degrade ---
+sometimes severely --- when those distributions diverge. The pattern,
+often referred to as the non-IID degradation problem, has motivated
+a family of algorithmic remedies. FedProx \citep{li2020fedprox}
+augments each client's local training objective with a proximal
+regulariser of the form $(\mu/2)\lVert w - w^t \rVert^2$ that
+penalises drift from the round-start global parameter vector,
+providing a convergence guarantee for $\gamma$-inexact local updates
+and empirically improving on FedAvg under heterogeneous client
+distributions. FedNova \citep{wang2020fednova} addresses a
+complementary axis of heterogeneity: when clients differ not in their
+data but in the amount of local computation they perform per round
+(because of hardware diversity, network conditions, or scheduling
+constraints), the naïve size-weighted aggregation rule is shown to
+be \emph{objective-inconsistent}, and FedNova normalises each
+client's update by the effective number of local SGD steps to
+correct this bias. Despite the maturity of these three algorithms,
+paired-seed empirical comparisons specifically on dermatology
+benchmarks are surprisingly thin in the federated-learning
+literature. The original FedProx paper validates on Synthetic,
+FEMNIST, Shakespeare, and Sentiment140 --- none of them medical;
+FedNova validates on CIFAR-10 and similar generic vision benchmarks.
+Where federated learning has been applied to medical imaging, the
+comparisons typically test FedAvg against a single proximal variant
+on a single partition, without the within-pair statistical machinery
+that allows the experimentally relevant question --- ``for a given
+paired seed, which algorithm produces the better global model?''
+--- to be answered with controlled across-seed variance.
+
+This dissertation reports a paired-seed empirical comparison of
+FedAvg, FedProx, and FedNova on a federated formulation of the
+DermaMNIST classification benchmark, which is the resized
+MedMNIST~v2 distribution of HAM10000. The scope is deliberately
+bounded. Heterogeneity is simulated: we partition a single dataset
+(DermaMNIST) across seven synthetic clients by class index, producing
+controlled non-IID conditions of varying severity, but we do not
+combine images from independent institutions, scanners, or patient
+populations. Hardware heterogeneity is not modelled; what we call
+``system heterogeneity'' in the corresponding section is strictly
+variable per-client local-step counts, a closely related but
+narrower manipulation than the wall-clock heterogeneity of real
+deployments. All images are at $28 \times 28$ resolution rather
+than the $64 \times 64$ of the source MedMNIST distribution (or the
+$600 \times 450$ of the original HAM10000 photographs), a deliberate
+compute-economy choice that makes ten paired seeds tractable on a
+single A100 GPU within the available HPC budget. Consequently, the
+relative algorithmic differences this dissertation reports should be
+interpreted as evidence about FedAvg, FedProx, and FedNova under
+controlled, simulated heterogeneity at fixed resolution, not as
+estimates of clinical performance. The transferability of those
+relative differences to higher resolutions, real multi-site
+deployments, or alternative dermatology cohorts is an open empirical
+question, identified as the primary direction for follow-up work in
+\S\ref{sec:future}.
+
+\paragraph{Contributions.} The substantive contributions of this
+dissertation are:
+\begin{itemize}
+\item \textbf{Paired-seed protocol with bit-equivalence at $\mu = 0$.}
+We design an experimental protocol in which FedAvg and FedProx share
+identical partitions, initial model weights, per-(round, client)
+DataLoader random-number generators, dropout masks, and
+system-heterogeneity schedules. Bit-equivalence at $\mu = 0$ is
+verified by seven unit tests at $10^{-8}$ tolerance over per-round
+history, final aggregated state-dictionaries, and test-set metrics.
+Within-pair differences therefore reflect only the algorithmic gating
+of the proximal term and not any artefact of independent random-number
+generators or framework choices.
+
+\item \textbf{A custom \texttt{balanced\_paired\_7\_clients} partition
+supporting a clean per-class mechanism prediction.} The partition is
+designed so that every minority class is held by exactly two of seven
+clients while the majority class (melanocytic nevi) is held by all
+seven. The mechanism prediction follows directly: where two clients
+hold the same minority class, the proximal regulariser has
+consensus-finding work to do; on the universally-held nevi class, it
+does not. The dissertation tests this prediction with a per-class
+Holm-corrected analysis and a per-specialty contrast.
+
+\item \textbf{Headline empirical result with effect-size and
+leave-one-seed-out robustness.} Across ten paired seeds, FedProx
+($\mu = 0.01$) improves over FedAvg on test macro-F1 by
+$\Delta = +0.027 \pm 0.035$ (paired Wilcoxon $p = 0.020$,
+sign-test $p = 0.021$, rank-biserial $r = +0.818$, 9 of 10 paired
+wins). The result survives leave-one-seed-out re-testing (all ten
+drop-one subsamples remain significant at $\alpha = 0.05$). The
+largest per-class gain is on the clinically critical melanoma class
+($\Delta = +0.114$, $p_\text{Holm} = 0.041$), the only per-class
+result to survive Holm correction across the seven classes.
+
+\item \textbf{Three-regime robustness analysis.} The headline finding
+is contextualised by sweeps under three statistical-heterogeneity
+regimes: the custom \texttt{balanced\_paired\_7\_clients} partition
+(mechanism experiment), a uniform IID null-falsification control
+under which FedProx is theoretically predicted to provide no
+advantage, and the literature-standard Dirichlet-$\alpha = 0.1$
+non-IID partition popularised in the federated-learning benchmarking
+literature. The three regimes jointly probe internal validity,
+falsifiability, and external validity to a partitioning scheme this
+work did not design.
+
+\item \textbf{Independently verified FedNova implementation.} The
+FedNova aggregation rule is implemented and verified against
+canonical reference values from \citet{wang2020fednova} (e.g.\
+$a_i = 41.381$ for $\tau = 10$, $m = 0.9$) via fourteen unit tests
+covering the closed-form normaliser, reduction to vanilla SGD at
+$m = 0$, monotonicity in $\tau$, sign convention, and reduction to
+FedAvg under uniform $\tau$ with zero momentum. The implementation
+is used to produce, to our knowledge, the first three-way
+(FedAvg vs.\ FedProx vs.\ FedNova) paired-seed comparison on
+DermaMNIST.
+\end{itemize}
+
+\paragraph{Thesis structure.} \S\ref{sec:background} reviews the
+federated-learning problem statement and the mathematical formulation
+of FedAvg, FedProx, and FedNova. \S\ref{sec:related} situates this
+work against prior federated-optimisation algorithms, non-IID
+benchmarks, and federated-learning deployments in medical imaging.
+\S\ref{sec:dataset} through \S\ref{sec:metrics} describe the dataset,
+the convolutional model, the federated-learning setup, the
+algorithmic details, the custom partition, the paired-seed protocol,
+and the statistical analysis design. The Results chapter that follows
+presents the headline statistical-heterogeneity finding, the
+per-class breakdown, the convergence trajectories, the per-specialty
+contrast, the peak-versus-final-round analysis, and the
+cross-partition robustness study, before consolidating all
+heterogeneity conditions into a single summary contrast.  The
+Discussion chapter interprets these findings in context.
+\S\ref{sec:hardware} documents the compute envelope and the
+experiments that were descoped within it. \S\ref{sec:conclusion}
+restates the calibrated thesis-level claim and \S\ref{sec:future}
+identifies concrete directions for follow-up work.
+
+%==============================================================================
+\section{Background}\label{sec:background}
+%==============================================================================
+This section fixes the federated optimisation problem statement used
+throughout the thesis, states the three algorithms under comparison in a
+common form, and collects the symbols that subsequent chapters rely on. The
+setting is cross-silo \citep{kairouz2021advances}: a small, fixed roster of
+trusted clients that all participate in every round, which matches the
+deployment scenario of a federation between dermatology departments.
+
+\subsection{Federated learning problem statement}
+We are given $K$ clients (in this work $K=7$). Client $i$ holds a private
+training set $\mathcal{D}_i$ of size $n_i$, and the union
+$\bigcup_i \mathcal{D}_i$ never leaves its origin. The federation learns a
+single global model $w \in \mathbb{R}^d$ by minimising a size-weighted average
+of the per-client empirical risks,
+\begin{equation}
+F(w) \;=\; \sum_{i=1}^{K} p_i\, F_i(w),
+\qquad
+F_i(w) \;=\; \frac{1}{n_i}\!\!\sum_{(x,y)\in\mathcal{D}_i}\!\! \ell\bigl(f_w(x),\, y\bigr),
+\qquad
+p_i \;=\; \frac{n_i}{\sum_{j=1}^{K} n_j},
+\label{eq:fl-objective}
+\end{equation}
+where $\ell$ is the multi-class cross-entropy loss and $f_w$ is the shared CNN
+introduced in \S\ref{sec:model}. Training proceeds in $R$ synchronous
+communication rounds. At round $t$ the server broadcasts the current iterate
+$w^t$ to a random fraction $C$ of clients (the active subset $S_t$ of size
+$\max(1,\lceil C K\rceil)$); each active client runs $E$ local epochs of
+mini-batch SGD on $F_i$ to produce $w_i^{t+1}$; the server then aggregates
+$\{w_i^{t+1}\}_{i\in S_t}$ into the next iterate $w^{t+1}$. The headline
+configuration in this thesis sets $C=1.0$ (full participation), $R=150$, and
+$E=20$.
+
+\subsection{The three algorithms}
+The three algorithms differ in (i) the local objective the client minimises
+and (ii) how the server combines the returned iterates. The local optimiser
+(mini-batch SGD with momentum $m=0.9$) and the broadcast schedule are
+identical across all three.
+
+\paragraph{FedAvg \citep{mcmahan2017fedavg}.}
+Clients minimise $F_i(w)$ directly. The server takes a size-weighted mean of
+the returned parameters,
+\begin{equation}
+w^{t+1} \;=\; \sum_{i\in S_t} p_i\, w_i^{t+1}.
+\label{eq:fedavg}
+\end{equation}
+FedAvg has no explicit defence against client drift: when local objectives
+$F_i$ disagree at $w^t$ (the non-IID case), more local steps can move
+$w_i^{t+1}$ further from the consensus that minimises $F$.
+
+\paragraph{FedProx \citep{li2020fedprox}.}
+Clients minimise a proximally regularised local objective,
+\begin{equation}
+\widetilde F_i(w;\, w^t) \;=\; F_i(w) \;+\; \frac{\mu}{2}\,\bigl\lVert w - w^t\bigr\rVert_2^2,
+\label{eq:fedprox-local}
+\end{equation}
+which penalises drift from the broadcast anchor $w^t$ with strength controlled
+by $\mu \ge 0$. Server aggregation is unchanged from
+Equation~\ref{eq:fedavg}. At $\mu = 0$ FedProx reduces exactly to FedAvg; the
+headline value in this thesis is $\mu = 0.01$, with a sensitivity sweep over
+$\{0.001, 0.01, 0.1, 0.5, 1.0\}$ reported alongside the main results.
+
+\paragraph{FedNova \citep{wang2020fednova}.}
+FedNova leaves the local objective at $F_i$ but rescales each client's update
+by the L1 norm of its cumulative-momentum series so that clients running
+different numbers of local steps $\tau_i$ contribute updates of comparable
+magnitude. Writing $d_i = w^t - w_i^{t+1}$ for client $i$'s update,
+\begin{equation}
+a_i \;=\; \sum_{j=1}^{\tau_i} \frac{1 - m^j}{1 - m}
+\;=\; \frac{\tau_i\,(1-m) \;-\; m\,(1-m^{\tau_i})}{(1-m)^2},
+\qquad
+a_{\mathrm{eff}} \;=\; \sum_{i\in S_t} p_i\, a_i,
+\label{eq:fednova-ai}
+\end{equation}
+\begin{equation}
+w^{t+1} \;=\; w^t \;-\; a_{\mathrm{eff}} \,\sum_{i\in S_t} p_i\,\frac{d_i}{a_i}.
+\label{eq:fednova-agg}
+\end{equation}
+When $m=0$ this collapses to $a_i = \tau_i$ (the original FedNova proposal);
+when in addition all $\tau_i$ are equal it collapses to FedAvg. FedNova
+therefore isolates the heterogeneous-local-work effect that proximal
+regularisation does not address directly, making it the canonical comparator
+for the system-heterogeneity arm of this study.
+
+\subsection{Notation}
+Table~\ref{tab:notation} collects the symbols used throughout the thesis.
+The same symbols are reused in the results chapter without redefinition.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Notation used throughout the thesis.}
+\label{tab:notation}
+\begin{tabular}{l p{0.72\textwidth}}
+\toprule
+Symbol & Meaning \\
+\midrule
+$K$               & Number of FL clients (this work: $K=7$). \\
+$\mathcal{D}_i$   & Local training dataset held by client $i$. \\
+$n_i$             & Number of training samples at client $i$. \\
+$p_i$             & Size weight, $p_i = n_i / \sum_{j} n_j$. \\
+$F$               & Global objective $F(w) = \sum_i p_i F_i(w)$. \\
+$F_i$             & Local empirical risk at client $i$. \\
+$w^t$             & Global model parameters at the start of round $t$. \\
+$w_i^{t+1}$       & Local parameters returned by client $i$ after round $t$. \\
+$R$               & Number of communication rounds (this work: $R=150$). \\
+$E$               & Number of local epochs per round (this work: $E=20$). \\
+$C$               & Fraction of clients sampled per round (this work: $C=1.0$). \\
+$\mu$             & FedProx proximal coefficient (headline: $\mu=0.01$). \\
+$\tau_i$          & Number of local SGD steps performed by client $i$ in one round. \\
+$a_i$             & FedNova momentum-aware normaliser, Equation~\ref{eq:fednova-ai}. \\
+$\Delta$          & Within-pair gap $\Delta = \mathrm{macro\text{-}F1}_{\mathrm{FedProx}} - \mathrm{macro\text{-}F1}_{\mathrm{FedAvg}}$. \\
+$r_{rb}$          & Rank-biserial correlation \citep{kerby2014rankbiserial}, the paired-test effect size. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hypotheses}\label{sec:hypotheses}
+The empirical study tests two pre-registered hypotheses and reports two
+auxiliary predictions that act as falsification probes. Pre-registration here
+means the hypotheses, partition, and statistical tests were fixed before the
+HPC sweeps were submitted; only the test statistics and effect sizes were
+re-derived from the run logs.
+
+\paragraph{H1 (within-condition).}
+\emph{On the \texttt{balanced\_paired\_7\_clients} partition at $E=20$,
+$R=150$, and $\mu=0.01$, FedProx improves test macro-F1 over FedAvg in a
+paired-seed comparison.} Operationally: let
+$\Delta^{(s)} = \mathrm{macro\text{-}F1}_{\mathrm{FedProx}}^{(s)} - \mathrm{macro\text{-}F1}_{\mathrm{FedAvg}}^{(s)}$
+for paired seed $s \in \{1,\dots,10\}$. We test
+$H_0\!:\, \mathrm{median}(\Delta) = 0$ against
+$H_1\!:\, \mathrm{median}(\Delta) \ne 0$ using the two-sided paired Wilcoxon
+signed-rank test at $\alpha = 0.05$ with $n = 10$ seeds, supported by a paired
+sign test and the Hodges--Lehmann estimator of $\mathrm{median}(\Delta)$.
+
+\paragraph{H2 (between-condition).}
+\emph{Under computational-work heterogeneity (random stragglers, condition
+C2), the FedProx-over-FedAvg gap widens relative to the C0 baseline.}
+Operationally: per seed $s$, compute $\Delta_{C2}^{(s)}$ and
+$\Delta_{C0}^{(s)}$; then test
+$H_0\!:\, \mathrm{median}(\Delta_{C2} - \Delta_{C0}) = 0$ via paired Wilcoxon
+at a Bonferroni-corrected threshold of $\alpha/2 = 0.025$ (the family covers
+both C1 and C2, although only C2 is the primary inferential test; C1 is
+reported descriptively because of the documented partition-confound between
+fixed-straggler identity and the class mechanism).
+
+\paragraph{Falsification prediction (IID).}
+On the IID partition every client sees an i.i.d.\ draw from the same
+distribution, so the local objectives $F_i$ agree at every $w^t$ and the
+proximal anchor in Equation~\ref{eq:fedprox-local} has nothing to anchor
+\emph{to}. We therefore predict $\Delta \approx 0$ and a non-significant
+Wilcoxon $p$-value ($p > 0.05$) on IID. A significant positive $\Delta$ under
+IID would falsify the drift-control mechanism story and indicate that the
+observed headline gap is driven by something other than statistical
+heterogeneity.
+
+\paragraph{External-validity prediction (Dirichlet $\alpha = 0.1$).}
+Dirichlet partitioning \citep{hsu2019dirichlet} is the field-standard
+synthetic non-IID benchmark and is not engineered to maximise the FedProx
+advantage in the way \texttt{balanced\_paired\_7\_clients} is. We predict
+$\Delta > 0$ on Dirichlet $\alpha = 0.1$ (the result transfers) but with
+magnitude $\lvert\Delta_{\mathrm{Dir}}\rvert < \lvert\Delta_{\mathrm{paired}}\rvert$
+(the engineered partition still produces the largest effect).
+
+%==============================================================================
+\section{Related Work}\label{sec:related}
+%==============================================================================
+Three streams of work bear directly on the empirical comparison this thesis
+performs: the federated optimisation algorithms that the thesis evaluates, the
+non-IID benchmarks that establish how such algorithms are stress-tested, and
+the medical-imaging FL literature that motivates the use case. This section
+reviews each in turn, identifies the gap this thesis addresses, and contrasts
+the present contribution against the closest published references.
+
+\subsection{Federated optimisation algorithms}
+\label{sec:rw-algorithms}
+
+\paragraph{FedAvg and the client-drift problem.}
+The defining algorithm of federated learning is FedAvg
+\citep{mcmahan2017fedavg}, which alternates $E$ local SGD epochs at each
+client with a size-weighted server average of the returned parameters
+(Equation~\ref{eq:fedavg}). The original analysis observed strong empirical
+performance on partitions where client data is drawn IID from a single
+distribution, and subsequent theory has shown that under IID conditions and
+sufficiently small local steps FedAvg converges at the same asymptotic rate
+as centralised SGD up to a slowdown that depends on $E$ and the participation
+fraction $C$. The intuition is straightforward: with IID local data, each
+local SGD step is an unbiased estimator of the global gradient
+$\nabla F(w^t)$, so the size-weighted average of local updates is itself an
+unbiased estimator and the algorithm inherits centralised SGD's convergence
+guarantees up to constants. The failure mode that motivates everything that
+follows is the non-IID setting: when local datasets $\mathcal{D}_i$ are drawn
+from different distributions the local objectives $F_i$ disagree at every
+$w^t$, and more local steps move each $w_i^{t+1}$ further along its own
+per-client gradient trajectory rather than the global one. Formally,
+$\mathbb{E}\!\left[\nabla F_i(w^t)\right] \ne \nabla F(w^t)$ in general, so
+the local update bias accumulates over $E$ epochs. The size-weighted average
+of these divergent iterates is not in general a descent step for $F$, and
+convergence slows --- or, in extreme cases, fails altogether.
+\citet{hsieh2020quagmire} quantify how severe this degradation can be on
+practical workloads, with reported accuracy losses of $10$--$50$ percentage
+points relative to centralised baselines on image and language tasks, and
+introduce the now-standard vocabulary of ``the non-IID quagmire'' under
+which subsequent benchmarks are framed.
+
+\paragraph{Three families of remedies.}
+The literature has converged on three architectural families of solutions,
+each modifying a different part of the FedAvg round.
+\emph{(i) Proximal regularisation.} FedProx \citep{li2020fedprox} adds a
+quadratic anchor $(\mu/2)\lVert w - w^t\rVert_2^2$ to the local objective
+(Equation~\ref{eq:fedprox-local}). The anchor penalises drift from the
+broadcast point and yields a $\gamma$-inexact-update convergence framework
+under a bounded-dissimilarity assumption
+$\lVert \nabla F_i(w) \rVert^2 \le B^2 \lVert \nabla F(w) \rVert^2$ for some
+constant $B$; under this assumption \citet{li2020fedprox} prove $O(1/T)$
+convergence on non-convex objectives even when clients perform variable
+amounts of local work. Empirically, FedProx improves non-IID performance at
+the cost of a single new hyperparameter $\mu$, and degrades gracefully:
+choosing $\mu$ too small recovers FedAvg, while choosing $\mu$ too large
+slows convergence by over-anchoring to a possibly suboptimal $w^t$. The
+sweet spot is dataset- and partition-dependent. This thesis evaluates FedProx
+in the headline at $\mu = 0.01$ with a sensitivity sweep over
+$\mu \in \{0.001, 0.01, 0.1, 0.5, 1.0\}$ to characterise the FedProx-over-
+FedAvg gap's robustness to that choice.
+\emph{(ii) Control variates.} SCAFFOLD \citep{karimireddy2020scaffold}
+maintains client-side and server-side control variates $c_i$ and $c$ that
+explicitly correct for client-drift gradient differences. The local update
+rule becomes $w \leftarrow w - \eta_l (\nabla F_i(w) - c_i + c)$, where the
+$-c_i + c$ term is a variance-reduction control variate that cancels in
+expectation under IID data but corrects the per-client gradient bias under
+non-IID data. The method enjoys variance-reduction guarantees that are
+tighter than FedProx's and matches centralised SGD's asymptotic rate under
+arbitrary heterogeneity. The price is twofold: the per-round communication
+doubles, because both the parameter update and the control-variate update
+must be transmitted, and each client must maintain persistent state across
+rounds, which complicates cross-device deployment where clients may drop in
+and out. This thesis does \emph{not} evaluate SCAFFOLD: the 2$\times$
+communication penalty changes the cost structure of the round, and a fair
+comparison would require either equal-communication or equal-rounds
+baselines that compare on a different axis from the one the thesis isolates.
+\emph{(iii) Aggregation normalisation.} FedNova \citep{wang2020fednova}
+leaves the local objective at $F_i$ but rescales each client's returned
+update by the L1 norm of its cumulative-momentum series
+(Equation~\ref{eq:fednova-ai}). The motivation is the
+\emph{objective-inconsistency} problem: when clients run different numbers
+of local steps $\tau_i$, the size-weighted FedAvg aggregator implicitly
+optimises a perturbed objective $\sum_i p_i \tau_i F_i / \sum_j p_j \tau_j$
+rather than the intended $\sum_i p_i F_i$, so clients doing fewer steps
+contribute disproportionately small updates and the global iterate drifts
+toward the objective of clients doing more. FedNova's per-client
+$a_i$-rescaling removes this bias. In the $m=0$, equal-$\tau$ limit FedNova
+reduces to FedAvg; in the $m=0$, variable-$\tau$ regime it reduces to the
+earlier FedNova-SGD variant; only the momentum case $m > 0$ produces the
+full closed-form $a_i$ used here. FedNova is the canonical comparator for
+heterogeneous-local-work conditions, and this thesis evaluates it as the
+third arm of the system-heterogeneity comparison.
+
+\paragraph{Server-side adaptive optimisers.}
+A complementary line of work modifies the \emph{server-side} aggregation rule
+rather than the local objective. \citet{reddi2021adaptive} replace the size-
+weighted average with adaptive moment estimation (FedAdam, FedYogi, FedAdagrad),
+treating client deltas as pseudo-gradients into a server-side optimiser. The
+resulting algorithms address slow convergence on heterogeneous data without
+modifying the client at all, which is attractive when client compute is
+constrained or when the federation includes resource-asymmetric devices.
+This thesis does not evaluate the FedAdam family: a clean comparison would
+require carefully controlling the server-side learning-rate schedule across
+algorithms, and the proximal-vs-normalisation contrast that the thesis
+isolates is sharper without that additional axis. Adaptive aggregation is
+flagged as future work (\S\ref{sec:future}).
+
+\paragraph{Scope of the present thesis.}
+In summary, of the four families above --- FedAvg, proximal regularisation,
+control variates, aggregation normalisation, and server-side adaptive
+optimisation --- this thesis evaluates three (FedAvg, FedProx, FedNova) and
+explicitly scopes out SCAFFOLD (communication asymmetry) and the FedAdam
+family (server-side axis). The three algorithms it does evaluate are the
+minimum set that lets the thesis attribute observed gaps to specific
+mechanisms: FedAvg as the no-intervention baseline, FedProx as the proximal-
+anchor mechanism, and FedNova as the aggregation-normalisation mechanism.
+
+\subsection{Non-IID federated learning benchmarks}
+\label{sec:rw-benchmarks}
+
+\paragraph{Dirichlet partitioning.}
+The most widely adopted protocol for simulating non-IID label skew is the
+Dirichlet partitioning scheme of \citet{hsu2019dirichlet}. For each class
+$c \in \{1,\dots,C\}$ a vector
+$\bm{q}_c \sim \mathrm{Dir}_K(\alpha\bm{1})$ is sampled and class-$c$ samples
+are then allocated to the $K$ clients in proportions $q_{c,1}, \dots, q_{c,K}$.
+The concentration parameter $\alpha$ controls heterogeneity: small $\alpha$
+(e.g.\ $0.1$) yields highly skewed partitions in which each client holds only
+a few classes, while large $\alpha$ (e.g.\ $10$ or larger) approximates the
+IID limit. In the limit $\alpha \to 0$ each class is concentrated on a
+single client (the extreme pathological non-IID case), and in the limit
+$\alpha \to \infty$ the partition converges to uniform-IID. The scheme is
+attractive because it generates a smooth one-parameter family of partitions
+and exposes the algorithm's robustness profile as $\alpha$ varies, but it has
+two well-documented limitations: the per-class sampling can produce empty-
+client classes that need to be re-rolled, and the resulting per-client
+quantities $n_i$ are themselves random, which couples label skew with
+quantity skew unless explicit re-balancing is applied. This thesis evaluates
+Dirichlet $\alpha = 0.1$ as the external-validity probe alongside the
+engineered \texttt{balanced\_paired} partition described in
+\S\ref{sec:partition}, with the same seed-fixing protocol so per-seed
+Dirichlet draws are reproducible.
+
+\paragraph{NIID-Bench.}
+The canonical multi-algorithm comparison on non-IID data is NIID-Bench
+\citep{li2022niidbench}, which benchmarks seven federated algorithms across
+nine datasets and six non-IID partitioning protocols. The paper's central
+empirical finding is that no single algorithm wins uniformly: relative
+ordering between FedAvg, FedProx, FedNova, and SCAFFOLD changes as the
+heterogeneity axis, the dataset, and the model family change. The
+partitioning protocols themselves --- label-quantity (each client gets $k$
+of $C$ classes), label-distribution (Dirichlet), feature-distribution (per-
+client noise), quantity-skew, and homogeneous (IID) --- formalise the
+heterogeneity axes that earlier work surveyed informally and have become
+de facto standards in subsequent comparisons. NIID-Bench also documents
+that even within a single partition setting the relative ordering can flip
+across random seeds, which motivates the paired-seed inferential protocol
+this thesis adopts. The NIID-Bench DermaMNIST entry specifically reports
+overlapping confidence intervals between FedAvg and FedProx, leaving the
+question of whether the difference is statistically significant unanswered:
+this thesis fills exactly that gap, with a paired Wilcoxon at $n=10$ seeds
+on the engineered \texttt{balanced\_paired} partition that maximises the
+label-skew axis NIID-Bench identified as most sensitive for this dataset.
+
+\paragraph{Taxonomy of heterogeneity axes.}
+\citet{kairouz2021advances} provide the field-standard taxonomy of non-IID
+data, distinguishing four axes: \emph{label skew} (different clients have
+different class priors $p_i(y)$, the dominant axis in cross-silo medical FL
+where each site sees a different patient-population case mix),
+\emph{feature skew} (the conditional input distribution $p(x \mid y)$
+differs across clients, e.g.\ scanner-dependent acquisition protocols
+producing systematically different intensity histograms for the same
+underlying tissue), \emph{quantity skew} (clients have different $n_i$,
+which on its own is a benign axis handled by the size weights $p_i$ but
+which interacts multiplicatively with label and feature skew), and
+\emph{concept drift} (the label function $p(y \mid x)$ itself differs
+across sites or over time, e.g.\ when diagnostic conventions or labelling
+guidelines change between institutions). Different algorithmic interventions address different
+axes: FedProx and SCAFFOLD primarily target label skew via drift control;
+FedBN \citep{li2021fedbn} targets feature skew by keeping batch-norm
+statistics local; quantity skew is implicitly handled by the size weights
+$p_i$ but interacts with all of the above. This thesis isolates \emph{label
+skew} with mild quantity skew: every client in \texttt{balanced\_paired}
+holds a distinct class subset (label skew), and the partition slightly
+varies $n_i$ across clients (quantity skew), but the dataset is a single
+homogeneous source (no feature skew or concept drift). Isolating label skew
+this cleanly makes any FedProx advantage attributable to the drift-control
+mechanism rather than confounded with feature-shift remedies.
+
+\subsection{Federated learning in medical imaging}
+\label{sec:rw-medicalfl}
+
+\paragraph{Foundational work.}
+The first widely cited demonstration that federated learning matches
+centralised training on a clinically meaningful task is
+\citet{sheller2020medicalfl}, which trains a brain-tumour segmentation
+model across ten institutions on the BraTS dataset and shows that the
+federated model achieves segmentation Dice within $\sim$1\% of a centrally
+trained model with the same architecture. Crucially, the study also
+compares against single-institution baselines and finds that the federated
+model substantially outperforms any individual site, quantifying the
+collaborative gain for the first time on real clinical data. The result
+established that the privacy-utility trade-off in medical imaging need not
+be punitive when inter-site heterogeneity is moderate.
+\citet{rieke2020future} provide the broader vision-piece for the field,
+surveying the technical, regulatory, and clinical considerations that
+distinguish medical FL from FL on consumer devices. They emphasise three
+practical constraints absent in the canonical FL formulation: regulatory
+heterogeneity across jurisdictions (HIPAA, GDPR, MDR), the need for audit
+trails that survive aggregation, and the fact that medical clients are
+small in number ($K$ in tens) but rich in data per client, the inverse of
+the cross-device profile FedAvg was designed for. They argue that cross-
+silo FL between trusted institutions is the most tractable setting for
+early deployment, a framing this thesis adopts.
+
+\paragraph{Production-scale medical FL.}
+The FeTS study \citep{pati2022fets} brings federated learning to production
+scale: 71 sites across six continents collaborate on glioblastoma boundary
+detection in a federation that runs over six months, with no central pooling
+of patient data at any stage. The paper reports a measurable improvement in
+generalisation when the federation includes geographically and demographically
+diverse sites, and is the strongest available evidence that the
+small-scale findings of \citet{sheller2020medicalfl} extrapolate to
+real-world deployment. FeTS used FedAvg with carefully tuned local epochs
+rather than any of the heterogeneity-aware algorithms reviewed in
+\S\ref{sec:rw-algorithms}; whether FedProx or FedNova would have improved
+upon their results remains an open question, and is part of the practical
+motivation for studies of the present kind.
+
+\paragraph{Feature-shift remedies.}
+A distinct concern in multi-scanner medical imaging is feature shift: even
+when the underlying condition is held constant, scanner-specific intensity
+distributions and acquisition protocols produce $p(x \mid y)$ that varies
+across sites. The standard FL aggregation rule averages batch-norm running
+statistics across clients, which propagates each site's idiosyncratic
+intensity distribution into a shared estimator that fits none of them well.
+FedBN \citep{li2021fedbn} addresses this by keeping batch-normalisation
+statistics --- both the running mean and variance buffers and the affine
+$\gamma, \beta$ parameters --- \emph{local} (i.e.\ never aggregated) while
+sharing all other convolutional and linear parameters; on multi-scanner MRI
+and X-ray cohorts the intervention recovers most of the gap between
+federated and centralised performance, and incurs no extra communication
+because the local parameters are never transmitted. This thesis does not
+evaluate FedBN: DermaMNIST is a single homogeneous source with no scanner
+axis, so feature shift is absent by construction, and the CNN used here
+employs GroupNorm \citep{wu2018groupnorm} rather than BatchNorm precisely
+to side-step the FedBN-style aggregation question. FedBN is nonetheless
+relevant context: it shows that the right algorithmic intervention depends
+on which heterogeneity axis dominates in the deployment setting, which is
+a recurring theme of \S\ref{sec:rw-algorithms} and
+\S\ref{sec:rw-benchmarks}.
+
+\paragraph{Contemporary thesis-scale work.}
+\citet{nedeljkovic2025fedprox} is the closest contemporary thesis-scale
+reference: an MPhil dissertation on FedAvg vs FedProx for breast-lesion
+segmentation in DCE-MRI under engineered class-imbalance partitions.
+That work and this thesis share the paired comparison protocol but
+diverge in task (segmentation vs classification), dataset (proprietary
+DCE-MRI vs public DermaMNIST), heterogeneity construction (class
+imbalance vs balanced-pair label skew), and inferential scope (two
+algorithms vs three). The two studies together provide complementary
+evidence on whether the proximal-anchor mechanism generalises across
+medical imaging modalities and task families.
+
+\paragraph{Where this thesis fits.}
+The literature surveyed above leaves a specific empirical gap that this
+thesis fills. NIID-Bench compares algorithms across many datasets but
+without a paired-seed inferential protocol, leaving DermaMNIST's
+FedAvg-vs-FedProx ordering statistically unresolved. The medical-FL line
+(\citealt{sheller2020medicalfl, rieke2020future, pati2022fets}) provides
+deployment evidence under FedAvg but does not isolate algorithmic
+interventions. The contemporary thesis-scale work
+\citep{nedeljkovic2025fedprox} provides a paired FedAvg-vs-FedProx contrast
+on segmentation but does not include FedNova or system-heterogeneity
+conditions. The present thesis combines the three contributions absent
+from each individual line: \emph{(a)} a strict paired-seed protocol with
+formal Wilcoxon inference on DermaMNIST classification, \emph{(b)} the
+addition of FedNova as the heterogeneous-computation arm so the
+proximal-vs-normalisation contrast can be tested directly, and \emph{(c)}
+explicit C0/C1/C2 conditions that decouple statistical heterogeneity
+(non-IID label skew) from computational-work heterogeneity (random
+stragglers). The novelty is not the algorithms or the dataset; it is the
+combination, and the inferential discipline imposed on top.
 
 %==============================================================================
 \section{Experimental Setting}
@@ -148,9 +826,9 @@ momentum-aware normaliser for the size-weighted server aggregation.}
 \end{figure}
 
 \subsection{Dataset}\label{sec:dataset}
-We use DermaMNIST \citep{Yang et al., 2023}, the dermatology subset of the
+We use DermaMNIST \citep{yang2023medmnistv2}, the dermatology subset of the
 MedMNIST~v2 benchmark, derived from the HAM10000 collection of
-dermatoscopic images \citep{Tschandl et al., 2018}. DermaMNIST contains 10{,}015
+dermatoscopic images \citep{tschandl2018ham10000}. DermaMNIST contains 10{,}015
 dermoscopic images of skin lesions across seven diagnostic categories,
 split into 7{,}007 training, 1{,}003 validation, and 2{,}005 test samples in
 the canonical MedMNIST split. The source archive \texttt{dermamnist\_64.npz} (the v2 distribution at
@@ -197,15 +875,24 @@ The use of \texttt{AdaptiveAvgPool2d((1, 1))} as the final spatial
 pooling allows the same architecture to accept inputs of any spatial
 size $\geq 28 \times 28$ without modification, which is used for the
 64$\times$64 resolution-sensitivity follow-up identified in §Limitations.
-GroupNorm \citep{Wu \& He, 2018} is used in place of BatchNorm because
+GroupNorm \citep{wu2018groupnorm} is used in place of BatchNorm because
 per-client batch statistics encode local distribution information that
 cannot be safely averaged across heterogeneous clients
-\citep{Hsieh et al., 2020}.
+\citep{hsieh2020quagmire}.
 
 \subsection{Federated Learning Setup}\label{sec:fl-setup}
-Training is performed with the Flower~1.29 simulation framework
-\citep{Beutel et al., 2020} via \texttt{flwr.simulation.start\_simulation},
-which orchestrates each client as a Ray actor. Clients submit updated
+%% TODO: Kairouz et al. (2021) is the field's reference survey for FL
+%% setup and open problems. Cited here as the canonical background;
+%% prune if you decide to keep the introduction chapter lean.
+The federated-learning protocol used throughout this dissertation
+follows the canonical cross-silo formulation surveyed in
+\citet{kairouz2021advances}. The headline results in this dissertation were produced by the project's
+pure-PyTorch reference loop (\texttt{experiments/run\_one.py}). A
+Flower~1.29 simulation runtime \citep{beutel2020flower} via
+\texttt{flwr.simulation.start\_simulation} (each client a Ray actor) is
+also implemented for the queued system-heterogeneity, IID, and Dirichlet
+sweeps; a full-scale Flower C0 equivalence sweep is queued for HPC
+(\texttt{scripts/submit\_flower\_C0\_baseline.sh}). Clients submit updated
 parameters back to a custom \texttt{NumPyClient} subclass that implements
 both the FedAvg local objective (cross-entropy alone) and the FedProx
 local objective (cross-entropy plus the proximal penalty
@@ -275,7 +962,7 @@ on its private partition; the server then aggregates and centrally
 evaluates the resulting global model on a held-out validation set. The
 test set is evaluated \emph{once} per run, at the round of best
 validation macro-F1, in accordance with the standard early-stopping
-protocol \citep{Goodfellow et al., 2016}.
+protocol \citep{goodfellow2016deeplearning}.
 
 Hyperparameters are listed in Table~\ref{tab:hyperparams}.
 
@@ -290,14 +977,14 @@ Clients ($K$)               & 7         & Matches partition design (Table~\ref{t
 Fraction-fit ($C$)          & 1.0       & Full participation isolates drift effect \\
 Rounds ($R$)                & 150       & Sufficient for FedAvg convergence \\
 Local epochs ($E$)          & 20        & High-$E$ regime where drift dominates \\
-Optimizer                   & SGD + momentum & \citet{McMahan et al., 2017} \\
+Optimizer                   & SGD + momentum & \citet{mcmahan2017fedavg} \\
 Learning rate               & 0.01      & Standard for CNNs at this scale \\
 Momentum                    & 0.9       & Standard \\
 Weight decay                & 0.0       & Avoids conflation with proximal term \\
 Batch size                  & 32        & Capped per-client to $\min(32, \text{client size})$ \\
-Normalisation               & GroupNorm & FL-safe \citep{Hsieh et al., 2020} \\
+Normalisation               & GroupNorm & FL-safe \citep{hsieh2020quagmire} \\
 Dropout                     & 0.2       & Mild regularisation \\
-FL framework                & Flower~1.29 (\texttt{flwr.simulation}) & \citet{Beutel et al., 2020}; Ray-actor backend \\
+FL framework                & Flower~1.29 (\texttt{flwr.simulation}) & \citet{beutel2020flower}; Ray-actor backend \\
 Hardware                    & NVIDIA A100-SXM4-80GB & CSD3 Ampere partition \\
 \bottomrule
 \end{tabular}
@@ -306,10 +993,155 @@ Hardware                    & NVIDIA A100-SXM4-80GB & CSD3 Ampere partition \\
 \end{table}
 
 \subsection{Algorithms}\label{sec:algorithms}
-\textbf{FedAvg} \citep{McMahan et al., 2017} minimises the local
+
+Algorithms~\ref{alg:fedavg}, \ref{alg:fedprox}, and \ref{alg:fednova}
+present the three federated optimisers in a common
+server/\textsc{ClientUpdate} layout following \citet{mcmahan2017fedavg};
+the three algorithms share the server-side communication loop and differ
+only in (i) the local objective minimised by \textsc{ClientUpdate} and
+(ii) the aggregation rule the server applies.
+Table~\ref{tab:algorithm_comparison} situates them within the broader
+family of federated optimisers and records which are evaluated in this
+thesis, which are deferred to future work, and which are out of scope.
+
+\begin{algorithm}[H]
+\caption{\textsc{FedAvg} \citep{mcmahan2017fedavg}. $K$ clients indexed
+by $k$; $C$ client-sampling fraction; $E$ local epochs; $\eta$ local
+learning rate; $B$ local mini-batch size.}
+\label{alg:fedavg}
+\begin{algorithmic}[1]
+\Procedure{Server executes}{}
+  \State initialise $w^0$
+  \For{each round $t = 0, 1, 2, \dots, R-1$}
+    \State $m \gets \max(\lceil C \cdot K\rceil, 1)$
+    \State $S_t \gets$ random subset of $m$ clients
+    \For{each client $k \in S_t$ \textbf{in parallel}}
+      \State $w_k^{t+1} \gets \textsc{ClientUpdate}(k,\, w^t)$
+    \EndFor
+    \State $w^{t+1} \gets \sum_{k \in S_t} p_k\, w_k^{t+1}$
+      \Comment{size-weighted mean}
+  \EndFor
+\EndProcedure
+\Statex
+\Procedure{ClientUpdate}{$k$, $w$}
+  \State $\mathcal{B} \gets$ split $\mathcal{D}_k$ into batches of size $B$
+  \For{local epoch $i = 1, \dots, E$}
+    \For{each batch $b \in \mathcal{B}$}
+      \State $w \gets w - \eta\, \nabla \mathcal{L}_k(w;\, b)$
+    \EndFor
+  \EndFor
+  \State \Return $w$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{\textsc{FedProx} \citep{li2020fedprox}. Identical to
+\textsc{FedAvg} except for the local objective, which adds a proximal
+anchor of strength $\mu \ge 0$ to the global iterate $w^t$.}
+\label{alg:fedprox}
+\begin{algorithmic}[1]
+\Procedure{Server executes}{}
+  \State initialise $w^0$
+  \For{each round $t = 0, 1, 2, \dots, R-1$}
+    \State $m \gets \max(\lceil C \cdot K\rceil, 1)$
+    \State $S_t \gets$ random subset of $m$ clients
+    \For{each client $k \in S_t$ \textbf{in parallel}}
+      \State $w_k^{t+1} \gets \textsc{ClientUpdate}(k,\, w^t)$
+    \EndFor
+    \State $w^{t+1} \gets \sum_{k \in S_t} p_k\, w_k^{t+1}$
+      \Comment{size-weighted mean, as FedAvg}
+  \EndFor
+\EndProcedure
+\Statex
+\Procedure{ClientUpdate}{$k$, $w^t$}
+  \State $w \gets w^t$
+  \State $\mathcal{B} \gets$ split $\mathcal{D}_k$ into batches of size $B$
+  \For{local epoch $i = 1, \dots, E$}
+    \For{each batch $b \in \mathcal{B}$}
+      \State $w \gets w - \eta\, \bigl(\nabla \mathcal{L}_k(w;\, b)
+        + \mu\,(w - w^t)\bigr)$
+        \Comment{proximal gradient}
+    \EndFor
+  \EndFor
+  \State \Return $w$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{\textsc{FedNova} \citep{wang2020fednova}. Local optimisation is
+identical to \textsc{FedAvg}; only the server-side aggregation differs.
+Each client's update is rescaled by its momentum-aware normaliser $a_k$
+so clients running different numbers of local steps $\tau_k$ contribute
+updates of comparable magnitude.}
+\label{alg:fednova}
+\begin{algorithmic}[1]
+\Procedure{Server executes}{}
+  \State initialise $w^0$
+  \For{each round $t = 0, 1, 2, \dots, R-1$}
+    \State $m \gets \max(\lceil C \cdot K\rceil, 1)$
+    \State $S_t \gets$ random subset of $m$ clients
+    \For{each client $k \in S_t$ \textbf{in parallel}}
+      \State $(w_k^{t+1},\, \tau_k) \gets \textsc{ClientUpdate}(k,\, w^t)$
+      \State $d_k \gets w^t - w_k^{t+1}$
+        \Comment{client update}
+      \State $a_k \gets
+        \dfrac{\tau_k(1-m) - m\,(1-m^{\tau_k})}{(1-m)^2}$
+        \Comment{cumulative-momentum normaliser}
+    \EndFor
+    \State $a_{\mathrm{eff}} \gets \sum_{k \in S_t} p_k\, a_k$
+    \State $w^{t+1} \gets w^t - a_{\mathrm{eff}}
+      \sum_{k \in S_t} p_k\, \dfrac{d_k}{a_k}$
+      \Comment{normalised aggregation}
+  \EndFor
+\EndProcedure
+\Statex
+\Procedure{ClientUpdate}{$k$, $w$}
+  \State $\mathcal{B} \gets$ split $\mathcal{D}_k$ into batches of size $B$;
+    $\tau \gets 0$
+  \For{local epoch $i = 1, \dots, E$}
+    \For{each batch $b \in \mathcal{B}$}
+      \State $w \gets w - \eta\, \nabla \mathcal{L}_k(w;\, b)$;
+        $\tau \gets \tau + 1$
+    \EndFor
+  \EndFor
+  \State \Return $(w,\, \tau)$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Federated optimisation algorithms situated by mechanism, the
+heterogeneity axis each primarily addresses, server-side compute cost
+relative to FedAvg, per-round communication cost relative to FedAvg, and
+whether they are evaluated in this thesis. FedBN is marked out of scope
+because it targets feature shift (per-site batch-norm statistics) rather
+than label shift (the partition axis this thesis isolates); evaluating
+FedBN would require multi-scanner medical-imaging partitions which
+DermaMNIST does not provide.}
+\label{tab:algorithm_comparison}
+\begin{tabular}{l l l l l l}
+\toprule
+Method   & Mechanism                & Heterogeneity addressed & Server cost & Comm.\ cost & Evaluated here \\
+\midrule
+FedAvg   & size-weighted mean       & --- (baseline)          & $1\times$   & $1\times$   & \checkmark \\
+FedProx  & proximal anchor          & label / quantity skew   & $1\times$   & $1\times$   & \checkmark \\
+FedNova  & aggregation normalisation & heterogeneous local work & $1\times$   & $1\times$   & \checkmark \\
+SCAFFOLD & control variates         & label skew (variance reduction) & $1\times$   & $2\times$   & future work \\
+FedAdam  & server-side adaptive optimiser & convergence speed under heterogeneity & $1\times$   & $1\times$   & future work \\
+FedLC    & logit calibration        & extreme label skew      & $1\times$   & $1\times$   & future work \\
+FedBN    & local batch-norm statistics & feature shift (multi-scanner) & $1\times$   & $<\!1\times$ & out of scope \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{FedAvg} \citep{mcmahan2017fedavg} minimises the local
 cross-entropy objective for $E$ epochs per round and aggregates the
 resulting client parameters by the size-weighted mean above.
-\textbf{FedProx} \citep{Li et al., 2020} augments the local objective with
+\textbf{FedProx} \citep{li2020fedprox} augments the local objective with
 a proximal regulariser anchoring the local model to the round-start
 global parameters:
 \[
@@ -327,7 +1159,7 @@ summed over all trainable parameters.
 
 \paragraph{Scope of FedProx as a remedy.}
 It is important to be precise about what FedProx targets. The proximal
-regulariser was introduced by \citet{Li et al., 2020} to address
+regulariser was introduced by \citet{li2020fedprox} to address
 \emph{optimisation-level instability under client-heterogeneous local
 objectives} --- namely, client drift from arbitrary local SGD trajectories
 and inexact ($\gamma$-inexact) updates from stragglers. FedProx is not, by
@@ -359,13 +1191,22 @@ dataset (DermaMNIST) by class index across seven synthetic clients}, not
 by combining data from real hospitals, scanners, or imaging protocols.
 This study therefore investigates \textbf{controlled synthetic
 label-skew heterogeneity in DermaMNIST, not real multi-site clinical
-heterogeneity}. Real federated medical-imaging deployments are subject
+heterogeneity}.
+%% TODO: Sheller et al. (2020, Sci Rep) is the most-cited demonstration
+%% of FL in a real multi-site medical-imaging setting (BraTS). Cited
+%% here as the canonical real-deployment contrast against this
+%% simulated study; consider expanding into a paragraph if the
+%% Introduction grows.
+For an instance of FL deployed across actual multi-institutional
+medical-imaging cohorts, see \citet{sheller2020medicalfl} on
+multi-institutional brain-tumour segmentation.
+Real federated medical-imaging deployments are subject
 to additional axes of heterogeneity that are \emph{not} modelled here,
 specifically:
 \begin{itemize}
 \item \textbf{Feature/domain shift} across imaging devices (scanner
 differences, magnetic-field strength, acquisition protocols) ---
-addressed by FedBN \citep{Li et al., 2021}, which keeps batch-norm
+addressed by FedBN \citep{li2021fedbn}, which keeps batch-norm
 statistics local and has been reported to outperform FedAvg and FedProx
 under feature shift.
 \item \textbf{Demographic shift} across institutions (skin-tone
@@ -416,6 +1257,15 @@ are within a 1.65$\times$ range.}
 \label{tab:partition}
 \end{table}
 
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{10_partition_heatmap.png}
+\caption{Class composition of the \texttt{balanced\_paired\_7\_clients}
+partition. Every minority class is held by exactly two clients; the
+majority class (nevi) is held by all seven.}
+\label{fig:partition-heatmap}
+\end{figure}
+
 \subsection{Paired-Seed Protocol}\label{sec:protocol}
 The single most important experimental control is paired seeding: for
 each seed $s \in S = \{42,\, 123,\, 456,\, 789,\, 999,\, 2024,\, 31337,\, 161803,\, 271828,\, 8675309\}$,
@@ -461,12 +1311,12 @@ round of best validation macro-F1, producing 20 single-shot test
 evaluations from which all reported test statistics are computed.
 
 The headline test macro-F1 comparison uses the paired Wilcoxon
-signed-rank test \citep{Demsar, 2006}, robust to the non-normality and
+signed-rank test \citep{demsar2006classifier}, robust to the non-normality and
 small sample size ($n = 10$) of paired differences. We report the
 two-sided $p$-value as the primary statistic and the rank-biserial
-correlation $r_{rb}$ \citep{Kerby, 2014} as the effect size. Bootstrap
+correlation $r_{rb}$ \citep{kerby2014rankbiserial} as the effect size. Bootstrap
 95\% confidence intervals on the mean paired difference are computed
-from 10{,}000 resamples \citep{Efron \& Tibshirani, 1993}. Per-class
+from 10{,}000 resamples \citep{efron1993bootstrap}. Per-class
 paired Wilcoxon tests are computed identically on the seven per-class
 test F1 vectors. Macro-F1 is treated as the single primary outcome to
 avoid multiple-comparison inflation; balanced accuracy and accuracy are
@@ -753,6 +1603,16 @@ partition design that places nevi in every client.}
 \label{fig:curves-per-class}
 \end{figure}
 
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{11_per_client_curves.png}
+\caption{Per-client validation macro-F1 trajectories across 10 paired
+seeds. Specialty clients (C0--C5, two minority classes each) show clear
+FedProx advantage; the generalist client C6 (nevi only) shows no
+separation.}
+\label{fig:per-client-curves}
+\end{figure}
+
 \subsection{Summary of Numerical Observations from the Curves}
 Table~\ref{tab:curve-stats} summarises the principal numerical
 observations extractable from Figures~\ref{fig:curves-main} and
@@ -867,6 +1727,14 @@ under the same evaluation protocol. The centralised result anchors the
 achievable with all data co-located and the FL performance with the same data
 partitioned across clients.
 
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{12_federation_tax.png}
+\caption{Federation tax by class. FedProx closes $\sim 33\%$ of the
+FedAvg-to-centralised gap on macro-F1.}
+\label{fig:federation-tax}
+\end{figure}
+
 \paragraph{A note on the structure of evidence in this section.}
 The custom \texttt{balanced\_paired\_7\_clients} partition is engineered
 to test a clean mechanistic prediction, but we acknowledge that its
@@ -882,7 +1750,14 @@ strongly under IID, the headline effect is suspicious; theory predicts
 $\Delta \approx 0$ under IID because no client drift accumulates.
 \item \textbf{Dirichlet-$\alpha = 0.1$ partition (literature-standard
 non-IID).} The de-facto benchmark partition in modern FL papers
-\citep{Hsu et al., 2019}. A positive $\Delta$ here demonstrates the
+\citep{hsu2019dirichlet}.
+%% TODO: Li et al. (2022, ICDE) — "NIID-Bench" — is the most
+%% comprehensive recent benchmark of FL algorithms on the
+%% Dirichlet-α partition family. Cited here to anchor the
+%% literature-standard claim.
+The Dirichlet-$\alpha$ family is the partitioning scheme
+benchmarked across 12 FL algorithms by the NIID-Bench study of
+\citet{li2022niidbench}. A positive $\Delta$ here demonstrates the
 headline effect transfers to a setup we did not design.
 \item \textbf{\texttt{balanced\_paired\_7\_clients} (mechanism
 experiment, this work).} The custom partition that supports a clean
@@ -940,7 +1815,7 @@ row~2 of Table~\ref{tab:robustness} and discussed below upon completion.
 
 \paragraph{Dirichlet-$\alpha = 0.1$ literature-standard non-IID (\TODOhpc{HPC running}).}
 \emph{Hypothesis being tested:} the Dirichlet-$\alpha = 0.1$ partition
-\citep{Hsu et al., 2019} is the de-facto standard non-IID configuration in
+\citep{hsu2019dirichlet} is the de-facto standard non-IID configuration in
 modern FL benchmarks. For each class, the proportion of its samples
 allocated to each of the 7 clients is drawn from a 7-dimensional
 Dirichlet distribution with concentration parameter $\alpha = 0.1$
@@ -1123,7 +1998,7 @@ drift correction is needed.
 
 Third, the mid-training communication-efficiency gain (3$\times$ fewer
 rounds to reach val macro-F1 = 0.45) is consistent with FedProx's
-theoretical convergence guarantee \citep{Li et al., 2020}. The
+theoretical convergence guarantee \citep{li2020fedprox}. The
 near-perfect identity of the two algorithms at round~1 confirms that
 the paired-seed protocol has successfully equalised initial conditions,
 so all subsequent divergence is attributable to the algorithmic
@@ -1148,7 +2023,7 @@ paired-seed level and is driven primarily by melanoma/specialist-client
 behaviour. However, the study does not show that FedProx solves class
 imbalance or real medical-site heterogeneity; robustness to IID/Dirichlet
 partitions, heterogeneous-local-step baselines such as FedNova
-\citep{Wang et al., 2020}, and imbalance-aware losses (class-weighted CE,
+\citep{wang2020fednova}, and imbalance-aware losses (class-weighted CE,
 FedLC) remain necessary to delimit the claim. The first two of these
 have been pre-registered and submitted to HPC; the last has been
 implemented in code and is queued.}
@@ -1164,7 +2039,7 @@ resource constraints that shaped what could and could not be run.
 clients participate in every communication round. This is standard in
 cross-silo FL benchmarks where the client population is small and
 stable, but partial-participation regimes ($C < 1$) are also common in
-the FL literature \citep{Karimireddy et al., 2020}. Our results
+the FL literature \citep{karimireddy2020scaffold}. Our results
 therefore characterise FedProx in the full-participation cross-silo
 setting; behaviour under partial participation (e.g., $C = 0.5$ in the
 cross-device regime) is not tested here and is identified as future
@@ -1177,7 +2052,7 @@ client subsets.
 \paragraph{Large local-epoch count ($E = 20$).} The high local-epoch
 budget per round is deliberately chosen because it is the regime in
 which client drift accumulates most strongly and FedProx's theoretical
-motivation is most directly engaged \citep{Li et al., 2020, Theorem~4}.
+motivation is most directly engaged \citep[Theorem~4]{li2020fedprox}.
 However, this choice is also where FedProx is most expected to help; at
 $E = 1$ the proximal anchor has essentially no drift to constrain and
 FedAvg and FedProx are predicted to be indistinguishable. The headline
@@ -1216,7 +2091,11 @@ FedNova baselines.} In response to peer methodology review, two
 imbalance/heterogeneity-aware baselines have been
 \emph{implemented in code} but are queued for HPC evaluation:
 \begin{itemize}
-\item \textbf{Class-weighted cross-entropy} (and focal-loss variant) in
+\item \textbf{Class-weighted cross-entropy} (and focal-loss
+%% TODO: Lin et al. (2017, ICCV) is the canonical reference for focal
+%% loss. Cited here at the implementation point since the loss is
+%% wired into the runners via --loss-type focal.
+\citep{lin2017focal} variant) in
 \texttt{mnist\_dermnist/fl/class\_imbalance.py}. This baseline directly
 addresses the label-distribution skew in DermaMNIST without invoking the
 FedProx mechanism; it is the closest loss-level alternative to FedProx
@@ -1225,7 +2104,7 @@ normalised so the weight vector sums to \texttt{num\_classes}; under the
 DermaMNIST distribution this gives the rarest class (\textit{dermato},
 1.15\%) a weight of $\approx 2.67$ and the majority class
 (\textit{mel\_nevi}, 67\%) a weight of $\approx 0.05$.
-\item \textbf{FedNova} \citep{Wang et al., 2020} in
+\item \textbf{FedNova} \citep{wang2020fednova} in
 \texttt{mnist\_dermnist/fl\_flower/\{client\_fednova.py, strategy\_fednova.py\}}
 and the runner \texttt{experiments/run\_one\_fednova\_flower.py}.
 FedNova is the canonical competitor for the system-heterogeneity
@@ -1244,7 +2123,7 @@ $d_\text{norm} = \sum_i p_i\,d_i / a_i$,
 $a_\text{eff} = \sum_i p_i a_i$, and
 $w^{t+1} = w^t - a_\text{eff}\,d_\text{norm}$. The implementation is
 brute-force verified at the canonical reference values from
-\citet{Wang et al., 2020} (e.g.\ for $\tau = 10$, $m = 0.9$:
+\citet{wang2020fednova} (e.g.\ for $\tau = 10$, $m = 0.9$:
 $a_i = 41.381$). With $m = 0$ \emph{and} uniform $\tau_i$ FedNova
 reduces to FedAvg, so the strategy is safe in all conditions, though
 under $m > 0$ even uniform $\tau$ produces a different aggregate from
@@ -1269,7 +2148,7 @@ sweep is the highest-priority comparative extension and is recommended
 for a follow-up extension of this dissertation.
 
 \paragraph{Terminology.} We refer to per-client variable local-epoch
-budgets as ``system heterogeneity'' following \citet{Li et al., 2020};
+budgets as ``system heterogeneity'' following \citet{li2020fedprox};
 strictly the manipulation is \emph{computational-work heterogeneity},
 since we do not simulate hardware or network latency. Wall-clock and
 hardware claims are therefore out of scope; the experiment isolates
@@ -1279,7 +2158,7 @@ the algorithmic response to variable local-step counts $\tau_i$.
 In this implementation, both FedAvg and FedProx aggregate over
 \emph{the same} client set every round, including stragglers, with size-weighted
 $w^{t+1} = \sum_i (n_i / \sum_j n_j)\,w_i^{t+1}$. This differs from
-\citet{Li et al., 2020} §5.2, where FedAvg \emph{drops} straggler
+\citet{li2020fedprox} §5.2, where FedAvg \emph{drops} straggler
 updates entirely while FedProx \emph{includes} them as $\gamma$-inexact
 partial work; the resulting comparison there is between different
 aggregation populations. Our design instead isolates the effect of the
@@ -1299,10 +2178,10 @@ slow clients) which is \textbf{descriptive only}, and C2 (\emph{random
 stragglers}, \textbf{the primary condition}: 4 of 7 clients per round
 (approximately 57\%) are randomly designated stragglers with
 $E_i \sim \mathrm{Uniform}\{1, 2, \ldots, 19\}$). C2 approximates the
-\citet{Li et al., 2020} §5.2 protocol up to the aggregation deviation
+\citet{li2020fedprox} §5.2 protocol up to the aggregation deviation
 described above and the additional constraint that $E_i \geq 1$
 (stragglers never do zero epochs in our setup). C1 is simpler and
-inspired by \citet{Marija, 2025} §3.8.4 but carries an
+inspired by \citet{nedeljkovic2025fedprox} §3.8.4 but carries an
 experimental-design caveat that we make explicit here. In the
 \texttt{balanced\_paired\_7\_clients} partition, the two clients fixed
 as stragglers (the last two by index, $C_5$ and $C_6$) happen to be
@@ -1319,10 +2198,16 @@ separately for each condition under a Bonferroni-corrected
 $\alpha/2 = 0.025$ threshold.
 
 A fuller comparison would additionally include FedLC (label-frequency
-calibration), FedBN \citep{Li et al., 2021} (feature-shift; out of scope
-because we do not test feature-shift partitions), and SCAFFOLD
-\citep{Karimireddy et al., 2020} (control variates as an alternative
-drift remedy with $\sim 2\times$ communication cost).
+calibration), FedBN \citep{li2021fedbn} (feature-shift; out of scope
+because we do not test feature-shift partitions), SCAFFOLD
+\citep{karimireddy2020scaffold} (control variates as an alternative
+drift remedy with $\sim 2\times$ communication cost),
+%% TODO: Reddi et al. (2021, ICLR) — adaptive FL optimizers
+%% (FedAdam, FedAdagrad, FedYogi) — is the canonical reference for
+%% adaptive-server-optimizer alternatives. Worth one mention in the
+%% related-work breadth.
+and the adaptive-server-optimizer family (FedAdam, FedAdagrad,
+FedYogi) introduced by \citet{reddi2021adaptive}.
 
 \paragraph{Communication efficiency (a complementary metric).}
 A communication-cost analysis derived from the existing headline data
@@ -1344,7 +2229,7 @@ reports per-class test F1 with Holm-corrected $p$-values
 (Table~\ref{tab:worst-per-class}), but does not include confusion
 matrices, per-class precision/recall, or qualitative examples of
 correctly/incorrectly classified images. A segmentation thesis on the
-same topic (e.g., \citet{Marija, 2025}) gets such visual interpretability
+same topic (e.g., \citet{nedeljkovic2025fedprox}) gets such visual interpretability
 naturally from predicted-mask overlays; a classification thesis must
 construct it from confusion-matrix and per-class metrics, which require
 storing per-prediction outputs (not done in the current evaluation
@@ -1457,6 +2342,30 @@ NVIDIA A100 GPU on the CSD3 Ampere partition.}
 \end{table}
 
 %==============================================================================
+\section{Conclusion}\label{sec:conclusion}
+%==============================================================================
+% TODO Day 2: write Conclusion (~500 words). Restate the calibrated
+% thesis-level claim (FedProx improves macro-F1 over FedAvg under the
+% engineered non-IID partition, with melanoma the only Holm-significant
+% per-class gain). Restate explicit scope conditions (simulated label
+% skew, not real multi-site; 28×28 not clinical resolution; full
+% participation only). Close with how the result fits into the FL
+% literature given the cross-runtime and aggregation-deviation caveats.
+
+%==============================================================================
+\section{Future Work}\label{sec:future}
+%==============================================================================
+% TODO Day 2: write Future Work (~500 words). Reorganise content
+% currently scattered across §Limitations and §Hardware. Concrete
+% items (each one paragraph): (1) 64×64 resolution sensitivity;
+% (2) partial participation (C < 1); (3) FedLC and class-weighted
+% CE loss-side comparisons; (4) SCAFFOLD as the canonical
+% drift-aware non-proximal alternative; (5) update-norm logging
+% as direct drift evidence (now collected on all queued sweeps);
+% (6) real multi-site data (HAM10000 source-id partition) as the
+% natural follow-up to validate the simulated finding clinically.
+
+%==============================================================================
 % INTERNAL CHECKLIST — delete this whole section before final submission
 % (or set \showtodofalse at the top of the document to hide it without
 % removing the source). The section is hidden in the PDF only when
@@ -1557,65 +2466,14 @@ removed. Once all instances are gone, the
 \fi   % \ifshowtodo
 
 %==============================================================================
-\section*{References}
+% References — backed by references.bib (BibTeX-managed).
+% Build sequence (any TeX distribution):
+%   pdflatex 09_overleaf_ready
+%   bibtex   09_overleaf_ready
+%   pdflatex 09_overleaf_ready
+%   pdflatex 09_overleaf_ready
 %==============================================================================
-\begin{description}\setlength{\itemsep}{2pt}
-\item Beutel, D.~J., Topal, T., Mathur, A., Qiu, X., Parcollet, T.,
-de Gusm\~ao, P.~P.~B., \& Lane, N.~D. (2020). Flower: A friendly
-federated learning research framework. \textit{arXiv preprint}
-arXiv:2007.14390.
-
-\item Dem\v{s}ar, J. (2006). Statistical comparisons of classifiers
-over multiple data sets. \textit{Journal of Machine Learning Research},
-\textit{7}, 1--30.
-
-\item Efron, B., \& Tibshirani, R.~J. (1993). \textit{An introduction
-to the bootstrap}. Chapman \& Hall/CRC.
-
-\item Goodfellow, I., Bengio, Y., \& Courville, A. (2016).
-\textit{Deep learning}. MIT Press.
-
-\item Hsieh, K., Phanishayee, A., Mutlu, O., \& Gibbons, P.~B. (2020).
-The non-IID data quagmire of decentralized machine learning. In
-\textit{Proceedings of the 37th International Conference on Machine
-Learning} (pp.\ 4387--4398).
-
-\item Kerby, D.~S. (2014). The simple difference formula: An approach
-to teaching nonparametric correlation. \textit{Comprehensive
-Psychology}, \textit{3}, 11.IT.3.1.
-
-\item Li, T., Sahu, A.~K., Zaheer, M., Sanjabi, M., Talwalkar, A., \&
-Smith, V. (2020). Federated optimization in heterogeneous networks. In
-\textit{Proceedings of Machine Learning and Systems}, \textit{2},
-429--450.
-
-\item Li, X., Jiang, M., Zhang, X., Kamp, M., \& Dou, Q. (2021). FedBN:
-Federated learning on non-IID features via local batch normalization.
-\textit{International Conference on Learning Representations (ICLR)}.
-
-\item Wang, J., Liu, Q., Liang, H., Joshi, G., \& Poor, H.~V. (2020).
-Tackling the objective inconsistency problem in heterogeneous federated
-optimization. \textit{Advances in Neural Information Processing Systems
-(NeurIPS)}, \textit{33}, 7611--7623.
-
-\item McMahan, B., Moore, E., Ramage, D., Hampson, S., \& y~Arcas,
-B.~A. (2017). Communication-efficient learning of deep networks from
-decentralized data. In \textit{Proceedings of the 20th International
-Conference on Artificial Intelligence and Statistics} (pp.\ 1273--1282).
-
-\item Tschandl, P., Rosendahl, C., \& Kittler, H. (2018). The HAM10000
-dataset, a large collection of multi-source dermatoscopic images of
-common pigmented skin lesions. \textit{Scientific Data}, \textit{5},
-180161.
-
-\item Wu, Y., \& He, K. (2018). Group normalization. In
-\textit{Proceedings of the European Conference on Computer Vision}
-(pp.\ 3--19).
-
-\item Yang, J., Shi, R., Wei, D., Liu, Z., Zhao, L., Ke, B., Pfister,
-H., \& Ni, B. (2023). MedMNIST~v2---A large-scale lightweight benchmark
-for 2D and 3D biomedical image classification. \textit{Scientific
-Data}, \textit{10}, 41.
-\end{description}
+\bibliographystyle{plainnat}
+\bibliography{references}
 
 \end{document}
