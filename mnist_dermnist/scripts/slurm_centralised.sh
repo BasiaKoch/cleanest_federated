@@ -10,7 +10,7 @@
 #SBATCH --output=/home/bk489/federated_clean/cleanest_federated/mnist_dermnist/logs/%x_%j.out
 #SBATCH --error=/home/bk489/federated_clean/cleanest_federated/mnist_dermnist/logs/%x_%j.err
 
-set -uo pipefail
+set -euo pipefail
 REPO=/home/bk489/federated_clean/cleanest_federated
 cd "$REPO"
 source /home/bk489/federated_clean/.venv/bin/activate
@@ -20,6 +20,18 @@ EPOCHS="${2:-50}"
 OUT="${3:-mnist_dermnist/results/centralised}"
 
 mkdir -p "$OUT" mnist_dermnist/logs
+
+if [ ! -f "$REPO/dermamnist_64.npz" ]; then
+    echo "ERROR: dataset not found at $REPO/dermamnist_64.npz" >&2
+    exit 2
+fi
+
+# Centralised baseline is pure-PyTorch by definition (not federated);
+# only torch is required (no flwr import).
+python - <<'PY'
+import torch
+print(f"Preflight OK: torch={torch.__version__}")
+PY
 
 PYTHONPATH=. python -m mnist_dermnist.experiments.run_centralised \
     --seed "$SEED" \
