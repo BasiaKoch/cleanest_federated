@@ -83,7 +83,7 @@ def main():
     ap.add_argument("--image-size", type=int, default=28)
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--npz-path",
-                    default="/home/bk489/federated_clean/cleanest_federated/dermamnist_64.npz")
+                    default=str(Path(__file__).resolve().parents[2] / "dermamnist_64.npz"))
     ap.add_argument("--out-dir", default="mnist_dermnist/results/centralised")
     args = ap.parse_args()
 

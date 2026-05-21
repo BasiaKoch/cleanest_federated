@@ -106,7 +106,7 @@ def build_parser() -> argparse.ArgumentParser:
                     default="balanced_paired_7_clients")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--npz-path",
-                    default="/Users/basiakoch/cleanest_federated/dermamnist_64.npz")
+                    default=str(Path(__file__).resolve().parents[2] / "dermamnist_64.npz"))
     ap.add_argument("--out-dir", default="mnist_dermnist/results/system_het_fednova")
     ap.add_argument("--fraction-fit", type=float, default=1.0,
                     help="Fraction of clients sampled per round (C).")

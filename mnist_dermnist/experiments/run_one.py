@@ -96,7 +96,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--image-size", type=int, default=28)
     ap.add_argument("--partition", choices=list(PARTITIONERS), default="medical_skew_7_clients")
     ap.add_argument("--device", default="cpu")
-    ap.add_argument("--npz-path", default="/Users/basiakoch/cleanest_federated/dermamnist_64.npz")
+    ap.add_argument("--npz-path",
+                    default=str(Path(__file__).resolve().parents[2] / "dermamnist_64.npz"))
     ap.add_argument("--out-dir", default="mnist_dermnist/results/headline")
     # --- System heterogeneity (per-client variable local epochs) ---
     # See mnist_dermnist/fl/system_het.py for the canonical reference and the
