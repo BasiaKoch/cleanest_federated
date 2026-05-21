@@ -58,6 +58,7 @@ from mnist_dermnist.data.partition import (
     medical_skew_7_clients,
     quantity_skew_improved,
     simple_pathological_3_clients,
+    specialist_7_clients,
 )
 from mnist_dermnist.fl.evaluation import evaluate
 from mnist_dermnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
@@ -81,6 +82,7 @@ PARTITIONERS = {
     "simple_pathological_3_clients": simple_pathological_3_clients,
     "balanced_specialist_7_clients": balanced_specialist_7_clients,
     "balanced_paired_7_clients": balanced_paired_7_clients,
+    "specialist_7_clients": specialist_7_clients,
     "quantity_skew_improved": quantity_skew_improved,
     "iid_7_clients": iid_7_clients,
     "dirichlet_alpha01_7_clients": _dir_a01,
