@@ -1,0 +1,45 @@
+{
+  "specialist_7_clients": {
+    "name": "specialist",
+    "n": 0,
+    "note": "no data"
+  },
+  "balanced_paired_7_clients": {
+    "name": "paired",
+    "n": 10,
+    "deltas": [
+      0.06845445893383356,
+      0.0014142243420569578,
+      0.0003861618772313946,
+      -0.020030806733578488,
+      0.027244807235462354,
+      0.03720228721501767,
+      0.04044597466543559,
+      0.012684046722197306,
+      0.0038043187030564196,
+      0.09532375385928471
+    ],
+    "mean": 0.02669292268199975,
+    "std": 0.03494188285737848,
+    "median": 0.01996442697882983,
+    "wilcoxon_p_two_sided": 0.01953125,
+    "wilcoxon_significant_at_05": true,
+    "hodges_lehmann": 0.022125146684246005,
+    "hl_ci_lo_exact_n10_alpha05": 0.002095240290143907,
+    "hl_ci_hi_exact_n10_alpha05": 0.052828373074425616,
+    "ci_method": "exact Walsh-average inversion (n=10, \u03b1=0.05)",
+    "sign_test_n_pos": 9,
+    "sign_test_n": 10,
+    "sign_test_p_two_sided": 0.021484375
+  },
+  "dirichlet_alpha01_7_clients": {
+    "name": "dirichlet_\u03b1=0.1",
+    "n": 0,
+    "note": "no data"
+  },
+  "iid_7_clients": {
+    "name": "IID anchor",
+    "n": 0,
+    "note": "no data"
+  }
+}
