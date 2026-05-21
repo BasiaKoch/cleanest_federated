@@ -59,15 +59,43 @@ step "dataset_present" \
 step "python_in_venv" \
     'which python | grep -q "/.venv/" && python --version'
 
-# 3. flwr import + pinned version (best-effort: warn but do not fail on mismatch)
+# 3. flwr import + major-version compatibility check.
+# The runner uses APIs that have been stable across all of flwr 1.x
+# (start_simulation, NumPyClient, FedAvg strategy, ServerConfig). Strict
+# patch-level pinning would block submission on benign drift (e.g. HPC's
+# 1.23.0 vs the laptop's 1.29.0). We accept any flwr 1.x and warn on drift.
 EXPECTED_FLWR=$(grep '^flwr==' "$REPO_ROOT/requirements.txt" | cut -d= -f3)
-step "flwr_importable_and_pinned" \
-    "python -c \"import flwr,sys; assert flwr.__version__=='${EXPECTED_FLWR}', f'flwr {flwr.__version__} != ${EXPECTED_FLWR}'; print(flwr.__version__)\""
+EXPECTED_FLWR_MAJOR=$(echo "$EXPECTED_FLWR" | cut -d. -f1)
+step "flwr_importable_and_compatible" \
+    "python -c \"
+import flwr
+v = flwr.__version__
+major = v.split('.')[0]
+assert major == '${EXPECTED_FLWR_MAJOR}', f'flwr major {v} ({major}.x) incompatible with pinned ${EXPECTED_FLWR} (${EXPECTED_FLWR_MAJOR}.x)'
+if v != '${EXPECTED_FLWR}':
+    print(f'{v} (pinned in requirements.txt: ${EXPECTED_FLWR} — major version matches, OK)')
+else:
+    print(v)
+\""
 
-# 4. torch import + pinned version
+# 4. torch import + major-version compatibility check.
+# Same reasoning as flwr: torch 2.x has stable APIs (state_dict, manual_seed,
+# cudnn.deterministic, optim.SGD). Strict-equality would block on the HPC's
+# 2.8.0+cu128 vs the laptop's 2.11.0. The version string can include a
+# CUDA-build suffix (+cu128) which we strip before comparing.
 EXPECTED_TORCH=$(grep '^torch==' "$REPO_ROOT/requirements.txt" | cut -d= -f3)
-step "torch_importable_and_pinned" \
-    "python -c \"import torch,sys; assert torch.__version__=='${EXPECTED_TORCH}', f'torch {torch.__version__} != ${EXPECTED_TORCH}'; print(torch.__version__)\""
+EXPECTED_TORCH_MAJOR=$(echo "$EXPECTED_TORCH" | cut -d. -f1)
+step "torch_importable_and_compatible" \
+    "python -c \"
+import torch
+v = torch.__version__
+major = v.split('.')[0].split('+')[0]
+assert major == '${EXPECTED_TORCH_MAJOR}', f'torch major {v} ({major}.x) incompatible with pinned ${EXPECTED_TORCH} (${EXPECTED_TORCH_MAJOR}.x)'
+if v != '${EXPECTED_TORCH}':
+    print(f'{v} (pinned in requirements.txt: ${EXPECTED_TORCH} — major version matches, OK)')
+else:
+    print(v)
+\""
 
 # 5. CUDA (informational only; does not fail if absent — local checks
 # typically run on CPU machines)
