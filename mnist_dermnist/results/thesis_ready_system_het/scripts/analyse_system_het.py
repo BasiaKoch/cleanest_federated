@@ -39,6 +39,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from mnist_dermnist.fl.provenance import canonicalise_framework
+
 try:
     from scipy import stats
     HAS_SCIPY = True
@@ -77,9 +79,14 @@ def load_pairs(results_dir: Path, *, require_framework: str | None = None):
         algo, seed = m.group(1), int(m.group(2))
         data = json.load(open(f))
         if require_framework is not None:
-            fw = data.get("framework", "<missing>")
+            fw_raw = data.get("framework", "<missing>")
+            try:
+                fw = canonicalise_framework(fw_raw)
+            except ValueError:
+                framework_violations.append((f.name, fw_raw))
+                continue
             if fw != require_framework:
-                framework_violations.append((f.name, fw))
+                framework_violations.append((f.name, fw_raw))
                 continue
         if algo == "fedavg":   fa[seed] = data
         elif algo == "fedprox": fp[seed] = data
