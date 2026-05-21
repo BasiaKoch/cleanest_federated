@@ -85,6 +85,33 @@ BALANCED_PAIRED_7_CLIENTS_SPEC: List[Dict] = [
 ]
 
 
+# Mode 6 — specialist (one-client-per-minority-class) partition.
+#
+# Sister partition to BALANCED_PAIRED_7_CLIENTS, intended to defuse the
+# "engineered partition favours FedProx" reviewer objection. Every minority
+# class is owned by EXACTLY ONE client — no co-trained pairs. nevi is
+# distributed across the six specialty clients in unequal shares so that
+# every client's total n_i matches the corresponding client in
+# BALANCED_PAIRED_7_CLIENTS_SPEC EXACTLY, and a single nevi-only generalist
+# (C6) holds the remainder. This isolates the structural change
+# (pairing vs specialist) from any quantity-imbalance confound: a side-by-
+# side comparison of Δ_paired and Δ_specialist sees identical per-client
+# sample counts and an identical 7-client federation; only the assignment
+# of which client holds which class differs.
+#
+# Per-class allocations (verified against the actual training-set counts
+# 228 + 359 + 769 + 80 + 779 + 4693 + 99 = 7007):
+SPECIALIST_7_CLIENTS_SPEC: List[Dict] = [
+    {"id": 0, "per_class": {0: 228, 5:  736}},          # actinic specialist + nevi
+    {"id": 1, "per_class": {1: 359, 5:  604}},          # basal specialist + nevi
+    {"id": 2, "per_class": {2: 769, 5:  326}},          # benign_kerat specialist + nevi
+    {"id": 3, "per_class": {3:  80, 5: 1014}},          # dermato specialist + nevi
+    {"id": 4, "per_class": {4: 779, 5:  331}},          # melanoma specialist + nevi
+    {"id": 5, "per_class": {6:  99, 5: 1009}},          # vascular specialist + nevi
+    {"id": 6, "per_class": {5: 673}},                    # general nevi-only client
+]
+
+
 # Mode 4 — quantity-skewed specialist 7 clients.
 #
 # Realistic medical referral network: 3 size-skewed hospital-style clients
@@ -409,6 +436,79 @@ def balanced_paired_7_clients(
             if end > len(pools[c]):
                 raise ValueError(
                     f"balanced_paired_7_clients: ran out of class {c} during client {cid}."
+                )
+            clients[cid].extend(int(i) for i in pools[c][start:end])
+            cursors[c] = end
+
+    df = _build_long_form(clients, labels_arr)
+    _validate(clients, labels_arr)
+    return clients, df
+
+
+def specialist_7_clients(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Mode 6 — every minority class is owned by EXACTLY ONE client.
+
+    The sister partition to :func:`balanced_paired_7_clients`, designed to
+    defuse the "engineered partition favours FedProx" reviewer objection.
+    Holds every confound constant with the headline partition (same 7
+    clients, identical per-client n_i, same nevi total, same global class
+    counts) and flips a single structural lever: minority classes are
+    assigned to one client each instead of being paired across two. The
+    Δ_specialist vs Δ_paired contrast therefore isolates the pairing
+    structure from quantity skew, total client count, or label-class
+    composition.
+
+    Per-client composition (see ``SPECIALIST_7_CLIENTS_SPEC``):
+      C0: 228 actinic   +  736 nevi → 964   (matches paired C0)
+      C1: 359 basal     +  604 nevi → 963   (matches paired C1)
+      C2: 769 benign    +  326 nevi → 1095  (matches paired C2)
+      C3:  80 dermato   + 1014 nevi → 1094  (matches paired C3)
+      C4: 779 melanoma  +  331 nevi → 1110  (matches paired C4)
+      C5:  99 vascular  + 1009 nevi → 1108  (matches paired C5)
+      C6: 673 nevi-only (generalist)        (matches paired C6)
+    Total: 7007 (verified against the actual training-set class counts).
+
+    Parameters
+    ----------
+    labels : Sequence[int]
+        The full training-set label vector (length 7007 for DermaMNIST).
+    seed : int
+        Deterministic seed for the per-class sample shuffle. Same seed
+        → identical partition; same seed across paired FedAvg/FedProx
+        runs → bit-identical local data.
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    _assert_labels_valid(labels_arr)
+
+    # Verify spec consistency against the actual class totals.
+    actual = {c: int((labels_arr == c).sum()) for c in range(NUM_CLASSES)}
+    spec_totals: Dict[int, int] = {c: 0 for c in range(NUM_CLASSES)}
+    for entry in SPECIALIST_7_CLIENTS_SPEC:
+        for c, n in entry["per_class"].items():
+            spec_totals[c] += int(n)
+    for c in range(NUM_CLASSES):
+        if spec_totals[c] != actual[c]:
+            raise ValueError(
+                f"specialist_7_clients: spec sums to {spec_totals[c]} for class "
+                f"{c} ({CLASS_NAMES[c]}) but the training set has {actual[c]}."
+            )
+
+    pools = _class_pools(labels_arr, seed)
+    cursors: Dict[int, int] = {c: 0 for c in range(NUM_CLASSES)}
+
+    K = len(SPECIALIST_7_CLIENTS_SPEC)
+    clients: List[List[int]] = [[] for _ in range(K)]
+    for entry in SPECIALIST_7_CLIENTS_SPEC:
+        cid = entry["id"]
+        for c, n in entry["per_class"].items():
+            start = cursors[c]
+            end = start + int(n)
+            if end > len(pools[c]):
+                raise ValueError(
+                    f"specialist_7_clients: ran out of class {c} during client {cid}."
                 )
             clients[cid].extend(int(i) for i in pools[c][start:end])
             cursors[c] = end
