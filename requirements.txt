@@ -1,0 +1,46 @@
+# Pinned dependencies for the DermaMNIST FL thesis pipeline.
+#
+# Captured from the local .venv at 2026-05-21 (Python 3.14.3).
+# The HPC venv at /home/bk489/federated_clean/.venv should match these
+# versions; the SLURM template preflight imports flwr+torch but does
+# not currently version-check. If a future commit adds a version
+# assertion to the preflight, it should compare against this file.
+#
+# Usage on HPC:
+#   python -m venv /home/bk489/federated_clean/.venv
+#   source /home/bk489/federated_clean/.venv/bin/activate
+#   pip install --upgrade pip
+#   pip install -r requirements.txt
+#
+# This file lists the direct dependencies the project imports. Transitive
+# dependencies are resolved by pip from PyPI and are not pinned here;
+# if exact reproducibility is required across machines, regenerate
+# with `pip freeze > requirements.lock.txt` and use that lockfile.
+
+# Federated learning runtime
+flwr==1.29.0
+ray==2.55.1
+
+# Deep learning stack
+torch==2.11.0
+torchvision==0.26.0
+
+# Dataset (MedMNIST v2 DermaMNIST)
+medmnist==3.0.2
+
+# Numerical / data
+numpy==2.4.4
+pandas==3.0.3
+scipy==1.17.1
+scikit-learn==1.8.0
+
+# Plotting
+matplotlib==3.10.9
+seaborn==0.13.2
+
+# Config + utilities
+PyYAML==6.0.3
+tqdm==4.67.3
+
+# Test suite
+pytest==9.0.3
