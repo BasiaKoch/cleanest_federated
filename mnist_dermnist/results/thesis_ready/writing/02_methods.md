@@ -186,7 +186,7 @@ A finding will be reported as "FedProx improves over FedAvg" only if (a) the med
 - **Submission:** SLURM via `mnist_dermnist/scripts/submit_headline.sh`. Each job: 1 A100, 4 CPUs, 8-hour wall-clock cap.
 - **Per-job runtime:** ≈ 1 hour for FedAvg, ≈ 1.5 hours for FedProx (proximal term adds ~30 % per-batch overhead).
 - **Total compute:** ≈ 25 GPU-hours for the 20-job headline sweep.
-- **Software:** Python 3.9, PyTorch 2.x, Flower 1.x. RNG seeded deterministically at NumPy, PyTorch global, and dataloader levels; CUDA-kernel non-determinism is treated as part of the algorithmic noise floor (estimated < 0.005 macro-F1 from repeated identical-seed runs).
+- **Software:** Python 3.9, PyTorch 2.x for the pure-PyTorch headline runs; Flower 1.29 + Ray for the equivalence-check and queued Flower sweeps. RNG seeded deterministically at NumPy, PyTorch global, and dataloader levels; CUDA-kernel non-determinism is treated as part of the algorithmic noise floor (estimated < 0.005 macro-F1 from repeated identical-seed runs).
 
 ## 11 Reproducibility
 
