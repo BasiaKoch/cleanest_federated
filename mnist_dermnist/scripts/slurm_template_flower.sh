@@ -26,7 +26,7 @@
 #   $7 = extra args, passed verbatim to run_one_flower.py
 #        (e.g. "--log-update-norms" or "--loss-type class_weighted_ce")
 
-set -uo pipefail
+set -euo pipefail
 
 REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
 VENV_DIR=/home/bk489/federated_clean/.venv
@@ -43,6 +43,17 @@ PARTITION="${6:-balanced_paired_7_clients}"
 EXTRA_ARGS="${7:-}"
 
 mkdir -p "$OUT_DIR" mnist_dermnist/logs
+
+if [ ! -f "$REPO_ROOT/dermamnist_64.npz" ]; then
+    echo "ERROR: dataset not found at $REPO_ROOT/dermamnist_64.npz" >&2
+    exit 2
+fi
+
+python - <<'PY'
+import flwr
+import torch
+print(f"Preflight OK: flwr={flwr.__version__}, torch={torch.__version__}")
+PY
 
 PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
     --algorithm "$ALGO" \
