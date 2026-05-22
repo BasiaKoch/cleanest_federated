@@ -47,17 +47,35 @@ import torch
 print(f"Preflight OK: flwr={flwr.__version__}, torch={torch.__version__}")
 PY
 
-PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_fednova_flower \
-    --seed "$SEED" \
-    --local-epochs "$LOCAL_EPOCHS" \
-    --num-rounds 150 \
-    --lr 0.01 \
-    --batch-size 32 \
-    --partition "$PARTITION" \
-    --device cuda \
-    --npz-path "$REPO_ROOT/dermamnist_64.npz" \
-    --out-dir "$OUT_DIR" \
-    --system-het-mode "$SH_MODE" \
-    $EXTRA_ARGS
-
-echo "Job complete (FedNova): seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION sh=$SH_MODE"
+# Retry loop — see slurm_template_flower.sh for rationale.
+RETRY_MAX=3
+SUCCESS=0
+for attempt in $(seq 1 $RETRY_MAX); do
+    echo "=== Attempt $attempt/$RETRY_MAX at $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+    if PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_fednova_flower \
+            --seed "$SEED" \
+            --local-epochs "$LOCAL_EPOCHS" \
+            --num-rounds 150 \
+            --lr 0.01 \
+            --batch-size 32 \
+            --partition "$PARTITION" \
+            --device cuda \
+            --npz-path "$REPO_ROOT/dermamnist_64.npz" \
+            --out-dir "$OUT_DIR" \
+            --system-het-mode "$SH_MODE" \
+            $EXTRA_ARGS; then
+        SUCCESS=1
+        echo "Job complete on attempt $attempt (FedNova): seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION sh=$SH_MODE"
+        break
+    fi
+    rc=$?
+    echo "Attempt $attempt failed with exit code $rc"
+    if [ $attempt -lt $RETRY_MAX ]; then
+        echo "Sleeping 90s to let GPU recover before retry..."
+        sleep 90
+    fi
+done
+if [ "$SUCCESS" -eq 0 ]; then
+    echo "All $RETRY_MAX attempts failed; giving up. seed=$SEED sh=$SH_MODE"
+    exit 1
+fi

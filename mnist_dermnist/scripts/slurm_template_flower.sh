@@ -55,18 +55,41 @@ import torch
 print(f"Preflight OK: flwr={flwr.__version__}, torch={torch.__version__}")
 PY
 
-PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
-    --algorithm "$ALGO" \
-    --mu "$MU" \
-    --seed "$SEED" \
-    --local-epochs "$LOCAL_EPOCHS" \
-    --num-rounds 150 \
-    --lr 0.01 \
-    --batch-size 32 \
-    --partition "$PARTITION" \
-    --device cuda \
-    --npz-path "$REPO_ROOT/dermamnist_64.npz" \
-    --out-dir "$OUT_DIR" \
-    $EXTRA_ARGS
-
-echo "Job complete (Flower runtime): algo=$ALGO mu=$MU seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION extra='$EXTRA_ARGS'"
+# Retry loop around the python invocation. CUDA initialisation can fail
+# transiently when the node has just released a GPU from a previous job
+# ("CUDA-capable device(s) is/are busy or unavailable"). Crashes inside
+# the first ~60 seconds are almost always this. We retry up to RETRY_MAX
+# times within the same SLURM allocation, sleeping between attempts to
+# let the GPU recover. SUCCESS exits 0; exhausting retries exits 1.
+RETRY_MAX=3
+SUCCESS=0
+for attempt in $(seq 1 $RETRY_MAX); do
+    echo "=== Attempt $attempt/$RETRY_MAX at $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+    if PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
+            --algorithm "$ALGO" \
+            --mu "$MU" \
+            --seed "$SEED" \
+            --local-epochs "$LOCAL_EPOCHS" \
+            --num-rounds 150 \
+            --lr 0.01 \
+            --batch-size 32 \
+            --partition "$PARTITION" \
+            --device cuda \
+            --npz-path "$REPO_ROOT/dermamnist_64.npz" \
+            --out-dir "$OUT_DIR" \
+            $EXTRA_ARGS; then
+        SUCCESS=1
+        echo "Job complete on attempt $attempt (Flower runtime): algo=$ALGO mu=$MU seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION extra='$EXTRA_ARGS'"
+        break
+    fi
+    rc=$?
+    echo "Attempt $attempt failed with exit code $rc"
+    if [ $attempt -lt $RETRY_MAX ]; then
+        echo "Sleeping 90s to let GPU recover before retry..."
+        sleep 90
+    fi
+done
+if [ "$SUCCESS" -eq 0 ]; then
+    echo "All $RETRY_MAX attempts failed; giving up. algo=$ALGO seed=$SEED"
+    exit 1
+fi
