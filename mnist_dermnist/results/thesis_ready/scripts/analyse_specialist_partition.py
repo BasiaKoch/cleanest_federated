@@ -55,7 +55,10 @@ WILCOXON_CI_POSITION_N10_ALPHA05 = 9
 # parents[2] is mnist_dermnist/results/ (script is at results/thesis_ready/scripts/).
 RESULTS_DIR    = Path(__file__).resolve().parents[2]
 SPECIALIST_DIR = RESULTS_DIR / "specialist_partition"
-PAIRED_DIR     = RESULTS_DIR / "headline"
+# Default: compare against the new Flower-runtime headline. To compare against
+# the legacy pure-PyTorch headline instead, pass --paired-dir on the CLI:
+#   --paired-dir mnist_dermnist/results/legacy_pure_pytorch
+PAIRED_DIR     = RESULTS_DIR / "flower_C0_baseline"
 DIRICHLET_DIR  = RESULTS_DIR / "dirichlet_a01"
 IID_DIR        = RESULTS_DIR / "iid"
 OUT_DIR        = RESULTS_DIR / "thesis_ready" / "data"
