@@ -1,0 +1,813 @@
+%==============================================================================
+% Overleaf-ready LaTeX file — REORGANISED into a thesis-style chapter/section
+% hierarchy. Preserves your existing prose but restructures it.
+%
+% Where a section can be filled verbatim from your existing
+% 09_overleaf_ready.tex, you will see one of two markers:
+%
+%   * "% INSERT_FROM_ORIGINAL: lines X--Y" — copy that block from the
+%     original file verbatim into this position.
+%   * "% NEW_CONTENT_REQUIRED:" — section that is new relative to the
+%     original; a one-paragraph stub is provided that you should expand.
+%
+% Top-level structure (mapped to user's content):
+%   1. Introduction              — § Introduction + Background + Related Work + Dataset § (condensed)
+%      1.1 DermaMNIST Dataset
+%      1.2 Pipeline Design and Overview
+%   2. Method                    — § Experimental Setting (renamed + restructured)
+%      2.1 Dataset Preprocessing and Augmentation
+%      2.2 Centralised Training Framework
+%      2.3 Training and Evaluation Protocols
+%      2.4 Federated Learning Framework
+%          2.4.1 Baseline Federated Setup
+%          2.4.2 Heterogeneity Scenarios in Federated Learning
+%          2.4.3 FedProx
+%          2.4.4 FedNova
+%   3. Results and discussion    — § Results + § Discussion (interleaved)
+%      3.1 Centralised baseline
+%      3.2 Federated Learning
+%          3.2.1 Initial Setup: Engineered Paired Partition (n=10 seeds)
+%          3.2.2 Statistical Heterogeneity (multi-partition: IID, Dirichlet, specialist, paired)
+%          3.2.3 System Heterogeneity (C0, C1, C2)
+%          3.2.4 Summary and Comparison of Heterogeneity Experiments
+%      3.3 Hardware and Resource Limitations
+%   4. Conclusion                — § Conclusion + § Future Work folded in
+%   References
+%==============================================================================
+\documentclass[11pt,a4paper]{report}  % NB: 'report' supports \chapter; was 'article'
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage{tikz}
+\usetikzlibrary{positioning, shapes.geometric, arrows.meta, fit, backgrounds}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[authoryear,round]{natbib}
+\onehalfspacing
+
+% --- TODO / pending-HPC markers ----------------------------------------------
+\newif\ifshowtodo
+\showtodotrue
+\newcommand{\TODOhpc}[1]{%
+  \ifshowtodo\textcolor{red}{\textbf{[HPC PENDING: #1]}}\else#1\fi}
+\newcommand{\PENDING}{\TODOhpc{result}}
+
+\title{Federated Optimisation on DermaMNIST: A Paired-Seed Empirical
+Comparison of FedAvg, FedProx, and FedNova Under Statistical and
+Computational-Work Heterogeneity}
+\author{Barbara Koch}
+\date{}
+
+\begin{document}
+
+%==============================================================================
+% TITLE PAGE
+%==============================================================================
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+{\Huge\bfseries Federated Optimisation on DermaMNIST\par}
+\vspace{0.5cm}
+{\Large A Paired-Seed Empirical Comparison of FedAvg, FedProx, and FedNova\par}
+{\Large Under Statistical and Computational-Work Heterogeneity\par}
+\vspace{4cm}
+% \includegraphics[width=4cm]{cambridge_crest.png}  % uncomment if you have the crest
+\vspace{2cm}
+{\large\bfseries Barbara Koch\par}
+\vspace{1cm}
+{\large Supervisor: \TODOhpc{supervisor name}\par}
+{\large MPhil in Data Intensive Science\par}
+{\large University of Cambridge\par}
+\vspace{3cm}
+{This dissertation is submitted for the degree of\par}
+{\itshape Master of Philosophy\par}
+\vfill
+{\large \TODOhpc{College name} \hfill \TODOhpc{Month} 2026 \par}
+\end{titlepage}
+
+%==============================================================================
+% DECLARATION
+%==============================================================================
+\chapter*{Declaration}
+\addcontentsline{toc}{chapter}{Declaration}
+\thispagestyle{empty}
+
+I hereby declare that, except where specific reference is made to the work of
+others, the contents of this dissertation are original and have not been
+submitted in whole or in part for consideration for any other degree or
+qualification in this, or any other university. This dissertation is my own
+work and contains nothing which is the outcome of work done in collaboration
+with others, except as specified in the document. During its preparation,
+GitHub Copilot and Claude Code were utilised to assist with code organisation,
+autocompletion, experimental orchestration, and verifying results. For
+language accuracy, Grammarly was employed to check spelling and grammar
+throughout the document. This dissertation contains \TODOhpc{word count}
+words, excluding references and declaration.
+
+\vspace{2cm}
+\hfill Barbara Koch
+
+\hfill \TODOhpc{Month} 2026
+
+%==============================================================================
+% ABSTRACT
+%==============================================================================
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\thispagestyle{empty}
+
+Federated Learning (FL) trains models across data silos without
+centralising patient data, but the canonical FedAvg algorithm
+\citep{mcmahan2017fedavg} suffers under client heterogeneity. We
+evaluate FedProx \citep{li2020fedprox}, which adds a proximal
+regulariser to local objectives, on DermaMNIST --- a 7-class
+skin-lesion classification dataset with severe class imbalance
+(58:1 between majority and minority classes). We design a custom
+non-IID partition (\texttt{balanced\_paired\_7\_clients}) in which
+every minority class is held by exactly two clients, avoiding the
+catastrophic per-class regression observed under singleton-class
+partitions. Across 10 paired-seed runs ($R = 150$ rounds, $E = 20$
+local epochs, $\mu = 0.01$), FedProx achieves a mean test macro-F1
+of $0.508 \pm 0.014$ against FedAvg's $0.481 \pm 0.025$ --- a
+within-pair improvement of $\Delta = +0.027 \pm 0.035$ (paired
+Wilcoxon $p = 0.020$, rank-biserial $r = +0.818$). FedProx wins on
+9 of 10 paired seeds. The largest per-class gain is on melanoma
+($\Delta = +0.114$, $p = 0.006$), the most clinically critical
+lesion. No class regresses by more than $0.012$ F1, satisfying the
+pre-registered safety criterion. FedProx additionally reduces
+across-seed variance by 45\%, suggesting more stable convergence
+under non-IID conditions. A third algorithm, FedNova
+\citep{wang2020fednova}, is implemented and evaluated under
+computational-work heterogeneity as the canonical comparator for
+heterogeneous local SGD step counts.
+
+\vspace{1em}
+\noindent\textbf{Keywords:} federated learning, FedAvg, FedProx, FedNova,
+DermaMNIST, dermatology, class imbalance, non-IID, paired-seed protocol,
+medical imaging, data privacy
+
+%==============================================================================
+% TOC / LoF / LoT
+%==============================================================================
+\tableofcontents
+\listoffigures
+\listoftables
+
+%==============================================================================
+\chapter{Introduction}
+\label{ch:intro}
+%==============================================================================
+
+% ============================================================================
+% INTRO CHAPTER STRUCTURE:
+% - Three-to-four opening paragraphs on the clinical and methodological
+%   motivation (skin-cancer + dermatoscopic imaging + privacy + FL).
+% - Brief overview of the FedAvg → non-IID problem → FedProx/FedNova
+%   remedies (condensed from your current §Background §sec:background
+%   and §Related Work §sec:related — lit review folded INTO the
+%   Introduction rather than given a separate chapter).
+% - §1.1 Dataset — short standalone description.
+% - §1.2 Pipeline Design and Overview — short, with the pipeline figure.
+% ============================================================================
+
+% INSERT_FROM_ORIGINAL: lines 100-217 of 09_overleaf_ready.tex
+% (Your existing opening narrative: skin cancer + HAM10000 + GDPR/HIPAA +
+%  FedAvg/non-IID + FedProx/FedNova + scope conditions. Keep it almost
+%  verbatim, just remove the explicit \section{Introduction} header
+%  since this is now a \chapter.)
+
+Skin cancer is one of the most common malignancies worldwide, and
+melanoma in particular accounts for the great majority of skin-cancer
+deaths despite representing fewer than 5\% of cases. The outcome of a
+melanoma diagnosis is exquisitely sensitive to the time at which the
+disease is detected: five-year survival rates exceed 99\% when the
+lesion is identified while still localised, falling to under 35\% once
+the disease has metastasised. This stark survival gradient has
+motivated a generation of computer-aided diagnostic systems based on
+dermoscopic images, and the recent availability of large-scale
+labelled image datasets has made deep learning the de facto
+methodology in this space. The HAM10000 collection
+\citep{tschandl2018ham10000}, assembled from multiple clinical sites
+and comprising 10{,}015 dermoscopic images across seven diagnostic
+categories, has become the standard benchmark for this class of
+system.
+
+% INSERT_FROM_ORIGINAL: lines 113-217 (motivation continuation through
+% to scope conditions). Cut at "...identified as the primary direction
+% for follow-up work in §\ref{sec:future}." and pick up below.
+
+% ----- Condensed literature review (folded into Intro) -----
+% The original draft has two separate chapters (§Background and §Related
+% Work) totalling ~525 lines. Recommended condensation:
+%
+%   (a) One paragraph on FedAvg + the non-IID degradation problem
+%       (condense from lines 553-579).
+%   (b) One paragraph on the three remedy families (proximal / control-
+%       variates / aggregation-normalisation) — condense lines 581-631.
+%   (c) One paragraph on non-IID benchmarks (Dirichlet, NIID-Bench) —
+%       condense lines 660-727.
+%   (d) One paragraph on medical-imaging FL (Sheller, Rieke, FeTS, FedBN)
+%       — condense lines 732-822.
+%   (e) One paragraph stating where this thesis fits (lines 804-822).
+%
+% Each paragraph 4-7 sentences. Total ~1.5 pages.
+
+% NEW_CONTENT_REQUIRED: at the end of the Introduction, before §1.1,
+% drop in your "Contributions" itemised list from lines 219-275 of the
+% original.
+
+\paragraph{Contributions.} The substantive contributions of this
+dissertation are:
+\begin{itemize}
+\item \textbf{Paired-seed protocol with bit-equivalence at $\mu = 0$.}
+We design an experimental protocol in which FedAvg and FedProx share
+identical partitions, initial model weights, per-(round, client)
+DataLoader random-number generators, dropout masks, and
+system-heterogeneity schedules. Bit-equivalence at $\mu = 0$ is
+verified by seven unit tests at $10^{-8}$ tolerance over per-round
+history, final aggregated state-dictionaries, and test-set metrics.
+
+\item \textbf{A custom \texttt{balanced\_paired\_7\_clients} partition
+supporting a clean per-class mechanism prediction.} The partition is
+designed so that every minority class is held by exactly two of seven
+clients while the majority class (melanocytic nevi) is held by all
+seven.
+
+\item \textbf{Headline empirical result with effect-size and
+leave-one-seed-out robustness.} Across ten paired seeds, FedProx
+($\mu = 0.01$) improves over FedAvg on test macro-F1 by
+$\Delta = +0.027 \pm 0.035$ (paired Wilcoxon $p = 0.020$,
+sign-test $p = 0.021$, rank-biserial $r = +0.818$, 9 of 10 paired
+wins).
+
+\item \textbf{Three-regime robustness analysis.} The headline finding
+is contextualised by sweeps under three statistical-heterogeneity
+regimes: the custom paired partition, a uniform IID null-falsification
+control, and the literature-standard Dirichlet-$\alpha = 0.1$
+non-IID partition.
+
+\item \textbf{Independently verified FedNova implementation.} FedNova
+\citep{wang2020fednova} is verified against canonical reference values
+(e.g.\ $a_i = 41.381$ for $\tau = 10$, $m = 0.9$) and used in a
+three-way paired-seed comparison on DermaMNIST.
+\end{itemize}
+
+%==============================================================================
+\section{DermaMNIST Dataset}
+\label{sec:dataset-intro}
+%==============================================================================
+
+% INSERT_FROM_ORIGINAL: lines 906-935 (Dataset section from original) +
+% lines 1271-1310 (the "simulated, not real" methodology framing).
+
+We use DermaMNIST \citep{yang2023medmnistv2}, the dermatology subset of
+the MedMNIST~v2 benchmark, derived from the HAM10000 collection of
+dermatoscopic images \citep{tschandl2018ham10000}. DermaMNIST contains
+10{,}015 dermoscopic images of skin lesions across seven diagnostic
+categories, split into 7{,}007 training, 1{,}003 validation, and 2{,}005
+test samples in the canonical MedMNIST split. The source archive
+\texttt{dermamnist\_64.npz} (the v2 distribution at 64$\times$64 RGB) is
+the canonical MedMNIST file format; we resize all images to
+28$\times$28 before training. The class distribution is severely
+imbalanced, with a 58:1 ratio between the most prevalent
+(\textit{melanocytic nevi}, 67.05\%) and least prevalent
+(\textit{dermatofibroma}, 1.15\%) classes. This imbalance is preserved
+without re-sampling so that any reported gain reflects realistic
+clinical priors.
+
+% INSERT_FROM_ORIGINAL: lines 1271-1310 here — the "Simulated, not
+% real, heterogeneity" scope paragraph and the bulleted list of
+% heterogeneity axes not modelled.
+
+%==============================================================================
+\section{Pipeline Design and Overview}
+\label{sec:pipeline}
+%==============================================================================
+
+% INSERT_FROM_ORIGINAL: lines 839-904 (the pipeline TikZ figure).
+
+In summary, this dissertation presents a controlled empirical pipeline
+for paired-seed federated optimisation on a non-IID classification
+benchmark. First, we establish a centralised baseline on the pooled
+DermaMNIST training set to anchor the upper bound on global-model
+performance. Second, we implement a 7-client federated-learning
+framework under a custom \texttt{balanced\_paired} partition designed
+to maximise the proximal-anchor mechanism's engagement. Third, we
+investigate the FedProx-over-FedAvg gap under three forms of
+statistical heterogeneity (IID, Dirichlet-$\alpha = 0.1$, and the
+custom paired partition) and three forms of computational-work
+heterogeneity (uniform, fixed stragglers, random stragglers). Finally,
+we introduce FedNova \citep{wang2020fednova} as the canonical
+comparator for heterogeneous local SGD step counts. This work aims to
+provide a paired-seed inferential answer to the FedAvg-vs-FedProx
+question on DermaMNIST, addressing a gap left open by NIID-Bench
+\citep{li2022niidbench}.
+
+% INSERT_FROM_ORIGINAL: lines 839-904 (the full \begin{figure}...
+% \end{figure} block containing the TikZ pipeline diagram).
+
+%==============================================================================
+\chapter{Method}
+\label{ch:method}
+%==============================================================================
+
+This section details the implementation of the centralised baseline
+and federated-learning frameworks. It encompasses dataset
+preprocessing, model architecture, training and evaluation protocols,
+and the three federated optimisation algorithms.
+
+%==============================================================================
+\section{Dataset Preprocessing and Augmentation}
+\label{sec:dataset-preproc}
+%==============================================================================
+
+% NEW_CONTENT_REQUIRED: short standalone preprocessing section
+% (about half a page).
+
+All images and corresponding labels were taken directly from the
+DermaMNIST v2 distribution \citep{yang2023medmnistv2}. To facilitate
+faster experimentation and to align with prior FL-on-DermaMNIST
+literature, all images were downsampled from $64 \times 64$ to
+$28 \times 28$ pixels using bilinear interpolation. Pixel intensities
+were normalised to the range $[0, 1]$. No data augmentation was
+applied during federated training: the deliberate design choice is to
+isolate the algorithmic comparison between FedAvg, FedProx, and
+FedNova from the confound of stochastic augmentation, which would
+otherwise interact with the per-(round, client) random-number-
+generator seeding protocol described in §\ref{sec:protocol}. The
+centralised baseline (§\ref{sec:centralised-results}) was likewise run
+without augmentation so that the federation tax estimate is internally
+consistent.
+
+For all experiments, images are loaded in batches of size $B = 32$,
+capped per-client at $\min(32, n_i)$ so that the smallest client
+(C6 with $n = 673$ samples) still produces meaningful mini-batches.
+
+%==============================================================================
+\section{Centralised Training Framework}
+\label{sec:centralised-method}
+%==============================================================================
+
+% NEW_CONTENT_REQUIRED: short paragraph describing the centralised
+% baseline architecture and training protocol.
+
+The classifier is a four-block convolutional neural network
+(\texttt{DermMNISTCNN}, 423{,}175 parameters) with feature widths
+$32 \to 64 \to 128 \to 256$. Each block consists of a single
+3$\times$3 convolution (\texttt{padding=1}) followed by GroupNorm,
+ReLU, and 2$\times$2 max-pooling; the final block replaces max-pooling
+with adaptive global average pooling. A fully connected head of
+$256 \to 128 \to 7$ with dropout~0.2 produces the class logits.
+% INSERT_FROM_ORIGINAL: lines 944-959 (the verbatim block describing
+% the CNN graph + the GroupNorm justification citing
+% \citet{wu2018groupnorm} and \citet{hsieh2020quagmire}).
+
+The centralised baseline is computed by training this same
+\texttt{DermMNISTCNN} architecture on the pooled 7{,}007-sample training
+set under the same evaluation protocol used for the federated runs
+(early stopping on validation macro-F1; test evaluated once at the
+best-val epoch). The centralised model is trained for 50 epochs with
+SGD (learning rate 0.01, momentum 0.9, weight decay 0.0, batch size
+32) and provides the upper bound on test macro-F1 achievable when no
+client partition is imposed.
+
+%==============================================================================
+\section{Training and Evaluation Protocols}
+\label{sec:training-protocols}
+%==============================================================================
+
+% NEW_CONTENT_REQUIRED + INSERT_FROM_ORIGINAL:
+% (a) Brief paragraph describing optimiser/loss/eval.
+% (b) Then insert from original lines 1387-1410 (Metrics and Statistical
+%     Analysis).
+
+The optimiser is mini-batch SGD with momentum coefficient $m = 0.9$
+and no weight decay (set to 0 to avoid conflation with FedProx's
+proximal regulariser). The loss function is the multi-class
+cross-entropy, equivalent in form for all three algorithms with the
+sole exception of FedProx's added proximal penalty
+(§\ref{sec:fedprox}). Federated rounds use full participation
+($C = 1.0$); $R = 150$ communication rounds are run per experiment at
+$E = 20$ local epochs per round.
+
+The primary outcome is test macro-F1, the unweighted mean of per-class
+F1 scores. Accuracy is reported as a secondary descriptor but is
+misleading under the severe class imbalance present in DermaMNIST.
+Per-class F1 is reported separately to detect class-specific
+regressions. Validation metrics are recorded after every communication
+round and aggregated across the 10 paired seeds with mean and standard
+error of the mean (SEM); the test set is evaluated once per run at the
+round of best validation macro-F1, producing 20 single-shot test
+evaluations from which all reported test statistics are computed.
+
+% INSERT_FROM_ORIGINAL: lines 1398-1408 (paired Wilcoxon /
+% rank-biserial / bootstrap-CI / per-class Holm description).
+
+\subsection*{Paired-Seed Protocol}
+
+% INSERT_FROM_ORIGINAL: lines 1354-1386 (the paired-seed protocol
+% and reproducibility-provenance paragraph). This is a methodological
+% device, not an experimental condition.
+
+%==============================================================================
+\section{Federated Learning Framework}
+\label{sec:fl-framework}
+%==============================================================================
+
+% INSERT_FROM_ORIGINAL: lines 961-1078 (FL setup paragraphs + the
+% hyperparameters table). Recommend keeping the FedAvg pseudocode block
+% in this introductory text (before §2.4.1), then splitting FedProx /
+% FedNova into their own subsections below.
+
+The federated-learning protocol used throughout this dissertation
+follows the canonical cross-silo formulation surveyed in
+\citet{kairouz2021advances}. The headline statistical-heterogeneity
+results were produced by the project's pure-PyTorch reference loop
+(\texttt{experiments/run\_one.py}); a Flower~1.29 simulation runtime
+\citep{beutel2020flower} via \texttt{flwr.simulation.start\_simulation}
+(each client a Ray actor) is also implemented and is used for the
+system-heterogeneity, IID, and Dirichlet sweeps. Cross-runtime
+equivalence at full experimental scale is verified at two extreme
+seeds (789 and 8675309) and reported as a sensitivity check.
+
+% INSERT_FROM_ORIGINAL: rest of lines 961-1040 (cross-runtime
+% framing, the hyperparameters table at lines 1054-1078, and the
+% FedAvg aggregation equation around line 980).
+
+%==============================================================================
+\subsection{Baseline Federated Setup}
+\label{sec:baseline-fl}
+%==============================================================================
+
+% INSERT_FROM_ORIGINAL: lines 1042-1078 (the protocol paragraphs:
+% "The server orchestrates a fixed pool of seven clients…", through to
+% the hyperparameters table). Plus the canonical FedAvg description from
+% lines 1226-1228.
+
+The baseline federated setup uses 7 clients participating fully each
+round, $R = 150$ communication rounds, and $E = 20$ local epochs per
+client per round. The aggregation rule is the canonical size-weighted
+mean,
+\begin{equation}
+w^{(t+1)} \;=\; \sum_{k=1}^{K} \frac{n_k}{n}\, w_k^{(t+1)},
+\label{eq:fedavg-method}
+\end{equation}
+where $K = 7$ is the number of clients, $n_k$ is the number of
+training samples at client $k$, and $n = \sum_k n_k$. This is the
+FedAvg rule of \citet{mcmahan2017fedavg} and is used unchanged by both
+FedAvg and FedProx; FedNova replaces it with the normalised aggregator
+in §\ref{sec:fednova}.
+
+%==============================================================================
+\subsection{Heterogeneity Scenarios in Federated Learning}
+\label{sec:het-scenarios}
+%==============================================================================
+
+% Bold subheaders inline for the two heterogeneity types (Statistical
+% and System), with brief paragraphs describing each scenario. No
+% \subsubsection numbering — just bold inline subheaders.
+
+\paragraph{Statistical heterogeneity (label-distribution skew).}
+
+To evaluate the effect of label-distribution skew across clients,
+this dissertation tests four partitions of the DermaMNIST training
+set:
+
+\begin{itemize}
+\item \textbf{IID (falsification check).} Each client receives a
+uniform random sample of the training set, preserving the global class
+distribution at every client. This is the null condition: in
+expectation, no client drift can accumulate, and FedProx is predicted
+to provide no advantage.
+\item \textbf{Dirichlet-$\alpha = 0.1$ (literature-standard non-IID).}
+For each class, the proportion of its samples allocated to each of the
+7 clients is drawn from a 7-dimensional Dirichlet distribution with
+concentration parameter $\alpha = 0.1$, the now-canonical setting
+introduced by \citet{hsu2019dirichlet}.
+\item \textbf{Engineered \texttt{balanced\_paired\_7\_clients} (mechanism
+experiment, this work).} A custom non-IID partition designed so that
+every minority class is held by exactly two clients and the majority
+class (\textit{melanocytic nevi}) is held by all seven. Composition is
+given in Table~\ref{tab:partition}.
+\item \textbf{Engineered \texttt{specialist\_7\_clients} (pairing-lever
+check).} A sister partition in which every minority class is held by
+exactly \emph{one} client; serves as a pre-registered isolation of the
+pairing mechanism versus a generic label-skew effect.
+\end{itemize}
+
+% INSERT_FROM_ORIGINAL: lines 1320-1352 (the partition table
+% \texttt{tab:partition} and \texttt{fig:partition-heatmap}). Plus
+% lines 462-540 (Specialist-Partition Pre-Registration) — keep this as
+% MPhil-strong methodological discipline.
+
+\paragraph{System heterogeneity (computational-work imbalance).}
+
+System heterogeneity in this dissertation is operationalised as
+per-client variable local-epoch budgets, following the convention of
+\citet{li2020fedprox} §5.2; we do not simulate hardware latency or
+network conditions. Three conditions are tested in the Flower runtime:
+
+\begin{itemize}
+\item \textbf{C0 (uniform compute):} every client performs $E = 20$
+local epochs per round. This is the runtime-matched baseline against
+which C1 and C2 are compared and is run separately from the
+pure-PyTorch headline because cross-runtime mixing in inferential
+contrasts is avoided (§\ref{sec:baseline-fl}).
+\item \textbf{C1 (fixed stragglers):} clients $C_5$ and $C_6$ perform
+only $E_{\text{straggler}} = 5$ epochs per round; the remaining five
+clients perform $E = 20$. This is descriptive only — the fixed
+identity of $C_5$ partially removes the melanoma drift that the
+headline analysis identifies as the per-class FedProx driver, so this
+condition is reported but not used for primary inference.
+\item \textbf{C2 (random stragglers):} 4 of 7 clients per round are
+randomly designated stragglers with
+$E_i \sim \mathrm{Uniform}\{1, 2, \ldots, 19\}$. This is the
+primary system-heterogeneity condition for inference.
+\end{itemize}
+
+%==============================================================================
+\subsection{FedProx}
+\label{sec:fedprox}
+%==============================================================================
+
+% INSERT_FROM_ORIGINAL: condensed version of lines 1080-1268 focused
+% on FedProx (drop the FedNova content; that gets its own subsection
+% below). Aim for ~1 page.
+
+To mitigate the challenges introduced by statistical and system
+heterogeneity, FedProx \citep{li2020fedprox} extends the standard
+FedAvg approach by adding a proximal term to the local objective on
+each client, penalising deviation from the current global model.
+In FedProx, each client $k$ minimises the following local objective:
+
+\begin{equation}
+\min_w \;\; F_k(w) \;+\; \frac{\mu}{2}\,\bigl\lVert w - w^{(t)} \bigr\rVert^2,
+\label{eq:fedprox-method}
+\end{equation}
+
+where $F_k(w)$ is the local cross-entropy loss for client $k$, $w$ are
+the local model parameters, $w^{(t)}$ are the broadcast global model
+parameters at round $t$, and $\mu \geq 0$ controls the strength of the
+regularisation. At $\mu = 0$, FedProx reduces exactly to FedAvg. After
+local training, the server aggregates the returned parameters using
+the same size-weighted average as FedAvg (Eq.~\ref{eq:fedavg-method}).
+
+We use $\mu = 0.01$, selected on a held-out three-seed pilot sweep
+over $\{0.001, 0.01, 0.1\}$ on a different, discarded partition
+design; $\mu$ was \emph{not} tuned on the test set of the final
+10-seed sweep nor on the \texttt{balanced\_paired\_7\_clients}
+partition. This protects the headline test comparison from
+hyperparameter selection bias.
+
+% INSERT_FROM_ORIGINAL: optionally the FedProx algorithm pseudocode
+% block from lines 1123-1155 if you want to retain the formal
+% presentation.
+
+%==============================================================================
+\subsection{FedNova}
+\label{sec:fednova}
+%==============================================================================
+
+% INSERT_FROM_ORIGINAL: condensed version of FedNova content from
+% lines 1080-1268 + lines 2192-2230 (which provides additional FedNova
+% technical detail).
+
+FedNova \citep{wang2020fednova} addresses a complementary axis of
+heterogeneity to FedProx: when clients differ in the amount of local
+computation they perform per round (heterogeneous $\tau_i$, here
+driven by variable local epochs under C1 and C2), the naïve
+size-weighted aggregation rule is \emph{objective-inconsistent}, and
+FedNova removes the bias by normalising each client's update by its
+effective number of local SGD steps.
+
+For local SGD with momentum coefficient $m$ and $\tau_i$ local steps
+at client $i$, the FedNova normaliser is
+
+\begin{equation}
+a_i \;=\; \sum_{j=1}^{\tau_i} \frac{1 - m^j}{1 - m}
+       \;=\; \frac{\tau_i (1 - m) - m\,(1 - m^{\tau_i})}{(1-m)^2},
+\label{eq:fednova-ai-method}
+\end{equation}
+
+which reduces to $a_i = \tau_i$ for vanilla SGD ($m = 0$). The
+aggregation step is $d_i = w^t - w_i^{t+1}$,
+$d_\text{norm} = \sum_i p_i\,d_i / a_i$,
+$a_\text{eff} = \sum_i p_i a_i$, and
+$w^{t+1} = w^t - a_\text{eff}\,d_\text{norm}$. With $m = 0$ \emph{and}
+uniform $\tau_i$, FedNova reduces to FedAvg. Under $m = 0.9$ (the
+local optimiser used throughout this work) even uniform $\tau_i$
+produces a different aggregate from FedAvg, so the runtime-matched C0
+baseline is run separately for FedNova rather than borrowed from the
+FedAvg run.
+
+The implementation is brute-force verified against canonical reference
+values from \citet{wang2020fednova} (e.g.\ for $\tau = 10$, $m = 0.9$:
+$a_i = 41.381$); see §\ref{sec:protocol} for the unit-test inventory.
+
+%==============================================================================
+\chapter{Results and Discussion}
+\label{ch:results}
+%==============================================================================
+
+This chapter presents the experimental findings, starting with the
+centralised baseline and progressing through federated-learning
+scenarios affected by statistical and system heterogeneity. Particular
+attention is given to evaluating the performance of FedProx and
+FedNova across these settings. Methodological observations and
+mechanism-interpretation discussion are interleaved with the
+empirical findings rather than relegated to a separate Discussion
+chapter.
+
+%==============================================================================
+\section{Centralised baseline}
+\label{sec:centralised-results}
+%==============================================================================
+
+% INSERT_FROM_ORIGINAL: lines 1865-1885 (the "Centralised upper bound
+% (3-seed sweep)" paragraph) + lines 1938-1965 (the federation-tax
+% prose). Drop forward references to FL results.
+
+The centralised baseline anchors the upper bound on test macro-F1
+achievable when all training data is pooled into a single non-federated
+run. Using the \texttt{DermMNISTCNN} architecture described in
+§\ref{sec:centralised-method}, the centralised model reaches test
+macro-F1 = $\mathbf{0.562 \pm 0.006}$ across three seeds
+($\{42, 123, 456\}$); per-seed values 0.555, 0.568, 0.562. The
+across-seed standard deviation (0.006) is markedly smaller than the
+federated across-seed standard deviations reported in
+§\ref{sec:engineered-fl} (FedAvg 0.025, FedProx 0.014), as expected:
+centralised training has no client-aggregation noise.
+
+% INSERT_FROM_ORIGINAL: lines 1938-1965 (the federation-tax discussion
+% — relative gap recovery, per-class concentration on melanoma + BCC,
+% \textit{melanocytic nevi} reaching centralised-level under both
+% federated algorithms).
+
+%==============================================================================
+\section{Federated Learning}
+\label{sec:fl-results}
+%==============================================================================
+
+%------------------------------------------------------------------------------
+\subsection{Initial Setup: Engineered Paired Partition}
+\label{sec:engineered-fl}
+%------------------------------------------------------------------------------
+
+% Headline result on the engineered 7-client partition.
+
+\paragraph{Analysis of the global model.}
+
+% INSERT_FROM_ORIGINAL: lines 1414-1497 (Final Test Performance: the
+% headline paired Wilcoxon, Hodges-Lehmann, LOSO, per-seed table
+% \texttt{tab:per-seed}, headline table \texttt{tab:headline}).
+
+% INSERT_FROM_ORIGINAL: lines 1596-1653 (Convergence Behaviour:
+% \texttt{fig:curves-main} and the global-model trajectories) +
+% lines 1701-1732 (Summary of Numerical Observations from the
+% Curves: \texttt{tab:curve-stats}).
+
+% INSERT_FROM_ORIGINAL: lines 1779-1805 (Peak vs Final Round:
+% \texttt{tab:best-vs-last}).
+
+\paragraph{Analysis of individual clients and classes.}
+
+% INSERT_FROM_ORIGINAL: lines 1498-1594 (Per-Class Test Performance:
+% per-class table \texttt{tab:per-class}, worst-case
+% \texttt{tab:worst-per-class}, and the Holm-corrected discussion).
+
+% INSERT_FROM_ORIGINAL: lines 1655-1699 (Per-Class Convergence:
+% \texttt{fig:curves-per-class} and \texttt{fig:per-client-curves}).
+
+% INSERT_FROM_ORIGINAL: lines 1734-1777 (Per-Specialty Analysis:
+% \texttt{tab:per-specialty}, the three specialty pairs + generalist
+% asymmetry).
+
+\paragraph{Mechanism interpretation.}
+
+% Interleave the Discussion content from lines 2041-2097 here.
+% Specifically the three paragraphs:
+%   (i) training-objective panel caveat
+%   (ii) per-class / per-specialty mechanism asymmetry
+%   (iii) mid-training communication-efficiency gain + peak-vs-final
+%        plateau evidence
+% INSERT_FROM_ORIGINAL: lines 2041-2097.
+
+%------------------------------------------------------------------------------
+\subsection{Statistical Heterogeneity (Multi-Partition Comparison)}
+\label{sec:stat-het-multi}
+%------------------------------------------------------------------------------
+
+% Multi-partition sweep (IID, Dirichlet, specialist, paired). Lead
+% with the central comparison figure/table, then per-condition prose.
+
+% INSERT_FROM_ORIGINAL: lines 1807-1864 (the partition-robustness
+% framing prose, the three bullet points IID/Dirichlet/paired, +
+% \texttt{fig:federation-tax}).
+
+% INSERT_FROM_ORIGINAL: lines 1887-1899 (IID falsification check prose
+% with \TODOhpc placeholders for the actual numbers).
+
+% INSERT_FROM_ORIGINAL: lines 1901-1915 (Dirichlet-$\alpha = 0.1$ prose
+% with \TODOhpc placeholders).
+
+% INSERT_FROM_ORIGINAL: lines 1918-1936 (the
+% \texttt{tab:robustness} table consolidating all four conditions).
+
+% NEW_CONTENT_REQUIRED: short paragraph summarising the four-point
+% dose-response (IID → Dirichlet → specialist → paired) once all the
+% sweeps land. Reference §05_when_fedprox_helps.tex (the synthesis
+% subsection you drafted earlier).
+
+%------------------------------------------------------------------------------
+\subsection{System Heterogeneity}
+\label{sec:sys-het}
+%------------------------------------------------------------------------------
+
+% The 7-client C0/C1/C2 sweep + FedNova arm. The data for this
+% section is currently running on RunPod; populate when complete.
+
+% NEW_CONTENT_REQUIRED: the system-heterogeneity results section.
+% Structure:
+%   (a) C0 baseline (Flower runtime-matched) — describe FedAvg / FedProx /
+%       FedNova on uniform $E = 20$, all 7 clients full participation.
+%       Reference the bug-fix in commit 40c91f4 (numpy seed overflow at
+%       seed 8675309) and confirm the data was clean after re-run.
+%   (b) C1 fixed-stragglers — descriptive only, note the C5/C6
+%       confound described in §2.4.2.
+%   (c) C2 random-stragglers — primary inferential condition; the H2
+%       between-condition contrast (Δ_C2 vs Δ_C0) is tested by paired
+%       Wilcoxon under Bonferroni α/2 = 0.025.
+%   (d) FedNova in C2 — does the objective-inconsistency correction
+%       help on top of FedProx's proximal anchor?
+%   (e) Mechanism interpretation: when does FedProx's proximal anchor
+%       help vs. when does FedNova's normalised aggregator help.
+
+System heterogeneity results pending; sweeps currently executing on
+RunPod (4090) and CSD3 (A100). \TODOhpc{full results}
+
+%------------------------------------------------------------------------------
+\subsection{Summary and Comparison of Heterogeneity Experiments}
+\label{sec:summary-het}
+%------------------------------------------------------------------------------
+
+% INSERT_FROM_ORIGINAL: lines 1967-2037 (the summary section + the
+% across-conditions \texttt{tab:summary} table).
+
+%==============================================================================
+\section{Hardware and Resource Limitations}
+\label{sec:hardware}
+%==============================================================================
+
+% INSERT_FROM_ORIGINAL: lines 2332-2427 (the full Hardware section
+% verbatim, including \texttt{tab:resources}).
+
+%==============================================================================
+\chapter{Conclusion}
+\label{ch:conclusion}
+%==============================================================================
+
+% Fold Future Work INTO the Conclusion (~1.5 pages with future work as
+% the closing paragraphs). Structure:
+%
+%  - Opening paragraph: restate the clinical-and-methodological
+%    motivation (cancer detection + privacy + FL).
+%  - Middle paragraphs: restate the calibrated thesis-level claim
+%    (FedProx improves macro-F1 on the engineered partition; melanoma
+%    is the only Holm-significant per-class gain; the result transfers
+%    to Dirichlet-α=0.1 with attenuated magnitude; FedProx is null on
+%    IID as predicted by mechanism; FedNova provides complementary
+%    benefit on C2 system heterogeneity).
+%  - Acknowledgement of scope: simulated label-skew not real
+%    multi-site; 28×28 not clinical resolution; full participation
+%    only; 10 paired seeds.
+%  - Future-work paragraph (integrated rather than separate chapter):
+%    64×64 resolution sensitivity; partial participation; FedLC/
+%    class-weighted CE/focal loss baselines; SCAFFOLD; update-norm
+%    logging; real multi-site HAM10000 source-id partition.
+%  - Closing sentence reinforcing the main result.
+
+% INSERT_FROM_ORIGINAL: lines 2099-2115 (the "Calibrated thesis-level
+% claim" block quote) — this is the cleanest single statement of your
+% thesis claim and belongs in the Conclusion.
+
+\TODOhpc{Write the Conclusion (~500-700 words) once the system-het
+sweep lands. Use the calibrated-claim block-quote from lines
+2099-2115 of the original draft as the spine; expand into 4-5
+paragraphs.}
+
+%==============================================================================
+% References
+%==============================================================================
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

@@ -25,14 +25,14 @@ TFLW="$REPO/mnist_dermnist/scripts/slurm_template_flower.sh"
 TFNV="$REPO/mnist_dermnist/scripts/slurm_template_fednova.sh"
 
 # --- flower_C0_baseline FedAvg + FedProx (3 jobs) ---
-sbatch "$TFLW" fedavg  0.0  8675309 20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients ; sleep 3
-sbatch "$TFLW" fedprox 0.01 8675309 20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients ; sleep 3
-sbatch "$TFLW" fedprox 0.01 161803  20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients ; sleep 3
+sbatch "$TFLW" fedavg  0.0  8675309 20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients "--log-update-norms" ; sleep 3
+sbatch "$TFLW" fedprox 0.01 8675309 20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients "--log-update-norms" ; sleep 3
+sbatch "$TFLW" fedprox 0.01 161803  20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients "--log-update-norms" ; sleep 3
 
 # --- flower_C0_baseline FedNova (3 jobs) ---
-sbatch "$TFNV" 2024    20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients uniform "" ; sleep 3
-sbatch "$TFNV" 8675309 20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients uniform "" ; sleep 3
-sbatch "$TFNV" 161803  20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients uniform "" ; sleep 3
+sbatch "$TFNV" 2024    20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients uniform "--log-update-norms" ; sleep 3
+sbatch "$TFNV" 8675309 20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients uniform "--log-update-norms" ; sleep 3
+sbatch "$TFNV" 161803  20 mnist_dermnist/results/flower_C0_baseline balanced_paired_7_clients uniform "--log-update-norms" ; sleep 3
 
 # --- mu_sweep FedAvg sanity baselines (3 jobs) ---
 sbatch "$TFLW" fedavg 0.0 42  20 mnist_dermnist/results/mu_sweep balanced_paired_7_clients ; sleep 3

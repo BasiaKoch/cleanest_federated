@@ -36,8 +36,7 @@ partition; see §X.X for partition composition) always perform $E_\text{straggle
 local epochs, while the other five clients perform $E = 20$. Straggler
 identity is deterministic and constant across rounds and seeds. This setup
 models a deployment where specific institutions have consistently weaker
-compute (e.g., a small clinic with older hardware). This condition is
-closer to Marija (2025) §3.8.4 but adapted to 7 clients.
+compute (e.g., a small clinic with older hardware).
 
 **C2 — Random stragglers (Li et al. 2020 protocol).** Each communication
 round, half of the participating clients (3 or 4 of 7) are randomly

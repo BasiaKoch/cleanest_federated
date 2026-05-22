@@ -789,18 +789,6 @@ on which heterogeneity axis dominates in the deployment setting, which is
 a recurring theme of \S\ref{sec:rw-algorithms} and
 \S\ref{sec:rw-benchmarks}.
 
-\paragraph{Contemporary thesis-scale work.}
-\citet{nedeljkovic2025fedprox} is the closest contemporary thesis-scale
-reference: an MPhil dissertation on FedAvg vs FedProx for breast-lesion
-segmentation in DCE-MRI under engineered class-imbalance partitions.
-That work and this thesis share the paired comparison protocol but
-diverge in task (segmentation vs classification), dataset (proprietary
-DCE-MRI vs public DermaMNIST), heterogeneity construction (class
-imbalance vs balanced-pair label skew), and inferential scope (two
-algorithms vs three). The two studies together provide complementary
-evidence on whether the proximal-anchor mechanism generalises across
-medical imaging modalities and task families.
-
 \paragraph{Where this thesis fits.}
 The literature surveyed above leaves a specific empirical gap that this
 thesis fills. NIID-Bench compares algorithms across many datasets but
@@ -808,10 +796,7 @@ without a paired-seed inferential protocol, leaving DermaMNIST's
 FedAvg-vs-FedProx ordering statistically unresolved. The medical-FL line
 (\citealt{sheller2020medicalfl, rieke2020future, pati2022fets}) provides
 deployment evidence under FedAvg but does not isolate algorithmic
-interventions. The contemporary thesis-scale work
-\citep{nedeljkovic2025fedprox} provides a paired FedAvg-vs-FedProx contrast
-on segmentation but does not include FedNova or system-heterogeneity
-conditions. The present thesis combines the three contributions absent
+interventions. The present thesis combines the contributions absent
 from each individual line: \emph{(a)} a strict paired-seed protocol with
 formal Wilcoxon inference on DermaMNIST classification, \emph{(b)} the
 addition of FedNova as the heterogeneous-computation arm so the
@@ -2266,8 +2251,7 @@ $E_i \sim \mathrm{Uniform}\{1, 2, \ldots, 19\}$). C2 approximates the
 \citet{li2020fedprox} §5.2 protocol up to the aggregation deviation
 described above and the additional constraint that $E_i \geq 1$
 (stragglers never do zero epochs in our setup). C1 is simpler and
-inspired by \citet{nedeljkovic2025fedprox} §3.8.4 but carries an
-experimental-design caveat that we make explicit here. In the
+carries an experimental-design caveat that we make explicit here. In the
 \texttt{balanced\_paired\_7\_clients} partition, the two clients fixed
 as stragglers (the last two by index, $C_5$ and $C_6$) happen to be
 the second melanoma/vascular client and the nevi-only generalist;
@@ -2313,9 +2297,9 @@ reports per-class test F1 with Holm-corrected $p$-values
 (Table~\ref{tab:per-class}) and worst-case per-(seed, class) regressions
 (Table~\ref{tab:worst-per-class}), but does not include confusion
 matrices, per-class precision/recall, or qualitative examples of
-correctly/incorrectly classified images. A segmentation thesis on the
-same topic (e.g., \citet{nedeljkovic2025fedprox}) gets such visual interpretability
-naturally from predicted-mask overlays; a classification thesis must
+correctly/incorrectly classified images. A segmentation study on the
+same topic gets such visual interpretability naturally from
+predicted-mask overlays; a classification thesis must
 construct it from confusion-matrix and per-class metrics, which require
 storing per-prediction outputs (not done in the current evaluation
 pipeline; the saved \texttt{test\_at\_best\_*.json} files contain

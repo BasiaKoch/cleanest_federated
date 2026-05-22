@@ -20,6 +20,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset, Subset
 
+from mnist_dermnist.fl.seeding import dataloader_generator_seed, numpy_legacy_seed
+
 
 def state_dict_to_numpy(model: nn.Module) -> List[np.ndarray]:
     """Convert a model state_dict (parameters + buffers) to a list of numpy arrays.
@@ -125,20 +127,11 @@ class FlClient(fl.client.NumPyClient):
 
         # Per-(seed, round, cid) RNG: identical to the pure-PyTorch path's
         # dataloader_generator_seed() so results match between the two runtimes.
-        # NumPy's RandomState.seed() requires a value in [0, 2**32 - 1].
-        # Some of the paired seeds (e.g. 8675309) overflow when multiplied
-        # by 10_000 (8675309 * 10_000 ≈ 8.7e10 > 2**32 ≈ 4.3e9), causing
-        # ValueError in client.fit() at every round. torch.manual_seed and
-        # Python's random.seed accept arbitrary 64-bit ints, so only the
-        # numpy seed needs the modulo. We apply mod 2**32 uniformly so all
-        # three RNG seeds are bit-identical to the lower 32 bits of the
-        # original rng_seed (no information loss for our per-(seed, round,
-        # cid) tuple, which is at most ~ seed * 10_000 + 14_999).
-        rng_seed = (self.seed * 10_000 + round_num * 100 + self.cid) & 0xFFFFFFFF
-        gen = torch.Generator().manual_seed(rng_seed)
-        torch.manual_seed(rng_seed)
-        random.seed(rng_seed)      # Defensive: Ray workers don't inherit driver-process RNG state
-        np.random.seed(rng_seed)   # Defensive: Ray workers don't inherit driver-process RNG state
+        raw_seed = dataloader_generator_seed(self.seed, round_num, self.cid)
+        gen = torch.Generator().manual_seed(raw_seed)
+        torch.manual_seed(raw_seed)
+        random.seed(raw_seed)      # Defensive: Ray workers don't inherit driver-process RNG state
+        np.random.seed(numpy_legacy_seed(raw_seed))  # NumPy requires a 32-bit seed
 
         loader = DataLoader(
             self.train_subset,

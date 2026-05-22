@@ -51,6 +51,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset, Subset
 
+from mnist_dermnist.fl.seeding import dataloader_generator_seed, numpy_legacy_seed
 from mnist_dermnist.fl_flower.client import state_dict_to_numpy, numpy_to_state_dict
 
 
@@ -104,13 +105,11 @@ class FlClientFedNova(fl.client.NumPyClient):
         else:
             local_epochs = int(config.get("local_epochs", 1))
 
-        # See client.py for the rationale: numpy's seed must fit in 32 bits;
-        # large paired seeds (8675309) overflow when multiplied by 10_000.
-        rng_seed = (self.seed * 10_000 + round_num * 100 + self.cid) & 0xFFFFFFFF
-        gen = torch.Generator().manual_seed(rng_seed)
-        torch.manual_seed(rng_seed)
-        random.seed(rng_seed)      # Defensive: Ray workers don't inherit driver-process RNG state
-        np.random.seed(rng_seed)   # Defensive: Ray workers don't inherit driver-process RNG state
+        raw_seed = dataloader_generator_seed(self.seed, round_num, self.cid)
+        gen = torch.Generator().manual_seed(raw_seed)
+        torch.manual_seed(raw_seed)
+        random.seed(raw_seed)      # Defensive: Ray workers don't inherit driver-process RNG state
+        np.random.seed(numpy_legacy_seed(raw_seed))  # NumPy requires a 32-bit seed
 
         loader = DataLoader(
             self.train_subset,

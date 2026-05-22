@@ -101,7 +101,6 @@ the analysis is honest in either direction.
 | **Li et al. (2020) FedProx** | Random stragglers on Synthetic / FEMNIST / Shakespeare with $E \in \{1, 5, 20\}$. Reported up to 90% straggler fractions. | Same setup on medical imaging (DermaMNIST) at $E = 20$, with paired-seed protocol and Wilcoxon test. |
 | **Wang et al. (2020) FedNova** | Heterogeneous $E_i$ with FedNova normalisation. Compared FedNova vs FedAvg vs FedProx. | We do not implement FedNova; future work could add it as a competitor. |
 | **Karimireddy et al. (2020) SCAFFOLD** | Control variates for client drift; tested heterogeneous local work. | We do not implement SCAFFOLD; future work. |
-| **Marija (2025) thesis §3.8.4** | 2-client fixed-straggler setup with U-Net segmentation; single seed. | Our setup has 7 clients, 10 paired seeds, classification, and full statistical inference. |
 
 ## 8 Pre-registration statement
 

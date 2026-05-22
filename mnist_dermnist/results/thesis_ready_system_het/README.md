@@ -28,7 +28,7 @@ the local-epoch count varied per client per round.
 | **C2 — Random stragglers (Li-style)** | Each round, 50% of clients randomly designated stragglers with $E_i \sim \text{Unif}[1, 19]$; others $E = 20$ | Li et al. (2020) §5.2 |
 
 C2 follows the canonical FedProx system-heterogeneity setup exactly. C1
-is closer to Marija (2025) §3.8.4 but adapted to our 7-client partition.
+is a simpler deterministic variant adapted to our 7-client partition.
 Together they probe the deterministic and stochastic extremes of the
 straggler regime.
 

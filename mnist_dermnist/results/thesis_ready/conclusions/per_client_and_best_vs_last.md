@@ -1,7 +1,7 @@
 # Per-client specialty analysis and best-vs-last round comparison
 
-Two analyses inspired by Marija (2025) §3.8.2, computed from the existing
-20 HPC test_at_best JSONs and 20 history CSVs — no new compute required.
+Two analyses computed from the existing 20 HPC test_at_best JSONs and
+20 history CSVs — no new compute required.
 
 ## 1 Per-specialty test F1
 
@@ -51,7 +51,7 @@ Validation macro-F1 at peak round vs at round 150, mean across 10 seeds:
 
 1. **FedProx maintains a higher plateau throughout, not just at the peak.** Mean peak Δ = +0.035 (0.554 vs 0.519); mean final-round Δ = +0.038 (0.511 vs 0.473). The advantage is stable across the late-training regime.
 
-2. **Both algorithms overfit by similar absolute amounts** (Δ drop ≈ -0.003, p = 0.92). This is a different finding from Marija's two-client setup (where FedAvg dropped substantially more): in the high-E, 10-seed regime, both algorithms exhibit comparable overfitting magnitudes.
+2. **Both algorithms overfit by similar absolute amounts** (Δ drop ≈ -0.003, p = 0.92). In the high-E, 10-seed regime, both algorithms exhibit comparable overfitting magnitudes.
 
 3. **FedProx peaks ~9 rounds earlier on average** (118 vs 127). Combined with the slightly tighter range ([90, 137] vs [70, 150]), this indicates more predictable training dynamics.
 
@@ -70,6 +70,6 @@ Validation macro-F1 at peak round vs at round 150, mean across 10 seeds:
 
 ## 4 What these analyses do NOT show
 
-- They do not constitute Marija-style "per-client local models" — those would require training each client on its own data and comparing to the FL global model, which is a different experiment (~5 GPU-hours of additional work).
+- They do not constitute "per-client local models" — those would require training each client on its own data and comparing to the FL global model, which is a different experiment (~5 GPU-hours of additional work).
 - The per-specialty significance tests are computed per pair (n = 10 each); they have not been Bonferroni-corrected for the 4 specialties tested. The headline "all minorities" aggregate (p = 0.027) is the more conservative figure to cite.
-- The post-peak drop equivalence is a property of the high-E regime (E = 20); at lower E, the relative overfitting balance may differ (consistent with Marija's lower-E observations).
+- The post-peak drop equivalence is a property of the high-E regime (E = 20); at lower E, the relative overfitting balance may differ.

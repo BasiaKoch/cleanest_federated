@@ -1,8 +1,5 @@
 % =============================================================================
 %  When does FedProx help? — synthesis subsection
-%  Standalone draft inspired by Marija Nedeljković's clear-eyed characterisation
-%  of the conditions under which FedProx outperforms FedAvg in her DCE-MRI MPhil
-%  (Nedeljković 2025).
 %
 %  Intended as a subsection of \section{Discussion} or a standalone synthesis
 %  near the start of \section{Conclusion}. Reads as a structured argument:
@@ -31,9 +28,7 @@ The empirical question this dissertation set out to answer is not
 asymptotic theory in \citet{li2020fedprox} already provides one answer
 to that — but rather \emph{under what specific conditions} the proximal
 anchor produces a measurable improvement on a non-trivial medical-imaging
-classification task. Inspired by the structured characterisation in
-\citet{nedeljkovic2025fedprox} (Cambridge MPhil, 2025, on DCE-MRI breast
-lesion segmentation), this subsection synthesises the empirical evidence
+classification task. This subsection synthesises the empirical evidence
 from the experimental matrix (\S\ref{sec:stat-het}, \S\ref{sec:sys-het})
 into a per-condition verdict.
 
@@ -146,41 +141,6 @@ over-anchoring: when a single client holds the only samples of a
 rare class, pulling its local update back toward a global
 parameter vector that under-represents that class can actively
 delay learning for that class.
-
-\subsubsection{Comparison to Nedeljković 2025}
-\label{sec:when-fedprox-marija}
-
-\citet{nedeljkovic2025fedprox} reports a single-partition single-$\mu$
-characterisation on a different task (DCE-MRI breast-lesion
-segmentation) and arrives at a qualitatively similar pattern:
-FedProx helps under engineered class imbalance, with the magnitude of
-the advantage class-specific rather than uniform across labels.
-The present thesis extends this finding in three ways:
-
-\begin{enumerate}
-  \item \emph{Structural decomposition of label-skew}: the
-        specialist sweep isolates the paired-co-training
-        structural feature from generic label-skew intensity, a
-        contrast Nedeljkovi\'c's single-partition design does
-        not make.
-  \item \emph{System-heterogeneity test}: by including C1 and C2
-        we extend the FedProx evaluation into the canonical
-        Li~2020 regime of variable local work, which the prior
-        thesis does not test.
-  \item \emph{Pre-registered four-outcome interpretation for
-        the engineered-partition defence}: the four pre-written
-        scenarios in \texttt{specialist\_partition\_scenarios.tex}
-        provide an a-priori statistical hierarchy for the
-        specialist result that prevents post-hoc reframing.
-\end{enumerate}
-
-The qualitative agreement between two MPhil-scale evaluations
-across distinct medical-imaging task families is itself a
-useful piece of evidence: FedProx's advantage on engineered
-class-imbalance is replicable at this scale, but the structural
-prerequisites we identify here (paired co-training) clarify
-\emph{why} the advantage is observed in some conditions and
-not others.
 
 \subsubsection{Implications for FL deployment in medical imaging}
 \label{sec:when-fedprox-deployment}

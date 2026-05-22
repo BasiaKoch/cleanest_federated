@@ -32,6 +32,7 @@ from torch.utils.data import DataLoader, Dataset, Subset
 from mnist_dermnist.fl.aggregation import weighted_average_state_dicts
 from mnist_dermnist.fl.evaluation import evaluate
 from mnist_dermnist.fl.local_train import freeze_global_weights, local_train
+from mnist_dermnist.fl.seeding import dataloader_generator_seed
 from mnist_dermnist.fl.system_het import (
     SystemHetConfig,
     build_epoch_schedule,
@@ -52,11 +53,6 @@ def set_all_seeds(seed: int) -> None:
     # Deterministic algorithms — slightly slower but correct
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
-
-def dataloader_generator_seed(base_seed: int, round_num: int, client_id: int) -> int:
-    """Per (seed, round, cid) DataLoader generator seed — paired across algorithms."""
-    return int(base_seed) * 10_000 + int(round_num) * 100 + int(client_id)
 
 
 # ---------------------------------------------------------------------------
