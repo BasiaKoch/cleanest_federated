@@ -104,7 +104,9 @@ class FlClientFedNova(fl.client.NumPyClient):
         else:
             local_epochs = int(config.get("local_epochs", 1))
 
-        rng_seed = self.seed * 10_000 + round_num * 100 + self.cid
+        # See client.py for the rationale: numpy's seed must fit in 32 bits;
+        # large paired seeds (8675309) overflow when multiplied by 10_000.
+        rng_seed = (self.seed * 10_000 + round_num * 100 + self.cid) & 0xFFFFFFFF
         gen = torch.Generator().manual_seed(rng_seed)
         torch.manual_seed(rng_seed)
         random.seed(rng_seed)      # Defensive: Ray workers don't inherit driver-process RNG state
