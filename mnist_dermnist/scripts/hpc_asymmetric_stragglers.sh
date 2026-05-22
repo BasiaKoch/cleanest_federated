@@ -1,39 +1,54 @@
 #!/bin/bash
-# Cambridge HPC SLURM submission for the Li et al. 2020 §5.2 asymmetric
-# straggler-handling protocol.
+# Cambridge HPC SLURM submission — Li 2020 §5.2 asymmetric straggler protocol.
 #
-# Hypothesis being tested
-# ------------------------
-# The original FedProx paper claims FedProx significantly outperforms
-# FedAvg under random stragglers when:
-#   - FedAvg DROPS straggler clients' updates (γ-inexact work is discarded)
-#   - FedProx INCLUDES straggler updates (proximal anchor provides stability
-#     guarantee for γ-inexact contributions)
+# WHAT THIS SUBMITS
+# -----------------
+# 10 jobs: FedAvg WITH --drop-stragglers on the engineered partition
+#          under random_stragglers (4 of 7 clients per round at E in {1..19}).
+# Outputs to mnist_dermnist/results/system_het_random_asymmetric/.
 #
-# Our symmetric C2 sweep (system_het_random/) treats both algorithms
-# identically and finds only Δ = +0.017 (n.s. at n=10). This experiment
-# tests whether the asymmetric protocol — the literature-canonical one —
-# produces a clearly significant FedProx advantage on DermaMNIST.
+# WHY ONLY FEDAVG (and not FedProx) — RUN-TIME EQUIVALENCE
+# ---------------------------------------------------------
+# The FedProx arm of the Li 2020 §5.2 comparison is FedProx with
+# --drop-stragglers=False on the SAME partition + same straggler schedule.
+# Under our deterministic seeding protocol (paired seed -> fixed straggler
+# schedule + fixed RNG state for local training), that FedProx run is
+# bit-equivalent to our existing FedProx-symmetric-C2 runs already on disk
+# at mnist_dermnist/results/system_het_random/. Re-running them would
+# burn ~2.5h of HPC compute to reproduce identical numbers. The analysis
+# script (check_asymmetric_stragglers.py) reads the FedProx arm from
+# system_het_random/ and the FedAvg-drop arm from system_het_random_asymmetric/.
 #
-# Submitted jobs (20 total)
-# -------------------------
-#   10 paired seeds * 1 algorithm * --drop-stragglers (FedAvg-drops-stragglers)
-#   10 paired seeds * 1 algorithm * NO flag             (FedProx-includes-stragglers)
+# DECOMPOSITION INTERPRETATION
+# ----------------------------
+# The Li 2020 §5.2 comparison has a known confound: when FedAvg drops
+# stragglers but FedProx keeps them, FedProx sees more clients per round.
+# Any FedProx win decomposes into:
+#   (a) the proximal-anchor mechanism (proximal term stabilising the
+#       updates that FedAvg-drop discards), AND
+#   (b) FedProx-include's effective sample-size advantage per round.
 #
-# Output directory: mnist_dermnist/results/system_het_random_asymmetric/
-# Filename convention: FedAvg files get '_drop' suffix; FedProx files unchanged
+# To distinguish (a) from (b), the analysis script compares THREE arms:
+#   Arm 1: FedAvg --drop-stragglers           (new: ~3 clients/round, full work)
+#   Arm 2: FedAvg --no-drop = mu=0 include    (existing system_het_random/)
+#   Arm 3: FedProx mu=0.01 include            (existing system_het_random/)
+# The contrast (Arm 3 - Arm 1) is the literature's headline (+22% claim).
+# The contrast (Arm 2 - Arm 1) isolates the partial-work-inclusion effect.
+# The contrast (Arm 3 - Arm 2) isolates the proximal-term effect.
 #
-# Expected outcome (per literature)
-# ---------------------------------
-# Predicted Δ_asymmetric = +0.05 to +0.15 macro-F1 with p < 0.05.
-# This would be the "FedProx wins clearly" result the existing
-# symmetric protocol does not deliver.
+# WALL-CLOCK CAVEAT
+# -----------------
+# Flower waits for ALL clients to finish training before invoking
+# aggregate_fit; we then DISCARD straggler updates. This faithfully models
+# the algorithmic effect on accuracy-per-round but does NOT model
+# deadline-bounded wall-clock realism.
 #
+# USAGE
+# -----
 # Run AFTER pulling the commit that adds:
 #   - mnist_dermnist/fl_flower/strategy_straggler_dropping.py
 #   - --drop-stragglers flag in run_one_flower.py
 #
-# Usage on HPC login node:
 #   cd /home/bk489/federated_clean/cleanest_federated
 #   git pull origin main
 #   bash mnist_dermnist/scripts/hpc_asymmetric_stragglers.sh
@@ -44,7 +59,6 @@ REPO=/home/bk489/federated_clean/cleanest_federated
 TFLW="$REPO/mnist_dermnist/scripts/slurm_template_flower.sh"
 OUT=mnist_dermnist/results/system_het_random_asymmetric
 E=20
-MU=0.01
 PAIRED=balanced_paired_7_clients
 
 # Paired-seed protocol — same 10 seeds as the headline + system_het sweeps
@@ -59,7 +73,6 @@ if ! grep -q "numpy_legacy_seed" mnist_dermnist/fl_flower/client.py; then
 fi
 if ! grep -q "StragglerDroppingFedAvg" mnist_dermnist/experiments/run_one_flower.py; then
   echo "ERROR: HPC checkout missing --drop-stragglers wiring." >&2
-  echo "Pull commit with strategy_straggler_dropping.py first." >&2
   exit 2
 fi
 if ! grep -q -- "--drop-stragglers" mnist_dermnist/experiments/run_one_flower.py; then
@@ -71,38 +84,29 @@ mkdir -p "$OUT" mnist_dermnist/logs
 
 echo "============================================================"
 echo " HPC asymmetric-straggler protocol (Li 2020 §5.2)"
+echo " — FedAvg arm only (10 jobs)"
 echo "============================================================"
 echo " partition: $PAIRED"
 echo " system-het mode: random_stragglers (50% of clients per round)"
 echo " seeds: ${SEEDS[*]}"
-echo " algos: fedavg --drop-stragglers ; fedprox (no flag)"
+echo " algo: fedavg WITH --drop-stragglers"
 echo " out_dir: $OUT"
-echo " expected: 20 jobs"
+echo " (FedProx arm reused from system_het_random/ — bit-equivalent)"
 echo "============================================================"
 echo ""
 
-# Common args for both algorithms
-RANDOM_EXTRA_BASE="--straggler-fraction 0.5 --log-update-norms --system-het-mode random_stragglers"
+RANDOM_EXTRA="--straggler-fraction 0.5 --log-update-norms --system-het-mode random_stragglers --drop-stragglers"
 
-# FedAvg side: drops stragglers (Li 2020 §5.2 FedAvg behavior)
 for SEED in "${SEEDS[@]}"; do
     echo "Submitting FedAvg --drop-stragglers seed=$SEED ..."
-    EXTRA="$RANDOM_EXTRA_BASE --drop-stragglers"
-    sbatch "$TFLW" fedavg 0.0 "$SEED" "$E" "$OUT" "$PAIRED" "$EXTRA"
-    sleep 3
-done
-
-# FedProx side: includes stragglers (γ-inexact via proximal anchor)
-for SEED in "${SEEDS[@]}"; do
-    echo "Submitting FedProx (no drop) seed=$SEED ..."
-    sbatch "$TFLW" fedprox "$MU" "$SEED" "$E" "$OUT" "$PAIRED" "$RANDOM_EXTRA_BASE"
+    sbatch "$TFLW" fedavg 0.0 "$SEED" "$E" "$OUT" "$PAIRED" "$RANDOM_EXTRA"
     sleep 3
 done
 
 echo ""
 echo "============================================================"
-echo " Submitted 20 jobs total (10 FedAvg-drop + 10 FedProx-include)"
+echo " Submitted 10 FedAvg-drop jobs"
 echo " Watch with: squeue -u \$USER"
-echo " After completion, analyse the asymmetric-protocol delta with:"
+echo " After completion:"
 echo "   python mnist_dermnist/scripts/check_asymmetric_stragglers.py"
 echo "============================================================"

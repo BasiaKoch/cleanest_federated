@@ -38,6 +38,32 @@ Edge cases
 This strategy is intentionally limited to FedAvg-style aggregation.
 For FedNova-style normalised aggregation under stragglers, a different
 strategy is required.
+
+Methodological caveat
+---------------------
+Flower waits for ALL clients to finish training before invoking
+``aggregate_fit``; this strategy then DISCARDS straggler updates from
+the aggregation. This faithfully models the *algorithmic* effect of
+straggler dropping on accuracy-per-round, but it does NOT model
+wall-clock or deadline realism: in a true deadline-bounded deployment,
+stragglers would be cut off before completing local training.
+Thesis claims should be framed accordingly: this measures the
+*aggregation-policy* effect of dropping γ-inexact updates, not the
+operational benefit of not waiting for stragglers.
+
+Methodological confound (decomposition note)
+--------------------------------------------
+When this strategy is used for FedAvg while FedProx aggregates all
+clients (the Li 2020 §5.2 comparison), the two algorithms see
+DIFFERENT client subsets per round. If FedProx wins, the win
+decomposes into two sources:
+  (a) FedProx sees more clients per round (those that FedAvg drops);
+  (b) the proximal anchor stabilises γ-inexact updates.
+The pure proximal effect is given by the symmetric arm — FedProx vs
+FedAvg with both algorithms seeing all clients (``system_het_random/``
+in this codebase). The asymmetric vs symmetric contrast isolates the
+straggler-handling component, while the symmetric arm isolates the
+proximal-term component.
 """
 from __future__ import annotations
 
@@ -83,7 +109,18 @@ class StragglerDroppingFedAvg(FedAvg):
         kept: List[Tuple[ClientProxy, FitRes]] = []
         dropped_cids: List[int] = []
         for client_proxy, fit_res in results:
-            client_E = int(fit_res.metrics.get("local_epochs", self.E_max))
+            # Reject any client that did not report local_epochs.
+            # Silent fallback to E_max would mask broken client wiring and
+            # turn straggler dropping into a no-op without warning. For
+            # this special strategy we require explicit metadata.
+            if "local_epochs" not in fit_res.metrics:
+                raise KeyError(
+                    f"StragglerDroppingFedAvg requires every client to "
+                    f"report 'local_epochs' in fit metrics (got keys: "
+                    f"{list(fit_res.metrics.keys())}). Refusing to fall "
+                    f"back to E_max={self.E_max} silently."
+                )
+            client_E = int(fit_res.metrics["local_epochs"])
             cid = int(fit_res.metrics.get("cid", -1))
             if client_E < self.E_max:
                 dropped_cids.append(cid)

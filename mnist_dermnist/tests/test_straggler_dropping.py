@@ -139,6 +139,32 @@ def test_exactly_E_max_is_NOT_a_straggler():
     assert metrics["n_dropped"] == 1
 
 
+def test_raises_on_missing_local_epochs():
+    """A broken client metric (missing local_epochs) must NOT silently
+    fall back to E_max; that would turn straggler dropping into a no-op."""
+    strat = StragglerDroppingFedAvg(
+        E_max=20,
+        initial_parameters=make_initial_parameters(),
+    )
+    # Build a FitRes WITHOUT local_epochs in metrics
+    params = ndarrays_to_parameters(
+        [np.full((4, 4), 1.0, dtype=np.float32),
+         np.full((4,), 1.0, dtype=np.float32)]
+    )
+    broken_res = FitRes(
+        status=Status(code=Code.OK, message=""),
+        parameters=params,
+        num_examples=100,
+        metrics={"cid": 0},  # no local_epochs key
+    )
+    with pytest.raises(KeyError, match="local_epochs"):
+        strat.aggregate_fit(
+            server_round=1,
+            results=[(MagicMock(), broken_res)],
+            failures=[],
+        )
+
+
 def test_cumulative_counters_track_across_rounds():
     """Cumulative counters should accumulate over rounds for diagnostics."""
     strat = StragglerDroppingFedAvg(

@@ -411,8 +411,23 @@ def main():
     if hasattr(history_obj, "metrics_distributed_fit"):
         for r, v in history_obj.metrics_distributed_fit.get("train_loss", []):
             train_loss_by_round[int(r)] = float(v)
+    # When --drop-stragglers is set, the strategy also emits per-round
+    # n_kept and n_dropped via aggregate_fit's returned metrics. Persist
+    # these so the history CSV records how many clients were filtered
+    # at each round — necessary for thesis-defensibility of the
+    # asymmetric protocol claim (cf. Li 2020 §5.2).
+    n_kept_by_round: Dict[int, int] = {}
+    n_dropped_by_round: Dict[int, int] = {}
+    if args.drop_stragglers and hasattr(history_obj, "metrics_distributed_fit"):
+        for r, v in history_obj.metrics_distributed_fit.get("n_kept", []):
+            n_kept_by_round[int(r)] = int(v)
+        for r, v in history_obj.metrics_distributed_fit.get("n_dropped", []):
+            n_dropped_by_round[int(r)] = int(v)
     for row in history_rows:
         row["train_loss"] = train_loss_by_round.get(int(row["round"]), float("nan"))
+        if args.drop_stragglers:
+            row["n_kept"]    = n_kept_by_round.get(int(row["round"]), -1)
+            row["n_dropped"] = n_dropped_by_round.get(int(row["round"]), -1)
 
     # --- Final test at best-val checkpoint ---
     # `return_predictions=True` keeps per-sample argmax + target arrays
