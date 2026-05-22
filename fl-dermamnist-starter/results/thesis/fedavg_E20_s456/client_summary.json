@@ -1,0 +1,6 @@
+{
+  "avg_client_balanced_accuracy": 0.2319707501338925,
+  "worst_client_balanced_accuracy": 0.0,
+  "best_worst_client_gap": 0.6717900211510582,
+  "client_balanced_accuracy_std": 0.28590511670144514
+}
