@@ -6,9 +6,9 @@
 #   - numpy_legacy_seed(...) usage in fl_flower/client.py
 #   - numpy_legacy_seed(...) usage in fl_flower/client_fednova.py
 #
-# This script resubmits only jobs that were missing, provenance-incomplete,
-# or known-broken in the synced local audit. It deliberately does NOT rerun
-# low-performing non-8675309 FedNova C2 jobs: those may be a real FedNova
+# This script resubmits only jobs that are still missing, provenance-incomplete,
+# or known-broken in the latest synced local audit. It deliberately does NOT
+# rerun low-performing non-8675309 FedNova C2 jobs: those may be a real FedNova
 # failure mode under extreme random stragglers, not a seed-overflow bug.
 set -euo pipefail
 
@@ -51,13 +51,16 @@ submit_fednova() {
 
 echo "Submitting required post-seed-fix recovery jobs..."
 
-# 1) Canonical Flower C0 baseline: missing jobs.
-submit_flower fedavg  0.0 8675309 mnist_dermnist/results/flower_C0_baseline "$PAIRED" "--log-update-norms"
-submit_flower fedprox "$MU" 8675309 mnist_dermnist/results/flower_C0_baseline "$PAIRED" "--log-update-norms"
-submit_flower fedprox "$MU" 161803  mnist_dermnist/results/flower_C0_baseline "$PAIRED" "--log-update-norms"
-submit_fednova 2024    mnist_dermnist/results/flower_C0_baseline uniform "--log-update-norms"
-submit_fednova 8675309 mnist_dermnist/results/flower_C0_baseline uniform "--log-update-norms"
-submit_fednova 161803  mnist_dermnist/results/flower_C0_baseline uniform "--log-update-norms"
+# 1) Canonical Flower C0 baseline is complete and valid. Only rerun these if
+# complete C0 update-norm CSVs are needed for a drift plot.
+if [[ "${RERUN_C0_NORMS:-0}" == "1" ]]; then
+  submit_flower fedavg  0.0 8675309 mnist_dermnist/results/flower_C0_baseline "$PAIRED" "--log-update-norms"
+  submit_flower fedprox "$MU" 8675309 mnist_dermnist/results/flower_C0_baseline "$PAIRED" "--log-update-norms"
+  submit_flower fedprox "$MU" 161803  mnist_dermnist/results/flower_C0_baseline "$PAIRED" "--log-update-norms"
+  submit_fednova 2024    mnist_dermnist/results/flower_C0_baseline uniform "--log-update-norms"
+  submit_fednova 8675309 mnist_dermnist/results/flower_C0_baseline uniform "--log-update-norms"
+  submit_fednova 161803  mnist_dermnist/results/flower_C0_baseline uniform "--log-update-norms"
+fi
 
 # 2) IID falsification: seed 8675309 broke under the old NumPy seed path.
 submit_flower fedavg  0.0 8675309 mnist_dermnist/results/iid "$IID"
@@ -78,7 +81,6 @@ submit_flower fedprox "$MU" 8675309 mnist_dermnist/results/dirichlet_a01 "$DIRIC
 FIXED_EXTRA="--straggler-epochs 5 --fixed-straggler-ids 5,6 --log-update-norms"
 submit_sys fedavg  0.0 8675309 mnist_dermnist/results/system_het_fixed fixed_stragglers "$FIXED_EXTRA"
 submit_sys fedavg  0.0 161803  mnist_dermnist/results/system_het_fixed fixed_stragglers "$FIXED_EXTRA"
-submit_sys fedprox "$MU" 42      mnist_dermnist/results/system_het_fixed fixed_stragglers "$FIXED_EXTRA"
 submit_sys fedprox "$MU" 999     mnist_dermnist/results/system_het_fixed fixed_stragglers "$FIXED_EXTRA"
 submit_sys fedprox "$MU" 2024    mnist_dermnist/results/system_het_fixed fixed_stragglers "$FIXED_EXTRA"
 submit_sys fedprox "$MU" 8675309 mnist_dermnist/results/system_het_fixed fixed_stragglers "$FIXED_EXTRA"
