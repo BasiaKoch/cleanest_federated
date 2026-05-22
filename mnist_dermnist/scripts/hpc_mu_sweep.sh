@@ -49,8 +49,14 @@ SEEDS=(42 123 456)
 
 cd "$REPO"
 
-if ! grep -q "numpy_legacy_seed" mnist_dermnist/fl/server_loop.py; then
-  echo "ERROR: HPC checkout missing seed-overflow fix in server_loop.py." >&2
+# Pure-PyTorch path uses dataloader_generator_seed (from seeding.py) but
+# NOT numpy_legacy_seed — server_loop.py does not call np.random.seed per
+# (round, cid), so the 32-bit mask is unnecessary on this path.
+# We sanity-check by verifying the seeding helper import is in place.
+if ! grep -q "from mnist_dermnist.fl.seeding import dataloader_generator_seed" \
+        mnist_dermnist/fl/server_loop.py; then
+  echo "ERROR: HPC checkout missing seeding.py import in server_loop.py." >&2
+  echo "Pull at least commit f6d0fd9 (the seeding refactor)." >&2
   exit 2
 fi
 if [ ! -f "$TPT" ]; then
