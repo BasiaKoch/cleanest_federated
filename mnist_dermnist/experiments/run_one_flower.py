@@ -48,7 +48,7 @@ from mnist_dermnist.fl.evaluation import evaluate
 from mnist_dermnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
 from mnist_dermnist.fl.system_het import SystemHetConfig, build_epoch_schedule
 from mnist_dermnist.fl_flower.client import FlClient, state_dict_to_numpy, numpy_to_state_dict
-from mnist_dermnist.models import DermMNISTCNN
+from mnist_dermnist.models import DermMNISTCNN, get_model, resolve_variant
 
 
 def _dir_a01(labels, seed=42):
@@ -107,6 +107,19 @@ def build_parser() -> argparse.ArgumentParser:
                     choices=["ce", "class_weighted_ce", "focal"],
                     default="ce")
     ap.add_argument("--focal-gamma", type=float, default=2.0)
+    # Architecture-normalization variant (architecture ablation).
+    # 'gn' (default) = DermMNISTCNN with GroupNorm — the headline.
+    # 'bn' = DermMNISTCNN_BN with BatchNorm — the FL-unfriendly ablation
+    #         that probes the BN-running-stats × non-IID interaction
+    #         (cf. Li et al. 2021 FedBN). Results saved with an
+    #         '_arch-bn' filename tag so they cannot be mixed with the
+    #         GN headline.
+    ap.add_argument("--model-variant",
+                    choices=["gn", "bn"],
+                    default="gn",
+                    help="Architecture-normalization variant: 'gn' = "
+                         "GroupNorm (headline, default), 'bn' = BatchNorm "
+                         "(architecture ablation; see runpod_arch_ablation_bn.sh).")
     # Mechanism diagnostic — writes client_update_norms_*.csv beside the JSON.
     ap.add_argument("--log-update-norms", action="store_true",
                     help="Capture per-(round, client) L2 update norm "
@@ -173,8 +186,13 @@ def main():
     )
 
     # --- Global model: initialise ONCE, deterministically, before clients ---
+    # Architecture variant is gated via --model-variant; default 'gn' is the
+    # headline DermMNISTCNN (GroupNorm). 'bn' selects DermMNISTCNN_BN for the
+    # architecture ablation (results go to a different output directory and
+    # filename tag, see _arch_tag below).
+    model_registry_key = resolve_variant(args.model_variant)
     torch.manual_seed(seed)  # ensure init is paired
-    global_model = DermMNISTCNN(num_classes=7, dropout=0.2).to(device)
+    global_model = get_model(model_registry_key, num_classes=7, dropout=0.2).to(device)
     initial_params = state_dict_to_numpy(global_model)
 
     # --- Tracking state for best-val checkpoint ---
@@ -195,7 +213,7 @@ def main():
     # --- Centralised evaluation function called every round by the server ---
     def evaluate_fn(server_round: int, parameters: List[np.ndarray], config):
         # Reconstruct model and evaluate on val
-        eval_model = DermMNISTCNN(num_classes=7, dropout=0.2).to(device)
+        eval_model = get_model(model_registry_key, num_classes=7, dropout=0.2).to(device)
         numpy_to_state_dict(eval_model, parameters)
         metrics = evaluate(eval_model, val_loader, device, num_classes=7)
 
@@ -322,7 +340,7 @@ def main():
             cid=cid_int,
             train_dataset=train,
             indices=client_indices[cid_int],
-            model_builder=lambda: DermMNISTCNN(num_classes=7, dropout=0.2),
+            model_builder=lambda: get_model(model_registry_key, num_classes=7, dropout=0.2),
             seed=seed,
             lr=args.lr,
             momentum=args.momentum,
@@ -367,7 +385,7 @@ def main():
     # `return_predictions=True` keeps per-sample argmax + target arrays
     # for downstream confusion-matrix analysis (audit P2 fix). They're
     # serialised to a sibling .npz, NOT inlined into the JSON.
-    test_model = DermMNISTCNN(num_classes=7, dropout=0.2).to(device)
+    test_model = get_model(model_registry_key, num_classes=7, dropout=0.2).to(device)
     numpy_to_state_dict(test_model, best_val_macro_f1["params"])
     test_metrics = evaluate(
         test_model, test_loader, device, num_classes=7,
@@ -388,7 +406,10 @@ def main():
     # produced under C=1.0 retain their existing names and don't break the
     # already-collected headline data.
     c_tag = "" if abs(args.fraction_fit - 1.0) < 1e-9 else f"_C{args.fraction_fit}"
-    stem = f"{args.algorithm}_mu{mu}_E{args.local_epochs}{sh_tag}{c_tag}_s{seed}"
+    # Architecture-variant tag — only emitted for non-default ('bn') so that
+    # the existing 'gn' headline filenames are unchanged for back-compat.
+    arch_tag = "" if args.model_variant == "gn" else f"_arch-{args.model_variant}"
+    stem = f"{args.algorithm}_mu{mu}_E{args.local_epochs}{sh_tag}{c_tag}{arch_tag}_s{seed}"
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
@@ -425,6 +446,11 @@ def main():
             "runner_script": "run_one_flower.py",
             "loss_type": args.loss_type,
             "focal_gamma": args.focal_gamma if args.loss_type == "focal" else None,
+            # Architecture-variant provenance (architecture ablation).
+            # 'gn' = headline DermMNISTCNN; 'bn' = DermMNISTCNN_BN ablation.
+            "model_variant": args.model_variant,
+            "model_name": model_registry_key,
+            "model_normalization": "GroupNorm" if args.model_variant == "gn" else "BatchNorm2d",
             "system_het": sh_cfg.to_dict(),
             "elapsed_s": elapsed,            # legacy field name
             "wall_clock_seconds": elapsed,   # canonical (audit fix)
