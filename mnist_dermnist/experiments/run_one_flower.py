@@ -48,6 +48,7 @@ from mnist_dermnist.fl.evaluation import evaluate
 from mnist_dermnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
 from mnist_dermnist.fl.system_het import SystemHetConfig, build_epoch_schedule
 from mnist_dermnist.fl_flower.client import FlClient, state_dict_to_numpy, numpy_to_state_dict
+from mnist_dermnist.fl_flower.strategy_straggler_dropping import StragglerDroppingFedAvg
 from mnist_dermnist.models import DermMNISTCNN, get_model, resolve_variant
 
 
@@ -120,6 +121,19 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Architecture-normalization variant: 'gn' = "
                          "GroupNorm (headline, default), 'bn' = BatchNorm "
                          "(architecture ablation; see runpod_arch_ablation_bn.sh).")
+    # Asymmetric straggler-handling protocol (Li et al. 2020 §5.2).
+    # When set, the server's FedAvg aggregation DROPS client updates
+    # whose reported local_epochs < E_max. This is the FedAvg side of
+    # the canonical FedProx evaluation: FedAvg discards γ-inexact
+    # updates while FedProx (which is unaffected by this flag) includes
+    # them via the proximal anchor's stability guarantee. Run FedAvg
+    # WITH this flag and FedProx WITHOUT it to reproduce Li 2020's
+    # 22% advantage on synthetic data (or its analogue on DermaMNIST).
+    ap.add_argument("--drop-stragglers", action="store_true",
+                    help="Drop straggler clients (local_epochs < E_max) "
+                         "from FedAvg aggregation. Implements Li et al. "
+                         "2020 §5.2 asymmetric protocol. Default off "
+                         "(both algorithms see identical client subsets).")
     # Mechanism diagnostic — writes client_update_norms_*.csv beside the JSON.
     ap.add_argument("--log-update-norms", action="store_true",
                     help="Capture per-(round, client) L2 update norm "
@@ -288,9 +302,21 @@ def main():
         }
 
     # --- Strategy: standard FedAvg aggregation (FedProx uses same aggregation;
-    #     the proximal term is applied client-side in fit()) ---
+    #     the proximal term is applied client-side in fit()).
+    #
+    # If --drop-stragglers is set AND we are running an algorithm where
+    # straggler dropping is meaningful (i.e., fedavg), wrap aggregation
+    # in StragglerDroppingFedAvg. The semantically-correct application
+    # of Li 2020 §5.2 is:
+    #     algorithm=fedavg  + --drop-stragglers    → drops stragglers
+    #     algorithm=fedprox + (no flag)            → keeps stragglers (γ-inexact)
+    # This is the canonical asymmetric-comparison protocol.
+    #
+    # If --drop-stragglers is set with algorithm=fedprox, we honor it
+    # (drops stragglers from FedProx aggregation too). This is rare but
+    # allows the symmetric-dropping comparison if a user wants it.
     n_fit = max(1, int(round(args.fraction_fit * num_clients)))
-    strategy = fl.server.strategy.FedAvg(
+    strategy_kwargs = dict(
         fraction_fit=float(args.fraction_fit),
         fraction_evaluate=0.0,  # we don't run per-client eval
         min_fit_clients=n_fit,
@@ -302,6 +328,13 @@ def main():
         fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
         accept_failures=False,
     )
+    if args.drop_stragglers:
+        strategy = StragglerDroppingFedAvg(
+            E_max=int(args.local_epochs),
+            **strategy_kwargs,
+        )
+    else:
+        strategy = fl.server.strategy.FedAvg(**strategy_kwargs)
 
     # --- Client factory passes per-(round, cid) local-epoch override
     #     through a custom config dict per-client. Flower's NumPyClient API
@@ -409,7 +442,9 @@ def main():
     # Architecture-variant tag — only emitted for non-default ('bn') so that
     # the existing 'gn' headline filenames are unchanged for back-compat.
     arch_tag = "" if args.model_variant == "gn" else f"_arch-{args.model_variant}"
-    stem = f"{args.algorithm}_mu{mu}_E{args.local_epochs}{sh_tag}{c_tag}{arch_tag}_s{seed}"
+    # Asymmetric-straggler-protocol tag — only when stragglers are dropped.
+    drop_tag = "_drop" if args.drop_stragglers else ""
+    stem = f"{args.algorithm}_mu{mu}_E{args.local_epochs}{sh_tag}{c_tag}{arch_tag}{drop_tag}_s{seed}"
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
@@ -451,6 +486,9 @@ def main():
             "model_variant": args.model_variant,
             "model_name": model_registry_key,
             "model_normalization": "GroupNorm" if args.model_variant == "gn" else "BatchNorm2d",
+            # Straggler-policy provenance (Li 2020 §5.2 protocol).
+            "drop_stragglers": bool(args.drop_stragglers),
+            "straggler_policy": "drop_below_E_max" if args.drop_stragglers else "include_all",
             "system_het": sh_cfg.to_dict(),
             "elapsed_s": elapsed,            # legacy field name
             "wall_clock_seconds": elapsed,   # canonical (audit fix)
