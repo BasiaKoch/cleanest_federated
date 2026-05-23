@@ -164,6 +164,21 @@ fixed at $E = 20$ local epochs, $R = 150$ communication rounds,
 learning rate $0.01$, momentum $0.9$, $\mu = 0.01$, and full
 participation $C = 1.0$.
 
+\paragraph{Proximal coefficient $\mu$.}
+The proximal coefficient $\mu = 0.01$ was chosen a~priori on the
+basis of Li et al.~(2020), where this value is reported as a robust
+default across their experimental matrix. A sparse exploratory check
+on a subset of seeds at $\mu \in \{0.001, 0.1\}$ (pure-PyTorch,
+engineered partition; $n = 1$ at $\mu = 0.001$, $n = 2$ at
+$\mu = 0.1$) is consistent with $\mu = 0.01$ being near the local
+optimum: $\mu = 0.1$ underperformed $\mu = 0.01$ on both seeds
+tested (mean decrement $-0.030$ macro-F1), while $\mu = 0.001$ was
+within $0.012$ macro-F1 of $\mu = 0.01$ on the single seed where
+both were evaluated. The sample sizes are too small for formal
+inference, so the $\mu = 0.01$ choice is reported as pre-registered
+rather than empirically optimised, but the available exploratory
+data do not contradict the literature default.
+
 Table~\ref{tab:headline-summary} reports the paired-seed inferential
 suite. The mean within-pair difference is
 $\Delta = +0.0267 \pm 0.0349$ (paired Wilcoxon signed-rank
