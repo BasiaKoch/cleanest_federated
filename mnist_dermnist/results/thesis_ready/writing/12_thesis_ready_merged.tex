@@ -89,10 +89,10 @@ under non-IID conditions.
 
 \tableofcontents
 \newpage
-\listoffigures
-\newpage
-\listoftables
-\newpage
+% \listoffigures   % commented out: see thesis README
+% \newpage
+% \listoftables    % commented out: float-package interaction
+% \newpage
 
 %==============================================================================
 \chapter{Introduction}\label{sec:intro}
@@ -928,13 +928,13 @@ and 2$\times$2 max-pooling; the final block replaces max-pooling with
 adaptive global average pooling. A fully connected head of
 $256 \to 128 \to 7$ with dropout~0.2 produces the class logits. The
 exact computational graph is:
-\begin{verbatim}
-Conv(3->32,   k=3, p=1) -> GN(g=4,  c=32)  -> ReLU -> MaxPool(2)
-Conv(32->64,  k=3, p=1) -> GN(g=8,  c=64)  -> ReLU -> MaxPool(2)
-Conv(64->128, k=3, p=1) -> GN(g=16, c=128) -> ReLU -> MaxPool(2)
-Conv(128->256,k=3, p=1) -> GN(g=16, c=256) -> ReLU -> AdaptiveAvgPool(1)
-Flatten -> Linear(256->128) -> ReLU -> Dropout(0.2) -> Linear(128->7)
-\end{verbatim}
+\begin{quote}\small\ttfamily\noindent
+Conv(3$\to$32,~k=3,~p=1) $\to$ GN(g=4,~c=32) $\to$ ReLU $\to$ MaxPool(2)\\
+Conv(32$\to$64,~k=3,~p=1) $\to$ GN(g=8,~c=64) $\to$ ReLU $\to$ MaxPool(2)\\
+Conv(64$\to$128,~k=3,~p=1) $\to$ GN(g=16,~c=128) $\to$ ReLU $\to$ MaxPool(2)\\
+Conv(128$\to$256,~k=3,~p=1) $\to$ GN(g=16,~c=256) $\to$ ReLU $\to$ AdaptiveAvgPool(1)\\
+Flatten $\to$ Linear(256$\to$128) $\to$ ReLU $\to$ Dropout(0.2) $\to$ Linear(128$\to$7)
+\end{quote}
 The use of \texttt{AdaptiveAvgPool2d((1, 1))} as the final spatial
 pooling allows the same architecture to accept inputs of any spatial
 size $\geq 28 \times 28$ without modification, which is used for the
@@ -1508,7 +1508,7 @@ mechanism prediction.
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F5_partition_distributions.pdf}
+\includegraphics[width=\textwidth]{F5_partition_distributions.pdf}
 \caption{Class distribution of the 7{,}007 DermaMNIST training samples
 across the seven simulated clients under each of the four
 statistical-heterogeneity partition designs. Each row is one client
@@ -1572,7 +1572,7 @@ upper bound's distance from federation.
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F1_headline_convergence.pdf}
+\includegraphics[width=\textwidth]{F1_headline_convergence.pdf}
 \caption{Headline convergence on the engineered partition (pure-PyTorch,
 $n = 10$ paired seeds, mean $\pm$ standard error of the mean).
 \textbf{Left:} validation macro-F1 over the 150 communication rounds
@@ -1588,7 +1588,7 @@ of centralised performance; FedAvg $\sim 86\%$.}
 \label{fig:headline-convergence}
 \end{figure}
 
-\input{tables/T01_headline_summary}
+\input{T01_headline_summary}
 
 \subsubsection{Per-class breakdown}
 \label{sec:per-class}
@@ -1613,11 +1613,11 @@ $\mathrm{F1} \approx 0.06$ by round 50 while FedProx has reached
 $\mathrm{F1} \approx 0.30$, whereas the nevi trajectories are
 essentially superimposed.
 
-\input{tables/T02_per_class_holm}
+\input{T02_per_class_holm}
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F2_per_class_convergence.pdf}
+\includegraphics[width=\textwidth]{F2_per_class_convergence.pdf}
 \caption{Per-class validation F1 over rounds (pure-PyTorch headline,
 $n = 10$ paired seeds, mean $\pm$ SEM). Melanoma (centre row, right)
 is the only class with a Holm-corrected statistically significant
@@ -1646,11 +1646,11 @@ each other --- under the Flower runtime, varying partition heterogeneity
 intensity does not systematically increase the FedProx advantage at
 $n = 10$ paired seeds.
 
-\input{tables/T04_partition_dose_response}
+\input{T04_partition_dose_response}
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F4_partition_convergence.pdf}
+\includegraphics[width=\textwidth]{F4_partition_convergence.pdf}
 \caption{Partition robustness on the Flower runtime ($n = 10$ paired
 seeds, mean $\pm$ SEM). Under the IID partition (top left) the two
 algorithms are visually indistinguishable from round $\sim 20$
@@ -1703,11 +1703,11 @@ isolation, floating-point non-associativity in aggregation, parameter
 serialisation round-trips) without claiming any one mechanism is
 demonstrated.
 
-\input{tables/T03_cross_runtime}
+\input{T03_cross_runtime}
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F3_cross_runtime_convergence.pdf}
+\includegraphics[width=\textwidth]{F3_cross_runtime_convergence.pdf}
 \caption{Cross-runtime convergence on the engineered partition
 ($n = 10$ paired seeds, mean $\pm$ SEM). Both the pure-PyTorch
 sequential loop (left, primary inferential analysis) and the Flower
@@ -1740,7 +1740,7 @@ not as ``federated training matches centralised'' but as ``federated
 FedProx closes a modest portion of the federation gap that federated
 FedAvg leaves open.''
 
-\input{tables/T05_federation_tax}
+\input{T05_federation_tax}
 
 \subsection{Summary and limitations of the statistical-heterogeneity arm}
 \label{sec:headline-limitations}
@@ -1876,7 +1876,7 @@ contrast and decompose the two effects per-seed.
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F6_system_het_schedules.pdf}
+\includegraphics[width=\textwidth]{F6_system_het_schedules.pdf}
 \caption{Per-(round, client) local-epoch schedules under the three
 system-heterogeneity conditions, reconstructed deterministically from
 seed~42 (the schedule is a deterministic function of the seed). Each
@@ -1920,7 +1920,7 @@ most beneficial under inexact local updates.
 Table~\ref{tab:system-het-headline} reports the within-condition (H1)
 and between-condition (H2) tests across the three conditions.
 
-\input{tables/T06_system_het_headline}
+\input{T06_system_het_headline}
 
 The mean within-pair difference rises monotonically across conditions:
 $\Delta_{C0} = +0.007$ at baseline, $\Delta_{C1} = +0.013$ under fixed
@@ -1952,7 +1952,7 @@ descriptive ordering of the $\Delta$ values.
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F7_system_het_convergence.pdf}
+\includegraphics[width=\textwidth]{F7_system_het_convergence.pdf}
 \caption{Validation macro-F1 trajectories under the three
 system-heterogeneity conditions (Flower runtime, $n = 10$ paired seeds,
 mean $\pm$ SEM). Panels~(a)--(c) compare FedAvg (mint green) and
@@ -1990,7 +1990,7 @@ threshold at $n = 10$, but the per-class evidence localises a
 clinically meaningful FedProx benefit specifically on the
 hardest minority class.
 
-\input{tables/T07_system_het_per_class}
+\input{T07_system_het_per_class}
 
 \subsection{Asymmetric straggler protocol and effect decomposition}
 \label{sec:asymmetric}
@@ -2019,7 +2019,7 @@ and
 $\Delta_{\text{proximal}} = M_{\text{FedProx, include}} - M_{\text{FedAvg, include}}$.
 Table~\ref{tab:asymmetric-decomposition} reports the three components.
 
-\input{tables/T09_asymmetric_decomposition}
+\input{T09_asymmetric_decomposition}
 
 The total effect $\Delta_{\text{total}} = +0.068$ (paired Wilcoxon
 $p = 0.002$, 10 of 10 seeds positive) is large and statistically
@@ -2063,7 +2063,7 @@ Table~\ref{tab:fednova-comparison} reports the within-condition
 contrasts; Figure~\ref{fig:system-het-convergence}d shows the
 convergence trajectories.
 
-\input{tables/T10_fednova_comparison}
+\input{T10_fednova_comparison}
 
 Under C0 (no system heterogeneity), FedNova performs comparably to
 FedAvg ($\Delta = -0.011$, $p = 0.16$) and is slightly outperformed by
@@ -2115,7 +2115,7 @@ stragglers improves performance) and are best read as evidence that
 the baseline-vs-condition differences are within the within-runtime
 seed-noise floor of $\sim 0.005$ macro-F1 at $n = 10$.
 
-\input{tables/T08_straggler_tolerance}
+\input{T08_straggler_tolerance}
 
 The substantively useful comparison in this table is between FedAvg
 and FedProx within each row: FedProx's $\rho$ is descriptively higher
@@ -2691,12 +2691,12 @@ mean test macro-F1 $= 0.562 \pm 0.006$). Extending to all 10 paired-seed
 headline seeds would let the federation tax be stated as a paired
 comparison against the federated means rather than as a descriptive
 contrast. Cost is trivial ($\sim$5~minutes per seed on A100):
-\begin{verbatim}
-for s in 789 999 2024 31337 8675309 161803 271828; do
-  sbatch mnist_dermnist/scripts/slurm_centralised.sh \
-    $s 50 mnist_dermnist/results/centralised
+\begin{quote}\small\ttfamily\noindent
+for s in 789 999 2024 31337 8675309 161803 271828; do\\
+\hspace*{2em}sbatch mnist\_dermnist/scripts/slurm\_centralised.sh \textbackslash\\
+\hspace*{4em}\$s 50 mnist\_dermnist/results/centralised\\
 done
-\end{verbatim}
+\end{quote}
 (Seeds 42, 123, 456 already complete.) When all 10 are done, update
 \texttt{tab:robustness} row~1 with $n = 10$ mean$\pm$SD and re-run the
 federation-tax narrative against the new mean.
@@ -2717,10 +2717,10 @@ mechanism-consistent evidence.
 
 When results land, use the following greps to locate every placeholder
 in this \texttt{.tex} file:
-\begin{verbatim}
-grep -n "TODOhpc"   09_overleaf_ready.tex   # all visible red markers
-grep -n "PENDING"   09_overleaf_ready.tex   # short-form placeholder
-\end{verbatim}
+\begin{quote}\small\ttfamily\noindent
+grep -n "TODOhpc"~~~09\_overleaf\_ready.tex~~~\# all visible red markers\\
+grep -n "PENDING"~~~09\_overleaf\_ready.tex~~~\# short-form placeholder
+\end{quote}
 Every \texttt{\textbackslash TODOhpc\{\ldots\}} call should be replaced
 with the actual number (e.g.\ \texttt{0.485 $\pm$ 0.018}) and the macro
 removed. Once all instances are gone, the
@@ -2737,14 +2737,17 @@ removed. Once all instances are gone, the
 \fi   % \ifshowtodo
 
 %==============================================================================
-% References — backed by references.bib (BibTeX-managed).
-% Build sequence (any TeX distribution):
-%   pdflatex 09_overleaf_ready
-%   bibtex   09_overleaf_ready
-%   pdflatex 09_overleaf_ready
-%   pdflatex 09_overleaf_ready
+% References — placeholder stub (TODO: replace with \bibliography{references}
+% and upload references.bib once citations are finalised).
+%
+% Using an empty thebibliography environment instead of \bibliography{references}
+% lets the document compile even without the .bib file present.  Existing
+% \citep{...} / \citet{...} calls throughout the document will show as ``[?]''
+% until the bibliography is populated, but the PDF will build cleanly.
 %==============================================================================
-\bibliographystyle{plainnat}
-\bibliography{references}
+\begin{thebibliography}{99}
+\bibitem{tba} References to be added; placeholder so the document compiles
+without \texttt{references.bib} uploaded.
+\end{thebibliography}
 
 \end{document}

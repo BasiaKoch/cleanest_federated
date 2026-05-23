@@ -1,0 +1,15 @@
+% T11 -- Best-vs-final-round (field-standard, auto-generated)
+\begin{table}[!htbp]
+\centering
+\caption{Peak vs final-round validation macro-F1 across the 150 communication rounds (pure-PyTorch headline, $n = 10$ paired seeds, engineered partition). The post-peak drop quantifies how much each algorithm overfits between its best and final round.}
+\label{tab:best-vs-final}
+\small
+\begin{tabular}{lccc}
+\toprule
+Algorithm & Peak val F1 & Final val F1 & Post-peak drop \\
+\midrule
+FedAvg  & $0.5188 \pm 0.0174$ & $0.4729 \pm 0.0335$ & $+0.0459 \pm 0.0357$ \\
+FedProx & \textbf{$0.5540 \pm 0.0271$} & \textbf{$0.5114 \pm 0.0415$} & $+0.0425 \pm 0.0339$ \\
+\bottomrule
+\end{tabular}
+\end{table}

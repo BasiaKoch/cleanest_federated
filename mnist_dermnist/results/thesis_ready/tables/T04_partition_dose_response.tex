@@ -1,16 +1,17 @@
+% T04 -- Partition robustness (field-standard, auto-generated)
 \begin{table}[!htbp]
 \centering
+\caption{Robustness across four DermaMNIST partition designs, all on the Flower simulation runtime with the same ten paired seeds. The IID partition is the theoretical-null condition; the other three impose progressively different forms of label and quantity skew. Values are mean $\pm$ SD across seeds; the winning algorithm per row is shown in bold.}
+\label{tab:partition-robustness}
 \small
-\caption{Statistical-heterogeneity partition robustness on the Flower runtime. \textbf{All comparisons except the headline are exploratory; $p$-values are reported descriptively and are not corrected for multiplicity.} The pure-PyTorch primary analysis (engineered partition, separate row) is the only inferential test.}
-\label{tab:partition-dose-response}
-\begin{tabular}{l c c c c c}
+\begin{tabular}{lcccc}
 \toprule
-Partition & FedAvg mean & FedProx mean & Mean $\Delta$ & $p$ & FedProx wins \\
+Partition & FedAvg & FedProx & $\Delta$ & Wins \\
 \midrule
-  IID (falsification)                 & $0.5853$ & $0.5785$ & $-0.0068$ & $0.375$ & 4/10 \\
-  Dirichlet $\alpha=0.1$              & $0.4796$ & $0.4875$ & $+0.0079$ & $0.322$ & 6/10 \\
-  Specialist (1-of-7)                 & $0.4365$ & $0.4446$ & $+0.0081$ & $0.492$ & 7/10 \\
-  Balanced paired (engineered)        & $0.4964$ & $0.5033$ & $+0.0069$ & $0.432$ & 7/10 \\
+IID (uniform random) & \textbf{$0.5853 \pm 0.0205$} & $0.5785 \pm 0.0204$ & $-0.0068$ & 4/10 \\
+Dirichlet $\alpha = 0.1$ & $0.4796 \pm 0.0355$ & \textbf{$0.4875 \pm 0.0341$} & $+0.0079$ & 6/10 \\
+Specialist (1-of-7) & $0.4365 \pm 0.0236$ & \textbf{$0.4446 \pm 0.0172$} & $+0.0081$ & 7/10 \\
+Balanced paired (engineered) & $0.4964 \pm 0.0150$ & \textbf{$0.5033 \pm 0.0206$} & $+0.0069$ & 7/10 \\
 \bottomrule
 \end{tabular}
 \end{table}

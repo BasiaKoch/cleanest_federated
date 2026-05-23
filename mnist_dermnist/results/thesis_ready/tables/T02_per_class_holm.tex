@@ -1,19 +1,20 @@
+% T02 -- Per-class test macro-F1 (field-standard, auto-generated)
 \begin{table}[!htbp]
 \centering
+\caption{Per-class test F1 on the engineered partition under the pure-PyTorch reference loop, reported as mean $\pm$ standard deviation across $n=10$ paired seeds. Class prevalence in the 7\,007-sample training set is shown in parentheses. The winning algorithm per class is shown in bold; $\Delta$ is the mean within-pair difference (FedProx $-$ FedAvg).}
+\label{tab:per-class}
 \small
-\caption{Per-class test F1 paired comparison (FedProx $-$ FedAvg) on the headline pure-PyTorch dataset. \textbf{Holm--Bonferroni-corrected $p$-values across 7 classes}; * indicates significance at family-wise $\alpha = 0.05$. Per-class tests are exploratory within the headline analysis.}
-\label{tab:per-class-holm}
-\begin{tabular}{l r c c c c c}
+\begin{tabular}{lccc}
 \toprule
-Class & Prev. & FedAvg F1 & FedProx F1 & $\Delta$ & $p_{\mathrm{raw}}$ & $p_{\mathrm{Holm}}$ \\
+Class (prevalence) & FedAvg & FedProx & $\Delta$ \\
 \midrule
-  Actinic keratoses         &  3.27\% & $0.404$ & $0.471$ & $+0.0674$ & $0.020$ & $0.117$  \\
-  Basal cell carcinoma      &  5.13\% & $0.475$ & $0.473$ & $-0.0014$ & $0.846$ & $1.000$  \\
-  Benign keratosis          & 10.97\% & $0.440$ & $0.444$ & $+0.0036$ & $0.695$ & $1.000$  \\
-  Dermatofibroma            &  1.15\% & $0.283$ & $0.296$ & $+0.0131$ & $0.922$ & $1.000$  \\
-  Melanoma                  & 11.11\% & $0.187$ & $0.301$ & $+0.1141$ & $0.006$ & $0.041$ $\bm{*}$ \\
-  Melanocytic nevi          & 67.05\% & $0.884$ & $0.886$ & $+0.0019$ & $0.375$ & $1.000$  \\
-  Vascular lesions          &  1.41\% & $0.698$ & $0.686$ & $-0.0118$ & $0.695$ & $1.000$  \\
+Actinic keratoses (3.27\%) & $0.404 \pm 0.111$ & \textbf{$0.471 \pm 0.040$} & $+0.067$ \\
+Basal cell carcinoma (5.13\%) & \textbf{$0.475 \pm 0.046$} & $0.473 \pm 0.027$ & $-0.001$ \\
+Benign keratosis (10.97\%) & $0.440 \pm 0.033$ & \textbf{$0.444 \pm 0.041$} & $+0.004$ \\
+Dermatofibroma (1.15\%) & $0.283 \pm 0.141$ & \textbf{$0.296 \pm 0.070$} & $+0.013$ \\
+Melanoma (11.11\%) & $0.187 \pm 0.101$ & \textbf{$0.301 \pm 0.026$} & $+0.114$ \\
+Melanocytic nevi (67.05\%) & $0.884 \pm 0.003$ & \textbf{$0.886 \pm 0.004$} & $+0.002$ \\
+Vascular lesions (1.41\%) & \textbf{$0.698 \pm 0.078$} & $0.686 \pm 0.043$ & $-0.012$ \\
 \bottomrule
 \end{tabular}
 \end{table}
