@@ -22,7 +22,7 @@
 %   - To hide all placeholders in a clean compile: \showtodofalse (line ~46).
 %   - To find every placeholder:  grep -n "TODOhpc" 09_overleaf_ready.tex
 %==============================================================================
-\documentclass[11pt,a4paper]{article}
+\documentclass[11pt,a4paper]{report}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -95,7 +95,7 @@ under non-IID conditions.
 \newpage
 
 %==============================================================================
-\section{Introduction}\label{sec:intro}
+\chapter{Introduction}\label{sec:intro}
 %==============================================================================
 
 Skin cancer is one of the most common malignancies worldwide, and
@@ -296,7 +296,7 @@ restates the calibrated thesis-level claim and \S\ref{sec:future}
 identifies concrete directions for follow-up work.
 
 %==============================================================================
-\section{Background}\label{sec:background}
+\chapter{Background}\label{sec:background}
 %==============================================================================
 This section fixes the federated optimisation problem statement used
 throughout the thesis, states the three algorithms under comparison in a
@@ -539,7 +539,7 @@ Submission script: \texttt{mnist\_dermnist/scripts/submit\_specialist\_partition
 (20 jobs, $\approx$25 GPU-h on A100).
 
 %==============================================================================
-\section{Related Work}\label{sec:related}
+\chapter{Related Work}\label{sec:related}
 %==============================================================================
 Three streams of work bear directly on the empirical comparison this thesis
 performs: the federated optimisation algorithms that the thesis evaluates, the
@@ -808,7 +808,7 @@ stragglers). The novelty is not the algorithms or the dataset; it is the
 combination, and the inferential discipline imposed on top.
 
 %==============================================================================
-\section{Experimental Setting}
+\chapter{Experimental Setting}
 %==============================================================================
 
 Figure~\ref{fig:pipeline} summarises the end-to-end pipeline. The
@@ -1394,13 +1394,11 @@ avoid multiple-comparison inflation; balanced accuracy and accuracy are
 reported descriptively.
 
 %==============================================================================
-%==============================================================================
-\section{Results}
-%==============================================================================
+\chapter{Results}
 
-This chapter reports the empirical findings of the two heterogeneity experiments. Section~\ref{sec:results-statistical-het} reports the statistical-heterogeneity arm: FedProx-vs-FedAvg paired comparison across four partition designs (engineered, IID, Dirichlet $\alpha = 0.1$, specialist), the cross-runtime sensitivity check, and the centralised-reference federation tax. Section~\ref{sec:results-system-het} reports the system-heterogeneity arm: paired comparisons under three straggler conditions, an asymmetric-protocol decomposition that separates the proximal regulariser's contribution from the partial-work-inclusion effect, and an exploratory FedNova comparison.
+This chapter reports the empirical findings of the two heterogeneity experiments. Section~\ref{sec:results-statistical-het} covers the statistical-heterogeneity arm (FedProx-vs-FedAvg paired comparison across four partition designs, cross-runtime sensitivity, and federation tax). Section~\ref{sec:results-system-het} covers the system-heterogeneity arm (three straggler conditions, the asymmetric-protocol decomposition, and the FedNova exploratory comparison).
 
-\subsection{Statistical Heterogeneity}
+\section{Statistical Heterogeneity}
 \label{sec:results-statistical-het}
 
 Statistical heterogeneity refers to differences in the data distributions
@@ -1427,7 +1425,7 @@ evaluated on the Flower simulation runtime as descriptive robustness
 analyses; the headline partition is also replicated on Flower for the
 cross-runtime sensitivity check (Section~\ref{sec:cross-runtime}).
 
-\subsubsection{Experimental design and partition motivation}
+\subsection{Experimental design and partition motivation}
 \label{sec:partition-designs}
 
 Each of the four partition designs corresponds to a specific question
@@ -1526,7 +1524,7 @@ class (melanocytic nevi) split across all seven clients.}
 \label{fig:partition-distributions}
 \end{figure}
 
-\subsubsection{Primary analysis: headline paired comparison}
+\subsection{Primary analysis: headline paired comparison}
 \label{sec:headline-result}
 
 The headline experiment runs the FedProx-vs-FedAvg paired comparison
@@ -1592,7 +1590,7 @@ of centralised performance; FedAvg $\sim 86\%$.}
 
 \input{tables/T01_headline_summary}
 
-\paragraph{Per-class breakdown}
+\subsubsection{Per-class breakdown}
 \label{sec:per-class}
 
 The per-class decomposition (Table~\ref{tab:per-class-holm}, paired
@@ -1631,7 +1629,7 @@ where inter-client drift exists.}
 \label{fig:per-class-convergence}
 \end{figure}
 
-\subsubsection{Robustness across partition designs}
+\subsection{Robustness across partition designs}
 \label{sec:partition-robustness}
 
 The three additional partitions (IID, Dirichlet $\alpha = 0.1$,
@@ -1676,7 +1674,7 @@ ordering is consistent with the pre-registered prediction: pairing
 amplifies the FedProx mechanism beyond what generic single-class
 specialisation produces.
 
-\subsubsection{Cross-runtime sensitivity}
+\subsection{Cross-runtime sensitivity}
 \label{sec:cross-runtime}
 
 The headline experiment is replicated on the Flower simulation runtime
@@ -1722,7 +1720,7 @@ paired seeds (see Table~\ref{tab:cross-runtime}).}
 \label{fig:cross-runtime-convergence}
 \end{figure}
 
-\subsubsection{Federation tax}
+\subsection{Federation tax}
 \label{sec:federation-tax}
 
 To anchor the absolute magnitudes, we additionally train a centralised
@@ -1744,7 +1742,7 @@ FedAvg leaves open.''
 
 \input{tables/T05_federation_tax}
 
-\subsubsection{Summary and limitations of the statistical-heterogeneity arm}
+\subsection{Summary and limitations of the statistical-heterogeneity arm}
 \label{sec:headline-limitations}
 
 \paragraph{Summary.}
@@ -1779,7 +1777,7 @@ effect size. Per-class tests beyond melanoma are exploratory; the
 melanoma result alone is the Holm-corrected positive cell in the
 multiplicity-controlled family.
 
-\subsection{System Heterogeneity}
+\section{System Heterogeneity}
 \label{sec:results-system-het}
 
 System heterogeneity refers to differences in the local computational
@@ -1820,7 +1818,7 @@ manipulation acts only on the algorithm via heterogeneous local-epoch
 budgets $\tau_i$. Following Li et al.~(2020)'s terminology is convenient
 but should not be read as a hardware claim.
 
-\subsubsection{Experimental design and condition motivation}
+\subsection{Experimental design and condition motivation}
 \label{sec:system-het-conditions}
 
 Three system-heterogeneity conditions are evaluated. The schedules are
@@ -1894,7 +1892,7 @@ $10.0$, verified across all ten seeds).}
 \label{fig:system-het-schedules}
 \end{figure}
 
-\subsubsection{Pre-registered hypotheses}
+\subsection{Pre-registered hypotheses}
 \label{sec:system-het-hypotheses}
 
 \paragraph{H1 (within-condition).}
@@ -1916,7 +1914,7 @@ per-test threshold $0.025$). A positive significant result would
 support the canonical FedProx claim that the proximal regulariser is
 most beneficial under inexact local updates.
 
-\subsubsection{Primary analysis: headline paired comparisons}
+\subsection{Primary analysis: headline paired comparisons}
 \label{sec:system-het-headline}
 
 Table~\ref{tab:system-het-headline} reports the within-condition (H1)
@@ -1968,7 +1966,7 @@ $\approx 0.50$ as both FedAvg and FedProx do under the same schedule.}
 \label{fig:system-het-convergence}
 \end{figure}
 
-\paragraph{Per-class breakdown under C2}
+\subsubsection{Per-class breakdown under C2}
 \label{sec:system-het-per-class}
 
 The per-class decomposition under C2
@@ -1994,7 +1992,7 @@ hardest minority class.
 
 \input{tables/T07_system_het_per_class}
 
-\subsubsection{Asymmetric straggler protocol and effect decomposition}
+\subsection{Asymmetric straggler protocol and effect decomposition}
 \label{sec:asymmetric}
 
 The H1/H2 tests above use a symmetric inclusion policy (both FedAvg
@@ -2052,7 +2050,7 @@ significant at $n = 10$; the decomposition therefore both confirms a
 proximal effect of the expected sign and right-sizes the magnitude of
 the contribution.
 
-\subsubsection{Exploratory FedNova comparison}
+\subsection{Exploratory FedNova comparison}
 \label{sec:fednova}
 
 FedNova (Wang et al.\ 2020) is the specialised competitor to FedProx
@@ -2102,7 +2100,7 @@ steps performs markedly worse than both FedAvg and FedProx in
 the only condition where its corrective machinery is supposed to
 apply.
 
-\subsubsection{Straggler-tolerance ratios}
+\subsection{Straggler-tolerance ratios}
 \label{sec:tolerance}
 
 To quantify each algorithm's robustness to system heterogeneity
@@ -2127,7 +2125,7 @@ rankings in Table~\ref{tab:system-het-headline} and with the
 predicted direction of the H2 contrast even though the formal H2 test
 does not reach significance.
 
-\subsubsection{Schedule sanity verification}
+\subsection{Schedule sanity verification}
 \label{sec:system-het-sanity}
 
 Before interpreting any of the system-heterogeneity results we
@@ -2159,7 +2157,7 @@ smaller in normalised aggregation. As noted in
 Section~\ref{sec:fednova}, this rescaling appears to be the operative
 mechanism in FedNova's catastrophic C2 collapse.
 
-\subsubsection{Summary and limitations of the system-heterogeneity arm}
+\subsection{Summary and limitations of the system-heterogeneity arm}
 \label{sec:system-het-summary}
 
 \paragraph{Summary.}
@@ -2224,7 +2222,7 @@ formula. Variants of FedNova that handle partial work via different
 normalisation schemes (e.g.\ FedNova-M with momentum correction) are
 not evaluated and may behave differently.
 
-\section{Discussion}
+\chapter{Discussion}
 %==============================================================================
 
 The convergence curves in Figures~\ref{fig:curves-main} and
@@ -2515,7 +2513,7 @@ sweep, or a one-time re-evaluation on the existing saved model
 checkpoints if those are retained).
 
 %==============================================================================
-\section{Hardware and Resource Limitations}\label{sec:hardware}
+\chapter{Hardware and Resource Limitations}\label{sec:hardware}
 %==============================================================================
 
 All experiments in this study were conducted on a single NVIDIA A100
@@ -2615,7 +2613,7 @@ NVIDIA A100 GPU on the CSD3 Ampere partition.}
 \end{table}
 
 %==============================================================================
-\section{Conclusion}\label{sec:conclusion}
+\chapter{Conclusion}\label{sec:conclusion}
 %==============================================================================
 % TODO Day 2: write Conclusion (~500 words). Restate the calibrated
 % thesis-level claim (FedProx improves macro-F1 over FedAvg under the
@@ -2626,7 +2624,7 @@ NVIDIA A100 GPU on the CSD3 Ampere partition.}
 % literature given the cross-runtime and aggregation-deviation caveats.
 
 %==============================================================================
-\section{Future Work}\label{sec:future}
+\chapter{Future Work}\label{sec:future}
 %==============================================================================
 % TODO Day 2: write Future Work (~500 words). Reorganise content
 % currently scattered across §Limitations and §Hardware. Concrete
@@ -2645,7 +2643,7 @@ NVIDIA A100 GPU on the CSD3 Ampere partition.}
 % \showtodofalse is set; otherwise it renders as a red-flagged checklist.
 %==============================================================================
 \ifshowtodo
-\section{Pending Items Before Final Submission}\label{sec:todo}
+\chapter{Pending Items Before Final Submission}\label{sec:todo}
 \textcolor{red}{\textbf{This appendix is internal. Delete or hide before
 final submission.}}
 
