@@ -1,0 +1,16 @@
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Cross-runtime comparison of the headline FedProx-FedAvg gap on the engineered partition. The pure-PyTorch (sequential) result is the pre-registered primary analysis; the Flower simulation is a replication. The Wilcoxon $p$ on the per-seed gap itself (third row) tests whether the two runtimes produce different paired-$\Delta$ values.}
+\label{tab:cross-runtime}
+\begin{tabular}{l c c c}
+\toprule
+Runtime & Mean $\Delta$ & 95\% Walsh CI & Wilcoxon $p$ \\
+\midrule
+Pure-PyTorch (primary)         & $+0.0267$ & $[+0.0021, +0.0528]$ & $\mathbf{0.020}$ \\
+Flower-simulation (replication) & $+0.0069$ & $[-0.0112, +0.0243]$ & $0.432$ \\
+\midrule
+Per-seed gap (PT $-$ Flower)    & $+0.0198$ & --- & $0.322$ \\
+\bottomrule
+\end{tabular}
+\end{table}

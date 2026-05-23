@@ -1,0 +1,17 @@
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Federation tax: federated macro-F1 vs the pure-PyTorch centralised upper bound (no FL, pooled training set). Percentages refer to recovery of the centralised mean.}
+\label{tab:federation-tax}
+\begin{tabular}{l c c}
+\toprule
+Setting & Test macro-F1 (mean $\pm$ SD) & \% of centralised \\
+\midrule
+  Centralised (pure-PyTorch, no FL)        & $0.5600 \pm 0.0240$ & 100.0\% \\
+  FedAvg, pure-PyTorch, engineered partition & $0.4814 \pm 0.0254$ & 86.0\% \\
+  FedProx, pure-PyTorch, engineered partition & $0.5081 \pm 0.0140$ & 90.7\% \\
+  FedAvg, Flower replication               & $0.4964 \pm 0.0150$ & 88.6\% \\
+  FedProx, Flower replication              & $0.5033 \pm 0.0206$ & 89.9\% \\
+\bottomrule
+\end{tabular}
+\end{table}
