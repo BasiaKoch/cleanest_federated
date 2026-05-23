@@ -1,0 +1,20 @@
+% T07 -- Per-class system-het breakdown (auto-generated)
+\begin{table}[!htbp]
+\centering
+\caption{Per-class test macro-F1 under C2 (random stragglers), paired Wilcoxon FedProx-vs-FedAvg with Holm--Bonferroni correction over the seven-class family. Melanoma is the single Holm-corrected significant class ($\Delta = +0.085$, $p_{\text{Holm}} = 0.014$, 10/10 wins).}
+\label{tab:system-het-per-class}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+Class & FedAvg & FedProx & $\Delta$ & wins & $p_{\text{raw}}$ & $p_{\text{Holm}}$ \\
+\midrule
+Actinic keratoses & $0.454 \pm 0.060$ & $0.481 \pm 0.038$ & $+0.026$ & 7/10 & 0.432 & 1.000 \\
+Basal cell carcinoma & $0.491 \pm 0.057$ & $0.497 \pm 0.023$ & $+0.005$ & 4/10 & 1.000 & 1.000 \\
+Benign keratosis & $0.428 \pm 0.066$ & $0.432 \pm 0.045$ & $+0.003$ & 4/10 & 1.000 & 1.000 \\
+Dermatofibroma & $0.255 \pm 0.065$ & $0.288 \pm 0.103$ & $+0.034$ & 6/10 & 0.426 & 1.000 \\
+Melanoma & $0.233 \pm 0.065$ & $0.318 \pm 0.058$ & $+0.085$ & 10/10 & \textbf{0.002} & \textbf{0.014} \\
+Melanocytic nevi & $0.884 \pm 0.005$ & $0.886 \pm 0.004$ & $+0.001$ & 7/10 & 0.557 & 1.000 \\
+Vascular lesions & $0.703 \pm 0.066$ & $0.670 \pm 0.039$ & $-0.033$ & 4/10 & 0.131 & 0.785 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,16 @@
+% T09 -- Asymmetric (Li 2020 §5.2) decomposition (auto-generated)
+\begin{table}[!htbp]
+\centering
+\caption{Asymmetric straggler protocol following Li et al.~(2020) §5.2: FedAvg drops straggler updates while FedProx includes them. The total effect decomposes per-seed into a partial-work inclusion effect $\Delta_{\text{include}}$ and a residual proximal effect $\Delta_{\text{proximal}}$, satisfying $\Delta_{\text{total}} = \Delta_{\text{include}} + \Delta_{\text{proximal}}$ exactly per seed (maximum identity error $< 10^{-10}$, $n = 10$ triple-paired seeds).}
+\label{tab:asymmetric-decomposition}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Component & mean $\pm$ SD & wins & $p$ & share of $\Delta_{\text{total}}$ \\
+\midrule
+$\Delta_{\text{total}}$ (FedProx incl.\ $-$ FedAvg drop) & $+0.0679 \pm 0.0175$ & 10/10 & \textbf{0.002} & --- \\
+$\Delta_{\text{include}}$ (FedAvg incl.\ $-$ FedAvg drop) & $+0.0505 \pm 0.0398$ & 9/10 & \textbf{0.006} & $74.3\%$ \\
+$\Delta_{\text{proximal}}$ (FedProx incl.\ $-$ FedAvg incl.) & $+0.0174 \pm 0.0403$ & 7/10 & 0.232 & $25.7\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}

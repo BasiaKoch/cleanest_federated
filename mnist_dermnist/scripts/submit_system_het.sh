@@ -8,7 +8,7 @@
 #
 #   C1 "fixed_stragglers"  — clients 5 and 6 always do E=5 (the rest do E=20).
 #                            Simpler design; client identities of stragglers
-#                            are deterministic. Inspired by Marija (2025) §3.8.4.
+#                            are deterministic.
 #   C2 "random_stragglers" — each round, 50% of clients are randomly designated
 #                            stragglers with E_i ~ Uniform[1, 19]; others do E=20.
 #                            Follows Li et al. (2020) §5.2 exactly.
