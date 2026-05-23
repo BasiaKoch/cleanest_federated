@@ -1,4 +1,4 @@
-"""Best-vs-last round bar chart, comparable to Marija (2025) Fig 3.7 right panel.
+"""Best-vs-last round bar chart.
 
 Two grouped bars per algorithm: peak val_macro_F1 vs final round val_macro_F1.
 Shows that FedProx maintains a higher plateau but post-peak drop is similar

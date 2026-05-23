@@ -13,10 +13,11 @@ We compute, for each seed and each algorithm:
 
 Then aggregate across 10 paired seeds with paired Wilcoxon p-values.
 
-Marija's thesis evaluates individual-client local models against a federated
-global model. Our setup uses a single global model evaluated once on the global
-test set; the per-client question therefore becomes: how well does the global
-model perform on the classes each specialty pair was responsible for?
+Some federated-learning evaluation protocols evaluate individual-client local
+models against the federated global model. Our setup uses a single global model
+evaluated once on the global test set; the per-client question therefore
+becomes: how well does the global model perform on the classes each specialty
+pair was responsible for?
 
 Reads:   mnist_dermnist/results/headline/test_at_best_*.json
 Writes:  thesis_ready/data/per_client_specialty.csv

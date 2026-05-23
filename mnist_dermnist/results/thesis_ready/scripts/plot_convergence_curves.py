@@ -1,7 +1,7 @@
-"""Convergence-curve plots — Marija-style multi-panel figures.
+"""Convergence-curve plots — multi-panel-style multi-panel figures.
 
-Produces 4 figures inspired by the visual style of Nedeljković (2025)
-§3.8 (Federated Learning Results):
+Produces 4 figures using a clean multi-panel layout suitable for
+federated-learning result reporting:
 
     F1: Headline convergence (3-panel horizontal)
         – val_macro_f1, val_loss, best-vs-final bar chart
@@ -27,10 +27,11 @@ Outputs to:
     results/thesis_ready/figures/F4_partition_convergence.{pdf,png}
 
 Visual style:
-    Marija-inspired palette — soft mint-green for FedAvg, dark blue for
+    comparable-thesis-inspired palette — soft mint-green for FedAvg, dark blue for
     FedProx, warm brown for FedNova, deep slate for centralised reference.
-    Mean ± SEM bands across 10 paired seeds (more rigorous than Marija's
-    single-seed plots, which had no error envelopes).
+    Mean ± SEM bands across 10 paired seeds (more rigorous than the
+    single-seed plots typical in MPhil-scale FL theses, which lack
+    error envelopes).
 
 Usage:
     python mnist_dermnist/results/thesis_ready/scripts/plot_convergence_curves.py
@@ -59,7 +60,7 @@ OUT_FIG.mkdir(parents=True, exist_ok=True)
 PAIRED_SEEDS = [42, 123, 456, 789, 999, 2024, 31337, 161803, 271828, 8675309]
 NUM_ROUNDS = 150
 
-# Marija-inspired palette
+# comparable-thesis-inspired palette
 COL_FEDAVG    = "#7FBF94"   # soft mint green
 COL_FEDPROX   = "#3D5A80"   # dark slate blue
 COL_FEDNOVA   = "#9C6644"   # warm brown
@@ -155,11 +156,11 @@ def plot_curve(ax, rounds, mean, sem, *, color, label):
 
 
 def annotate_panel(ax, title):
-    """Marija-style: title placed inside panel at top."""
+    """multi-panel-style: title placed inside panel at top."""
     ax.set_title(title, loc="left", fontweight="bold", pad=6)
 
 
-# ----- F1 : Headline convergence (Marija Fig 3.7-style) --------------------
+# ----- F1 : Headline convergence (3-panel horizontal layout) --------------------
 
 def fig_headline_convergence():
     """3-panel horizontal: val_macro_f1, val_loss, best/final bars."""
@@ -193,7 +194,7 @@ def fig_headline_convergence():
     ax.set_ylabel("Validation cross-entropy loss")
     ax.set_xlim(0, NUM_ROUNDS)
 
-    # Panel 3: Best vs Final bar chart (Marija's Fig 3.7 right panel)
+    # Panel 3: Best vs Final bar chart
     ax = axes[2]
     fa_test = test_best_macro_f1(head_dir, "fedavg",  "0.0")
     fp_test = test_best_macro_f1(head_dir, "fedprox", "0.01")
@@ -256,7 +257,7 @@ def fig_headline_convergence():
     plt.close(fig)
 
 
-# ----- F2 : Per-class convergence grid (Marija Fig 3.6-style) ------------
+# ----- F2 : Per-class convergence grid -------------------------------------
 
 def fig_per_class_convergence():
     """7-panel grid: per-class val_f1_class_<c> over rounds (FedAvg vs FedProx)."""
@@ -314,7 +315,7 @@ def fig_per_class_convergence():
     plt.close(fig)
 
 
-# ----- F3 : Cross-runtime convergence (Marija Fig 3.7-style) ---------------
+# ----- F3 : Cross-runtime convergence (3-panel horizontal layout) ---------------
 
 def fig_cross_runtime_convergence():
     """2-panel horizontal: PT vs Flower side-by-side on engineered partition."""
@@ -392,7 +393,7 @@ def fig_partition_convergence():
 
 def main():
     print("=" * 80)
-    print(" Convergence-curve plotting (Marija-style)")
+    print(" Convergence-curve plotting (multi-panel-style)")
     print(f" Output directory: {OUT_FIG}")
     print("=" * 80)
     fig_headline_convergence()

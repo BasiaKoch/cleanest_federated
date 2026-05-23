@@ -15,7 +15,7 @@ designs:
                          (the no-system-het baseline).
   - "fixed_stragglers":  a deterministic subset of clients are always slow,
                          performing E_straggler epochs instead of E_max.
-                         (Closer to Marija 2025 §3.8.4; predictable but
+                         (Simpler deterministic variant; predictable but
                          less realistic.)
   - "random_stragglers": every round, half of the participating clients are
                          randomly designated stragglers, with E_i drawn

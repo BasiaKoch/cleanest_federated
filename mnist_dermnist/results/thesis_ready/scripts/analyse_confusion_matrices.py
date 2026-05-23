@@ -9,11 +9,11 @@ headline (or any other) results directory and produces:
   2. A per-class precision/recall/F1 table aggregated across all
      paired seeds (CSV at `data/per_class_precision_recall.csv`).
 
-These outputs substitute for the qualitative segmentation panels in
-Marija's thesis: classification doesn't naturally produce visualisable
-predictions per sample, but the confusion matrix is the closest
-classification analogue — it shows where each algorithm misclassifies
-into which other classes.
+Classification does not naturally produce visualisable predictions
+per sample (unlike segmentation, which has predicted masks), but the
+confusion matrix is the closest classification analogue --- it shows
+where each algorithm misclassifies into which other classes and is
+the standard medical-classification visualisation.
 
 If no `.npz` prediction files exist (e.g., because the headline runs
 were produced before the prediction-saving infrastructure landed), the

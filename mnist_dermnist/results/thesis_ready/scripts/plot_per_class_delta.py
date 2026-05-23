@@ -5,9 +5,9 @@ bootstrap CI and significance annotations.
 This is the qualitative complement to Table~\\ref{tab:per-class}: at a
 glance, the reader sees on which classes FedProx wins and by how much,
 which classes are statistically supported under Holm correction, and
-which are noisy / negligible. Mirrors the function of Marija's
-qualitative segmentation panels (which a classification task cannot
-produce directly).
+which are noisy / negligible. Serves the same function as qualitative
+prediction panels in segmentation work (which a classification task
+cannot produce directly).
 
 Input: headline `test_at_best_*.json` files (loaded directly so the
 script does not depend on a separately-cached CSV).

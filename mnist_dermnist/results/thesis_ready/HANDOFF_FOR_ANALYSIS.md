@@ -309,7 +309,7 @@ Per-round val_macro_f1 mean ± SEM across 10 paired seeds. 4-panel: val macro-F1
 7-panel grid, one per class. Data source: `headline/history_*.csv` (val_f1_class_0 ... val_f1_class_6).
 
 #### B.3 4-point dose-response (NEW)
-X-axis: heterogeneity intensity (KL divergence). Y-axis: mean Δ ± paired CI. Points: IID, Dirichlet α=0.1, specialist, balanced_paired (all Flower n=10). Optionally add Marija's points as off-figure references.
+X-axis: heterogeneity intensity (KL divergence). Y-axis: mean Δ ± paired CI. Points: IID, Dirichlet α=0.1, specialist, balanced_paired (all Flower n=10).
 
 #### B.4 Update-norm mechanism plot (NEW — HIGH PRIORITY)
 Per-round mean ‖w_i^(t+1) − w^t‖₂ across seeds and clients, FedAvg vs FedProx. Data source: `client_update_norms_*.csv` files in any sweep that has `--log-update-norms` (all Flower C0, C1, C2 runs do).

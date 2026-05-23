@@ -1,9 +1,8 @@
 """Best-vs-last round comparison from existing 20 history CSVs.
 
-Inspired by Marija (2025) Figure 3.7 right panel: comparing each algorithm's
-performance at its peak round vs at the final round reveals overfitting
-dynamics. We compute this on validation macro-F1 (since test is only evaluated
-once per run at best-val, never at the final round).
+Comparing each algorithm's performance at its peak round vs at the final round
+reveals overfitting dynamics. We compute this on validation macro-F1 (since
+test is only evaluated once per run at best-val, never at the final round).
 
 For each run we compute:
     val_macro_F1 at peak round (the round chosen for test evaluation)
@@ -121,7 +120,7 @@ def main():
                                      "(more stable post-peak)",
         }
 
-    # Marija-style "best vs final" comparison table
+    # Best vs final comparison table
     print(f"\n{'algorithm':>10} | {'best round F1':>14} | {'final round F1':>15}")
     print("-" * 50)
     for algo in ["fedavg", "fedprox"]:

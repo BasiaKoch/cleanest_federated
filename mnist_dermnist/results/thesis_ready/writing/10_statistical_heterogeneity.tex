@@ -1,0 +1,387 @@
+% ==============================================================================
+% Statistical Heterogeneity in DermaMNIST Classification
+% ------------------------------------------------------------------------------
+% Drop-in section for the §Results chapter. Structure: motivation,
+% per-condition design and class-distribution description, results,
+% interpretation, summary.
+%
+% Required figures (in figures/):
+%   F5_partition_distributions.pdf  — class distribution heatmap (this section)
+%   F1_headline_convergence.pdf     — convergence curves (referenced)
+%   F3_cross_runtime_convergence.pdf — cross-runtime (referenced)
+%   F4_partition_convergence.pdf    — 4-partition convergence (referenced)
+%
+% Required tables (in tables/):
+%   T01_headline_summary.tex
+%   T02_per_class_holm.tex
+%   T03_cross_runtime.tex
+%   T04_partition_dose_response.tex
+%   T05_federation_tax.tex
+%
+% Usage in the main Overleaf file:
+%   \input{path/to/10_statistical_heterogeneity}
+% ==============================================================================
+
+\section{Statistical Heterogeneity}
+\label{sec:results-statistical-het}
+
+Statistical heterogeneity refers to differences in the data distributions
+that the participating clients hold locally. In the medical-imaging
+context this is the dominant source of non-i.i.d.\ behaviour: each
+institution sees a different case mix, and the resulting per-client
+class priors $p_i(y)$ diverge from the global prior $p(y)$. The proximal
+term in FedProx is theoretically motivated precisely by this regime
+(Li et al.\ 2020): when the local objectives $F_i$ disagree at the
+broadcast iterate $w^t$, the proximal anchor
+$(\mu/2)\lVert w - w^t \rVert^2$ damps client drift and the global
+update remains closer to the consensus that minimises the federated
+objective $F$.
+
+This section tests the FedProx-vs-FedAvg comparison under four
+distinct partition designs of DermaMNIST, each chosen to expose a
+different facet of label heterogeneity. We motivate each partition,
+visualise its class distribution, and report the paired-seed
+inferential and descriptive results separately. The headline
+\texttt{balanced\_paired\_7\_clients} partition is the pre-registered
+primary analysis, run on the pure-PyTorch reference loop. The three
+other partitions (IID, Dirichlet $\alpha = 0.1$, specialist) are
+evaluated on the Flower simulation runtime as descriptive robustness
+analyses; the headline partition is also replicated on Flower for the
+cross-runtime sensitivity check (Section~\ref{sec:cross-runtime}).
+
+\subsection{Experimental design and partition motivation}
+\label{sec:partition-designs}
+
+Each of the four partition designs corresponds to a specific question
+about the FedProx mechanism. The class-distribution visualisations are
+shown in Figure~\ref{fig:partition-distributions}.
+
+\paragraph{IID partition (Figure~\ref{fig:partition-distributions}a) ---
+falsification check.}
+Each of the seven clients receives a uniform random sample of $\sim
+1001$ training images drawn i.i.d.\ from the global DermaMNIST pool.
+The per-client class distribution mirrors the global distribution
+exactly in expectation, with the majority class (melanocytic nevi,
+67\%) appearing in every client at proportional volume. Under this
+partition the local objectives $F_i$ are i.i.d.\ samples of the same
+underlying distribution; their gradients at any $w^t$ are unbiased
+estimators of $\nabla F(w^t)$ and the bounded-dissimilarity assumption
+of Li et al.~(2020) is satisfied in the limit. The proximal anchor
+therefore has no client drift to constrain, and FedProx is predicted to
+provide no advantage over FedAvg ($\Delta \approx 0$). A statistically
+significant positive $\Delta$ under IID would \emph{falsify} the
+drift-control mechanism interpretation; the IID arm thus functions as
+a null-condition probe of the broader thesis claim.
+
+\paragraph{Dirichlet $\alpha = 0.1$ partition
+(Figure~\ref{fig:partition-distributions}b) --- literature-standard
+non-i.i.d.}
+The Dirichlet-partitioning protocol of Hsu et al.~(2019) is the
+de-facto standard for synthetic non-i.i.d.\ benchmarking in federated
+learning. For each class $c$ a vector
+$\mathbf{q}_c \sim \mathrm{Dir}_7(\alpha \mathbf{1})$ is drawn and the
+class-$c$ samples are allocated to the seven clients in proportions
+$q_{c,1}, \dots, q_{c,7}$. The concentration parameter $\alpha = 0.1$
+produces highly skewed per-client priors: in the realisation shown,
+client~6 receives 3{,}721 samples (mostly nevi, $n = 3{,}538$) while
+client~4 receives only 91 (chiefly basal-cell carcinoma, $n = 78$).
+This partition combines label skew with severe quantity skew --- the
+two axes of statistical heterogeneity introduced in
+Kairouz et al.~(2021) --- and is the regime in which most of the
+non-i.i.d.\ FL benchmarks report FedAvg degradation. Including it in
+the experimental matrix demonstrates that the headline result is not
+specific to our engineered partition.
+
+\paragraph{Specialist partition (Figure~\ref{fig:partition-distributions}c)
+--- singleton ownership, pairing-lever check.}
+Every minority class is assigned to exactly one client; the majority
+class (melanocytic nevi) is split across all seven clients with
+unequal shares chosen so that the per-client sample counts $n_i$ match
+the engineered balanced-paired partition exactly
+($n_i \in \{673, 963, 964, 1094, 1095, 1108, 1110\}$). The specialist
+design isolates the \emph{paired-co-training} feature from a generic
+label-skew effect: under the engineered partition every minority
+class is held by two clients (which must drift apart during local SGD
+and be reconciled at aggregation), whereas under the specialist
+partition each minority class is held by exactly one client (no
+inter-client drift exists for the proximal anchor to reconcile on that
+class). The contrast between the two partitions therefore isolates
+the structural mechanism that the proximal anchor is hypothesised to
+exploit. This pre-registered counterfactual is the strongest defence
+against the engineered-partition critique discussed in
+Section~\ref{sec:headline-limitations}.
+
+\paragraph{Balanced paired partition (Figure~\ref{fig:partition-distributions}d)
+--- engineered mechanism experiment (headline).}
+The headline partition is engineered to satisfy three desiderata
+simultaneously: (i) every minority class is held by exactly two
+clients, creating co-trained drifting pairs that the proximal anchor
+must reconcile; (ii) the majority class melanocytic nevi is held by
+all seven clients (it provides a within-experiment per-class control
+where the proximal anchor cannot help, against which the
+minority-class effects can be compared); and (iii) per-client sample
+counts $n_i$ are within a $1.65 \times$ range
+($\{673, 963, 964, 1094, 1095, 1108, 1110\}$) so that quantity skew is
+mild and the label-skew axis is isolated. Three of seven clients
+co-train on \emph{actinic keratoses + basal cell carcinoma}, two on
+\emph{benign keratosis + dermatofibroma}, two on \emph{melanoma +
+vascular lesions}; one client holds only nevi. This composition is
+the unique partition (up to permutation of client identifiers) that
+satisfies all three desiderata and supports a clean per-class
+mechanism prediction.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/F5_partition_distributions.pdf}
+\caption{Class distribution of the 7{,}007 DermaMNIST training samples
+across the seven simulated clients under each of the four
+statistical-heterogeneity partition designs. Each row is one client
+(C0--C6); each column is one of the seven DermaMNIST classes. Cell
+colour shows the number of training samples on a
+$\log(1 + \mathrm{count})$ scale; integer counts are annotated inside
+each cell. Per-client total $n$ is shown in the row label. The IID
+partition is uniform; Dirichlet $\alpha = 0.1$ produces severe label
+plus quantity skew; the specialist partition assigns each minority
+class to exactly one client; the engineered balanced-paired partition
+assigns each minority class to exactly two clients with the majority
+class (melanocytic nevi) split across all seven clients.}
+\label{fig:partition-distributions}
+\end{figure}
+
+\subsection{Primary analysis: headline paired comparison}
+\label{sec:headline-result}
+
+The headline experiment runs the FedProx-vs-FedAvg paired comparison
+on the engineered \texttt{balanced\_paired\_7\_clients} partition
+through the pure-PyTorch sequential reference loop. The protocol uses
+ten paired seeds $\{42, 123, 456, 789, 999, 2024, 31337, 161803,
+271828, 8675309\}$, with identical partition, identical initial
+weights, identical per-(round, client) dataloader RNG, and identical
+optimiser state at $\mu = 0$ across the two algorithms. Within-pair
+differences therefore reflect only the algorithmic difference (the
+gated proximal term), not random-state divergence. Hyperparameters are
+fixed at $E = 20$ local epochs, $R = 150$ communication rounds,
+learning rate $0.01$, momentum $0.9$, $\mu = 0.01$, and full
+participation $C = 1.0$.
+
+Table~\ref{tab:headline-summary} reports the paired-seed inferential
+suite. The mean within-pair difference is
+$\Delta = +0.0267 \pm 0.0349$ (paired Wilcoxon signed-rank
+two-sided $p = 0.020$; exact Walsh-average 95\% CI
+$[+0.002, +0.053]$; Hodges--Lehmann estimator $+0.022$; FedProx wins
+9 of 10 paired seeds). The result is robust to leave-one-out
+re-sampling: all 10 LOSO subsamples remain significant at
+$\alpha = 0.05$. The Walsh-average lower confidence bound
+($+0.002$) approaches the pre-registered smallest effect of interest
+$\mathrm{SES} = 0.01$ but excludes zero. We therefore report the
+headline result as a \emph{small but statistically supported}
+FedProx advantage; the effect is not negligible relative to the SES
+but neither is it large in absolute terms compared to the centralised
+upper bound's distance from federation.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/F1_headline_convergence.pdf}
+\caption{Headline convergence on the engineered partition (pure-PyTorch,
+$n = 10$ paired seeds, mean $\pm$ standard error of the mean).
+\textbf{Left:} validation macro-F1 over the 150 communication rounds
+shows FedProx (dark slate blue) maintaining a higher trajectory than
+FedAvg (mint green) from round $\sim 10$ onwards.
+\textbf{Centre:} validation cross-entropy loss; both algorithms
+exhibit overfitting after round $\sim 30$ but FedProx's loss remains
+$0.10$--$0.18$ below FedAvg's throughout late training.
+\textbf{Right:} test macro-F1 at the best-validation checkpoint (solid)
+and at the final round (hatched), with the centralised pure-PyTorch
+reference (deep navy) shown for context. FedProx recovers $\sim 91\%$
+of centralised performance; FedAvg $\sim 86\%$.}
+\label{fig:headline-convergence}
+\end{figure}
+
+\input{tables/T01_headline_summary}
+
+\subsubsection{Per-class breakdown}
+\label{sec:per-class}
+
+The per-class decomposition (Table~\ref{tab:per-class-holm}, paired
+Wilcoxon with Holm--Bonferroni correction over the family of seven
+classes) localises where the FedProx advantage arises. Only the
+melanoma class survives multiplicity correction at family-wise
+$\alpha = 0.05$ ($\Delta = +0.114$, $p_{\mathrm{Holm}} = 0.041$);
+actinic keratoses is the next closest ($\Delta = +0.067$,
+$p_{\mathrm{raw}} = 0.020$, $p_{\mathrm{Holm}} = 0.117$) but loses
+significance after correction. The clinically critical melanoma class
+is therefore the single per-class anchor of the headline result. The
+majority class melanocytic nevi shows essentially no effect
+($\Delta = +0.002$, $p_{\mathrm{Holm}} = 1.000$) --- the partition
+holds nevi in every client, so no inter-client drift exists on this
+class for the proximal anchor to reconcile. The per-class
+trajectories (Figure~\ref{fig:per-class-convergence}) confirm the same
+pattern visually: the largest mid-training gaps occur on melanoma
+(panel E) where FedAvg fails to learn the class beyond
+$\mathrm{F1} \approx 0.06$ by round 50 while FedProx has reached
+$\mathrm{F1} \approx 0.30$, whereas the nevi trajectories are
+essentially superimposed.
+
+\input{tables/T02_per_class_holm}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/F2_per_class_convergence.pdf}
+\caption{Per-class validation F1 over rounds (pure-PyTorch headline,
+$n = 10$ paired seeds, mean $\pm$ SEM). Melanoma (centre row, right)
+is the only class with a Holm-corrected statistically significant
+within-pair $\Delta$. The majority class melanocytic nevi (centre,
+middle), held by every client in the engineered partition, shows
+essentially no FedProx benefit --- consistent with the partition
+design's mechanism prediction that the proximal anchor can only act
+where inter-client drift exists.}
+\label{fig:per-class-convergence}
+\end{figure}
+
+\subsection{Robustness across partition designs}
+\label{sec:partition-robustness}
+
+The three additional partitions (IID, Dirichlet $\alpha = 0.1$,
+specialist) are run on the Flower simulation runtime and reported
+descriptively in Table~\ref{tab:partition-dose-response}. None of the
+four Flower-runtime per-partition contrasts reaches $\alpha = 0.05$
+in our sample. The IID partition has the smallest (and slightly
+negative) mean $\Delta = -0.007$, consistent with the theoretical
+prediction that the proximal anchor has nothing to constrain when
+local objectives are i.i.d.\ samples of the same distribution.
+Dirichlet $\alpha = 0.1$ ($+0.008$), specialist ($+0.008$), and the
+engineered partition ($+0.007$) cluster within a $\pm 0.005$ band of
+each other --- under the Flower runtime, varying partition heterogeneity
+intensity does not systematically increase the FedProx advantage at
+$n = 10$ paired seeds.
+
+\input{tables/T04_partition_dose_response}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/F4_partition_convergence.pdf}
+\caption{Partition robustness on the Flower runtime ($n = 10$ paired
+seeds, mean $\pm$ SEM). Under the IID partition (top left) the two
+algorithms are visually indistinguishable from round $\sim 20$
+onwards, consistent with the theoretical null prediction. Under
+Dirichlet $\alpha = 0.1$, specialist, and engineered balanced-paired
+partitions, FedProx maintains a modest visible advantage of order
+$0.01$--$0.02$ macro-F1 throughout training, although none of the
+per-partition paired Wilcoxon contrasts reaches $\alpha = 0.05$ at
+$n = 10$.}
+\label{fig:partition-convergence}
+\end{figure}
+
+The pre-registered specialist counterfactual (cf.\
+Section~\ref{sec:partition-designs}) finds that the specialist
+partition's $\Delta$ ($+0.008$) is descriptively smaller than the
+engineered partition's ($+0.027$ pure-PyTorch, $+0.007$ Flower).
+Direct seed-paired comparison across the two partitions is not
+applicable because the partitions differ in client--class assignment
+(although the per-client $n_i$ are matched), but the descriptive
+ordering is consistent with the pre-registered prediction: pairing
+amplifies the FedProx mechanism beyond what generic single-class
+specialisation produces.
+
+\subsection{Cross-runtime sensitivity}
+\label{sec:cross-runtime}
+
+The headline experiment is replicated on the Flower simulation runtime
+on the same engineered partition with the same ten paired seeds. The
+two runtimes implement bit-equivalent local objectives at $\mu = 0$
+(verified by the cross-runtime equivalence sweep in
+Section~\ref{sec:equivalence-check}) and use identical hyperparameters.
+Under the pure-PyTorch runtime the within-pair difference is
+$\Delta_{\mathrm{PT}} = +0.027$ (paired Wilcoxon $p = 0.020$); under
+the Flower runtime it is $\Delta_{\mathrm{Flower}} = +0.007$
+(paired Wilcoxon $p = 0.432$); the across-seed mean difference is
+therefore $\sim 0.020$ smaller under Flower.
+
+However, the per-seed gap is \emph{not} consistent across the ten
+seeds: five seeds show $\Delta_{\mathrm{PT}} > \Delta_{\mathrm{Flower}}$
+and five show $\Delta_{\mathrm{Flower}} \ge \Delta_{\mathrm{PT}}$,
+and the paired Wilcoxon test on the gap itself yields $p = 0.32$.
+Table~\ref{tab:cross-runtime} reports the two single-runtime tests
+side by side together with the per-seed gap inference. The
+cross-runtime attenuation is therefore a mean-level descriptive
+observation, not a per-seed-consistent systematic effect; we describe
+it as a cautionary reproducibility observation rather than as a
+formal methodological finding. Section~\ref{sec:discussion-runtime}
+discusses the plausible sources of seed-level variance (Ray-actor
+isolation, floating-point non-associativity in aggregation, parameter
+serialisation round-trips) without claiming any one mechanism is
+demonstrated.
+
+\input{tables/T03_cross_runtime}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/F3_cross_runtime_convergence.pdf}
+\caption{Cross-runtime convergence on the engineered partition
+($n = 10$ paired seeds, mean $\pm$ SEM). Both the pure-PyTorch
+sequential loop (left, primary inferential analysis) and the Flower
+simulation runtime (right, descriptive replication) show FedProx
+maintaining a higher trajectory than FedAvg throughout training. The
+across-seed mean within-pair gap is descriptively larger under
+pure-PyTorch ($+0.027$) than under Flower ($+0.007$), but the per-seed
+analysis shows the runtime-gap is not consistent across the ten
+paired seeds (see Table~\ref{tab:cross-runtime}).}
+\label{fig:cross-runtime-convergence}
+\end{figure}
+
+\subsection{Federation tax}
+\label{sec:federation-tax}
+
+To anchor the absolute magnitudes, we additionally train a centralised
+non-federated reference on the pooled 7{,}007-sample training set
+under the same architecture, optimiser, and evaluation protocol.
+Table~\ref{tab:federation-tax} reports test macro-F1 for the
+centralised reference and for the four FL configurations at the
+matched ten paired seeds. The centralised mean
+$0.560 \pm 0.024$ is the upper bound. Pure-PyTorch FedAvg recovers
+$86.0\%$ of centralised performance and pure-PyTorch FedProx
+$90.7\%$; Flower FedAvg recovers $88.6\%$ and Flower FedProx $89.9\%$.
+The within-runtime gap between FedAvg and FedProx ($\sim 4.7$ percentage
+points pure-PyTorch, $\sim 1.3$ percentage points Flower) is small
+relative to the federation tax itself ($\sim 9$--$14$ percentage
+points). The headline FedProx advantage is therefore best understood
+not as ``federated training matches centralised'' but as ``federated
+FedProx closes a modest portion of the federation gap that federated
+FedAvg leaves open.''
+
+\input{tables/T05_federation_tax}
+
+\subsection{Summary and limitations of the statistical-heterogeneity arm}
+\label{sec:headline-limitations}
+
+\paragraph{Summary.}
+The pre-registered primary analysis on the engineered
+\texttt{balanced\_paired\_7\_clients} partition under pure-PyTorch
+yields a statistically supported FedProx advantage
+($\Delta = +0.027$, paired Wilcoxon $p = 0.020$, Walsh 95\% CI
+$[+0.002, +0.053]$, LOSO 10/10) that is, at the per-class level,
+attributable to a Holm-corrected significant improvement on the
+melanoma class ($\Delta = +0.114$, $p_{\mathrm{Holm}} = 0.041$).
+Three robustness analyses on alternative partition designs (IID,
+Dirichlet $\alpha = 0.1$, specialist) and one cross-runtime
+replication (Flower simulation on the engineered partition) are
+descriptively consistent with the headline direction --- all five
+Flower-runtime mean $\Delta$ values are non-negative, and the IID
+partition's slightly negative descriptive $\Delta$ matches the
+theoretical null prediction --- but none of the four Flower-runtime
+per-condition tests reach $\alpha = 0.05$ at $n = 10$ paired seeds.
+
+\paragraph{Limitations.}
+The headline partition is engineered to maximise the proximal-anchor
+mechanism; its external validity to real multi-institutional cohorts
+is unestablished and explicit. The cross-runtime gap, while large in
+the across-seed mean, is not consistent at the per-seed level and is
+therefore reported as a cautionary observation rather than a
+systematic methodological effect. The Flower-runtime descriptive
+$\Delta$ values cluster near the pre-registered smallest effect of
+interest of $0.01$ macro-F1 and would require a larger paired-seed
+sample (estimated $n \gtrsim 30$ on the basis of the observed within-
+seed standard deviation) to reach formal significance at the matched
+effect size. Per-class tests beyond melanoma are exploratory; the
+melanoma result alone is the Holm-corrected positive cell in the
+multiplicity-controlled family.
