@@ -1,0 +1,68 @@
+{
+  "loss": 0.8008524763019305,
+  "accuracy": 0.7391521197007481,
+  "balanced_accuracy": 0.4324085106932071,
+  "macro_f1": 0.4284421439652804,
+  "per_class_f1": [
+    0.44755244755244755,
+    0.4928909952606635,
+    0.08658008658008658,
+    0.08333333333333333,
+    0.37922077922077924,
+    0.8761840324763194,
+    0.6333333333333333
+  ],
+  "n": 2005,
+  "selected_round": 136,
+  "best_val_macro_f1": 0.4369775120632088,
+  "seed": 123,
+  "algorithm": "fedprox",
+  "mu": 1.0,
+  "num_rounds": 150,
+  "local_epochs": 20,
+  "fraction_fit": 1.0,
+  "lr": 0.01,
+  "momentum": 0.9,
+  "weight_decay": 0.0,
+  "batch_size": 32,
+  "num_classes": 7,
+  "device": "cuda",
+  "system_het": {
+    "mode": "uniform",
+    "E_max": 20,
+    "E_straggler": 5,
+    "fixed_straggler_ids": null,
+    "random_straggler_fraction": 0.5,
+    "random_straggler_min_epochs": 1,
+    "random_straggler_max_epochs": null
+  },
+  "loss_type": "ce",
+  "focal_gamma": 2.0,
+  "log_update_norms": false,
+  "system_het_schedule_summary": {
+    "shape": [
+      150,
+      7
+    ],
+    "mean_epochs_per_client_round": 20.0,
+    "min_epochs": 20,
+    "max_epochs": 20,
+    "per_client_mean_epochs": [
+      20.0,
+      20.0,
+      20.0,
+      20.0,
+      20.0,
+      20.0,
+      20.0
+    ],
+    "frac_straggler_rounds": 0.0
+  },
+  "partition": "balanced_paired_7_clients",
+  "image_size": 28,
+  "npz_path": "/home/bk489/federated_clean/cleanest_federated/dermamnist_64.npz",
+  "framework": "pure-pytorch",
+  "framework_version": null,
+  "runner_script": "run_one.py",
+  "predictions_file": "test_predictions_fedprox_mu1.0_E20_s123.npz"
+}
