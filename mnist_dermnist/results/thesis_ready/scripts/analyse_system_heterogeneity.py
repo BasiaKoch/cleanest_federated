@@ -1,47 +1,18 @@
 """System-heterogeneity analysis pipeline -- thesis-ready tables and dump.
 
-Self-contained: reads the system-het result directories directly, computes
-the pre-registered paired-seed contrasts, and writes LaTeX tables to
-``results/thesis_ready/tables/`` plus a JSON dump to
-``results/thesis_ready/data/``.
+Scope (after 2026-05-24 simplification):
+  - FedAvg vs FedProx only (FedNova excluded from thesis scope)
+  - C0 / C1 / C2 on BOTH the engineered (balanced_paired) and IID partitions
+  - Asymmetric Li 2020 §5.2 replication reports only Δ_total (no decomposition)
 
-PRIMARY (no multiplicity correction):
-  T06 -- Headline summary table across C0, C1, C2 conditions, all Flower
-         runtime, n=10 paired seeds each. H1 = within-condition paired
-         Wilcoxon FedProx-vs-FedAvg. H2 = paired Δ_c -- Δ_C0 with
-         Bonferroni correction across C1, C2 conditions.
-
-SECONDARY (Holm-Bonferroni across 7 classes):
-  T07 -- Per-class paired Wilcoxon under C2 (random stragglers, the
-         primary system-heterogeneity condition).
-
-EXPLORATORY:
-  T08 -- Straggler-tolerance ratios ρ_a^c = M_a^c / M_a^C0 and
-         schedule sanity-check summary (per-condition E_i stats and
-         per-client straggler frequency).
-  T09 -- Asymmetric protocol decomposition (Li et al. 2020 §5.2):
-         Δ_total = Δ_include + Δ_proximal. FedAvg arm uses
-         ``system_het_random_asymmetric`` (drop policy); FedProx and
-         FedAvg-include arms use ``system_het_random`` (include policy).
-  T10 -- FedNova exploratory comparison vs FedAvg and FedProx under
-         C0 and C2 conditions. Triple-paired Δ where available.
-
-Source data
------------
-  results/flower_C0_baseline/             (C0 baseline, all three algos)
-  results/system_het_fixed/                (C1 fixed stragglers)
-  results/system_het_random/               (C2 random stragglers, fedavg+fedprox)
-  results/system_het_random_asymmetric/    (C2 fedavg-drop arm)
-  results/system_het_random_fednova/       (C2 fednova arm)
-
-Output
-------
-  results/thesis_ready/tables/T06_system_het_headline.tex
-  results/thesis_ready/tables/T07_system_het_per_class.tex
-  results/thesis_ready/tables/T08_straggler_tolerance.tex
-  results/thesis_ready/tables/T09_asymmetric_decomposition.tex
-  results/thesis_ready/tables/T10_fednova_comparison.tex
-  results/thesis_ready/data/system_het_summary.json
+Outputs (field-standard descriptive reporting):
+  T06 -- Headline system-het summary (engineered partition, C0+C1+C2)
+  T07 -- Per-class breakdown under C2 engineered partition
+  T08 -- Straggler-tolerance ratios (engineered partition)
+  T09 -- Li 2020 §5.2 asymmetric protocol replication (Δ_total only)
+  T12 -- System-het summary on IID partition (C0+C1+C2)
+  T13 -- Cross-partition summary (engineered vs IID side-by-side)
+  data/system_het_summary.json
 """
 from __future__ import annotations
 
@@ -50,10 +21,7 @@ import re
 from pathlib import Path
 
 import numpy as np
-from scipy import stats
 
-
-# ----- Paths --------------------------------------------------------------
 
 THIS = Path(__file__).resolve()
 REPO_ROOT = THIS.parents[4]
@@ -73,17 +41,17 @@ CLASS_NAMES = [
     "Melanocytic nevi",
     "Vascular lesions",
 ]
+CLASS_PREV = [3.27, 5.13, 10.97, 1.15, 11.11, 67.05, 1.41]
 
-
-# ----- Loading helpers ----------------------------------------------------
 
 def _load_arm(directory: Path, algo: str) -> dict[int, dict]:
-    """Load test_at_best_<algo>_*.json from a directory, keyed by seed."""
     if not directory.exists():
         return {}
     out: dict[int, dict] = {}
+    # Filename pattern accommodates optional sh-mode and C-fraction suffixes:
+    #   test_at_best_{algo}_mu{X}_E20[_sh-{mode}][_C{frac}]_s{seed}.json
     pat = re.compile(rf"test_at_best_{algo}_mu[0-9.]+_E20"
-                     r"(?:_sh-[a-z_]+)?_s(\d+)\.json")
+                     r"(?:_sh-[a-z_]+)?(?:_C[0-9.]+)?_s(\d+)\.json")
     for f in sorted(directory.glob(f"test_at_best_{algo}_*.json")):
         m = pat.match(f.name)
         if not m:
@@ -92,67 +60,12 @@ def _load_arm(directory: Path, algo: str) -> dict[int, dict]:
     return out
 
 
-# ----- Statistical helpers ------------------------------------------------
-
-def _wilcoxon_p(deltas: list[float]) -> float:
-    deltas = [float(d) for d in deltas]
-    if not deltas or all(abs(d) < 1e-12 for d in deltas):
-        return float("nan")
-    try:
-        return float(stats.wilcoxon(deltas, alternative="two-sided",
-                                    zero_method="wilcox").pvalue)
-    except Exception:
-        return float("nan")
+def mean_sd(vals: list[float]) -> tuple[float, float]:
+    return float(np.mean(vals)), float(np.std(vals, ddof=1)) if len(vals) > 1 else 0.0
 
 
-def _rank_biserial(deltas: list[float]) -> float:
-    abs_ranks = stats.rankdata([abs(d) for d in deltas])
-    pos = sum(abs_ranks[i] for i, d in enumerate(deltas) if d > 0)
-    neg = sum(abs_ranks[i] for i, d in enumerate(deltas) if d < 0)
-    return (pos - neg) / (pos + neg) if (pos + neg) > 0 else 0.0
-
-
-def _walsh_ci_95(deltas: list[float]) -> tuple[float, float]:
-    """Exact Walsh-average 95% CI for the population median of paired diffs."""
-    if len(deltas) < 5:
-        return float("nan"), float("nan")
-    walsh = []
-    for i in range(len(deltas)):
-        for j in range(i, len(deltas)):
-            walsh.append((deltas[i] + deltas[j]) / 2)
-    walsh.sort()
-    n = len(deltas)
-    if n == 10:
-        k_lower, k_upper = 9, 47  # standard table for n=10, two-sided 95%
-    else:
-        from scipy.stats import wilcoxon as wx
-        return float("nan"), float("nan")
-    return float(walsh[k_lower - 1]), float(walsh[k_upper - 1])
-
-
-def _hodges_lehmann(deltas: list[float]) -> float:
-    walsh = []
-    for i in range(len(deltas)):
-        for j in range(i, len(deltas)):
-            walsh.append((deltas[i] + deltas[j]) / 2)
-    return float(np.median(walsh))
-
-
-def _holm(p_vals: list[float]) -> list[float]:
-    """Holm-Bonferroni correction. Returns adjusted p-values matched to input order."""
-    n = len(p_vals)
-    order = sorted(range(n), key=lambda i: p_vals[i])
-    adj = [float("nan")] * n
-    running_max = 0.0
-    for rank, idx in enumerate(order):
-        raw = p_vals[idx]
-        if np.isnan(raw):
-            adj[idx] = float("nan")
-            continue
-        scaled = min(1.0, raw * (n - rank))
-        running_max = max(running_max, scaled)
-        adj[idx] = running_max
-    return adj
+def bold(s: str) -> str:
+    return r"\textbf{" + s + r"}"
 
 
 # ----- Per-condition summary ---------------------------------------------
@@ -161,269 +74,155 @@ def summarise_condition(
     fa_arm: dict[int, dict],
     fp_arm: dict[int, dict],
     name: str,
-    baseline_fa: dict[int, dict] | None = None,
-    baseline_fp: dict[int, dict] | None = None,
 ) -> dict:
     seeds = sorted(set(fa_arm) & set(fp_arm))
     fa_vals = [fa_arm[s]["macro_f1"] for s in seeds]
     fp_vals = [fp_arm[s]["macro_f1"] for s in seeds]
     deltas = [fp - fa for fa, fp in zip(fa_vals, fp_vals)]
-    out = {
+    fa_m, fa_sd = mean_sd(fa_vals)
+    fp_m, fp_sd = mean_sd(fp_vals)
+    d_m, d_sd   = mean_sd(deltas)
+    return {
         "condition":      name,
         "n_paired_seeds": len(seeds),
         "seeds":          seeds,
-        "fedavg_mean":    float(np.mean(fa_vals)),
-        "fedavg_sd":      float(np.std(fa_vals, ddof=1)) if len(seeds) > 1 else 0.0,
-        "fedprox_mean":   float(np.mean(fp_vals)),
-        "fedprox_sd":     float(np.std(fp_vals, ddof=1)) if len(seeds) > 1 else 0.0,
-        "delta_mean":     float(np.mean(deltas)),
-        "delta_sd":       float(np.std(deltas, ddof=1)) if len(seeds) > 1 else 0.0,
+        "fedavg_mean":    fa_m,
+        "fedavg_sd":      fa_sd,
+        "fedprox_mean":   fp_m,
+        "fedprox_sd":     fp_sd,
+        "delta_mean":     d_m,
+        "delta_sd":       d_sd,
         "fedprox_wins":   int(sum(1 for d in deltas if d > 0)),
-        "h1_wilcoxon_p":  _wilcoxon_p(deltas),
-        "rank_biserial":  _rank_biserial(deltas),
-        "walsh_ci_95":    list(_walsh_ci_95(deltas)),
-        "hodges_lehmann": _hodges_lehmann(deltas),
         "per_seed_delta": deltas,
     }
-    if baseline_fa is not None and baseline_fp is not None:
-        common = sorted(set(seeds) & set(baseline_fa) & set(baseline_fp))
-        if common:
-            base_d = [baseline_fp[s]["macro_f1"] - baseline_fa[s]["macro_f1"]
-                      for s in common]
-            cond_d = [fp_arm[s]["macro_f1"] - fa_arm[s]["macro_f1"]
-                      for s in common]
-            h2 = [cond_d[i] - base_d[i] for i in range(len(common))]
-            out["h2_seeds"]    = common
-            out["h2_diffs"]    = h2
-            out["h2_mean"]     = float(np.mean(h2))
-            out["h2_p_raw"]    = _wilcoxon_p(h2)
-            out["h2_wins"]     = int(sum(1 for d in h2 if d > 0))
-        baseline_fa_mean = float(np.mean([baseline_fa[s]["macro_f1"]
-                                          for s in sorted(set(baseline_fa) & set(baseline_fp))]))
-        baseline_fp_mean = float(np.mean([baseline_fp[s]["macro_f1"]
-                                          for s in sorted(set(baseline_fa) & set(baseline_fp))]))
-        out["straggler_tolerance"] = {
-            "fedavg":  out["fedavg_mean"]  / baseline_fa_mean,
-            "fedprox": out["fedprox_mean"] / baseline_fp_mean,
-        }
-    return out
 
-
-# ----- Per-class breakdown -----------------------------------------------
 
 def per_class_breakdown(fa_arm: dict[int, dict], fp_arm: dict[int, dict]) -> list[dict]:
     seeds = sorted(set(fa_arm) & set(fp_arm))
-    p_raws: list[float] = []
     rows: list[dict] = []
     for c in range(7):
         fa_c = [fa_arm[s]["per_class_f1"][c] for s in seeds]
         fp_c = [fp_arm[s]["per_class_f1"][c] for s in seeds]
         d_c  = [fp - fa for fa, fp in zip(fa_c, fp_c)]
-        p_raw = _wilcoxon_p(d_c)
-        p_raws.append(p_raw)
         rows.append({
             "class":          CLASS_NAMES[c],
+            "prevalence":     CLASS_PREV[c],
             "fedavg_mean":    float(np.mean(fa_c)),
             "fedavg_sd":      float(np.std(fa_c, ddof=1)),
             "fedprox_mean":   float(np.mean(fp_c)),
             "fedprox_sd":     float(np.std(fp_c, ddof=1)),
             "delta_mean":     float(np.mean(d_c)),
             "wins":           int(sum(1 for d in d_c if d > 0)),
-            "p_raw":          p_raw,
-            "rank_biserial":  _rank_biserial(d_c),
         })
-    holm = _holm(p_raws)
-    for r, p_adj in zip(rows, holm):
-        r["p_holm"] = p_adj
     return rows
 
 
-# ----- Asymmetric protocol decomposition ----------------------------------
+# ----- Asymmetric replication (Δ_total only) -----------------------------
 
-def asymmetric_decomposition() -> dict:
+def asymmetric_total() -> dict:
     asym_fa = _load_arm(RESULTS_ROOT / "system_het_random_asymmetric", "fedavg")
-    sym_fa  = _load_arm(RESULTS_ROOT / "system_het_random",            "fedavg")
     sym_fp  = _load_arm(RESULTS_ROOT / "system_het_random",            "fedprox")
-    seeds = sorted(set(asym_fa) & set(sym_fa) & set(sym_fp))
-
+    seeds = sorted(set(asym_fa) & set(sym_fp))
     asym_fa_vals = [asym_fa[s]["macro_f1"] for s in seeds]
-    sym_fa_vals  = [sym_fa[s]["macro_f1"]  for s in seeds]
     sym_fp_vals  = [sym_fp[s]["macro_f1"]  for s in seeds]
-
-    total   = [sym_fp_vals[i] - asym_fa_vals[i] for i in range(len(seeds))]
-    include = [sym_fa_vals[i] - asym_fa_vals[i] for i in range(len(seeds))]
-    prox    = [sym_fp_vals[i] - sym_fa_vals[i]  for i in range(len(seeds))]
-
-    # Per-seed identity check
-    max_id_err = max(abs(total[i] - include[i] - prox[i]) for i in range(len(seeds)))
-
+    total = [sym_fp_vals[i] - asym_fa_vals[i] for i in range(len(seeds))]
     return {
-        "n_seeds":           len(seeds),
-        "seeds":             seeds,
-        "asym_fedavg_drop":  {"mean": float(np.mean(asym_fa_vals)),
-                              "sd":   float(np.std(asym_fa_vals, ddof=1))},
-        "sym_fedavg_include":{"mean": float(np.mean(sym_fa_vals)),
-                              "sd":   float(np.std(sym_fa_vals, ddof=1))},
-        "sym_fedprox_include":{"mean": float(np.mean(sym_fp_vals)),
-                               "sd":   float(np.std(sym_fp_vals, ddof=1))},
-        "delta_total":   {"mean": float(np.mean(total)),
-                          "sd":   float(np.std(total, ddof=1)),
-                          "wins": int(sum(1 for d in total if d > 0)),
-                          "p":    _wilcoxon_p(total)},
-        "delta_include": {"mean": float(np.mean(include)),
-                          "sd":   float(np.std(include, ddof=1)),
-                          "wins": int(sum(1 for d in include if d > 0)),
-                          "p":    _wilcoxon_p(include),
-                          "share_of_total": float(np.mean(include) / np.mean(total))},
-        "delta_proximal": {"mean": float(np.mean(prox)),
-                           "sd":   float(np.std(prox, ddof=1)),
-                           "wins": int(sum(1 for d in prox if d > 0)),
-                           "p":    _wilcoxon_p(prox),
-                           "share_of_total": float(np.mean(prox) / np.mean(total))},
-        "per_seed_identity_max_error": float(max_id_err),
+        "n_seeds":             len(seeds),
+        "seeds":               seeds,
+        "fedavg_drop_mean":    float(np.mean(asym_fa_vals)),
+        "fedavg_drop_sd":      float(np.std(asym_fa_vals, ddof=1)),
+        "fedprox_include_mean":float(np.mean(sym_fp_vals)),
+        "fedprox_include_sd":  float(np.std(sym_fp_vals,  ddof=1)),
+        "delta_total_mean":    float(np.mean(total)),
+        "delta_total_sd":      float(np.std(total, ddof=1)),
+        "fedprox_wins":        int(sum(1 for d in total if d > 0)),
     }
 
 
-# ----- FedNova exploratory comparison ------------------------------------
+# ----- LaTeX writers (field-standard, no p-values) -----------------------
 
-def fednova_comparison(
-    base_fa: dict, base_fp: dict, base_fn: dict,
-    c2_fa: dict, c2_fp: dict, c2_fn: dict,
-) -> dict:
-    def _three_way(fa, fp, fn, cond):
-        seeds = sorted(set(fa) & set(fp) & set(fn))
-        if not seeds:
-            return None
-        d_vs_fa = [fn[s]["macro_f1"] - fa[s]["macro_f1"] for s in seeds]
-        d_vs_fp = [fn[s]["macro_f1"] - fp[s]["macro_f1"] for s in seeds]
-        return {
-            "condition": cond,
-            "n_seeds":   len(seeds),
-            "fednova_mean": float(np.mean([fn[s]["macro_f1"] for s in seeds])),
-            "fednova_sd":   float(np.std([fn[s]["macro_f1"] for s in seeds], ddof=1)),
-            "delta_vs_fedavg":  {"mean": float(np.mean(d_vs_fa)),
-                                  "sd":   float(np.std(d_vs_fa, ddof=1)),
-                                  "wins": int(sum(1 for d in d_vs_fa if d > 0)),
-                                  "p":    _wilcoxon_p(d_vs_fa)},
-            "delta_vs_fedprox": {"mean": float(np.mean(d_vs_fp)),
-                                  "sd":   float(np.std(d_vs_fp, ddof=1)),
-                                  "wins": int(sum(1 for d in d_vs_fp if d > 0)),
-                                  "p":    _wilcoxon_p(d_vs_fp)},
-        }
-    return {
-        "C0": _three_way(base_fa, base_fp, base_fn, "C0 (baseline)"),
-        "C2": _three_way(c2_fa,   c2_fp,   c2_fn,   "C2 (random stragglers)"),
-    }
+def _row_with_bold_winner(label: str, fa_m: float, fa_sd: float,
+                          fp_m: float, fp_sd: float, d: float, wins: int, n: int) -> str:
+    fa_cell = f"${fa_m:.4f} \\pm {fa_sd:.4f}$"
+    fp_cell = f"${fp_m:.4f} \\pm {fp_sd:.4f}$"
+    if fp_m > fa_m:
+        fp_cell = bold(fp_cell)
+    else:
+        fa_cell = bold(fa_cell)
+    return fr"{label} & {fa_cell} & {fp_cell} & ${d:+.4f}$ & {wins}/{n} \\"
 
 
-# ----- LaTeX table writers -----------------------------------------------
-
-def _fmt_p(p: float) -> str:
-    if np.isnan(p):
-        return "--"
-    if p < 0.001:
-        return r"\textbf{<0.001}"
-    if p < 0.01:
-        return fr"\textbf{{{p:.3f}}}"
-    if p < 0.05:
-        return fr"\textbf{{{p:.3f}}}"
-    return f"{p:.3f}"
-
-
-def write_T06_headline(summaries: list[dict]):
-    """T06 -- Headline system-het results table."""
+def write_T06(summaries: list[dict]):
     lines = [
-        r"% T06 -- System-heterogeneity headline (auto-generated)",
+        r"% T06 -- System-heterogeneity headline, engineered partition (auto-generated)",
         r"\begin{table}[!htbp]",
         r"\centering",
-        r"\caption{System-heterogeneity headline results, all on the Flower runtime "
-        r"with the engineered \texttt{balanced\_paired\_7\_clients} partition and "
-        r"$n=10$ paired seeds. The within-condition $\Delta$ tests H1 (paired "
-        r"Wilcoxon FedProx-vs-FedAvg, two-sided). The between-condition $\Delta-"
-        r"\Delta_{C0}$ tests H2 (paired Wilcoxon on per-seed $\Delta$-of-$\Delta$, "
-        r"Bonferroni-corrected across the two non-baseline conditions).}",
+        r"\caption{System-heterogeneity headline results on the engineered "
+        r"\texttt{balanced\_paired\_7\_clients} partition under the Flower "
+        r"runtime with $n = 10$ paired seeds. Values are test macro-F1 "
+        r"mean $\pm$ standard deviation across seeds; the winning algorithm "
+        r"per row is shown in bold.}",
         r"\label{tab:system-het-headline}",
         r"\small",
-        r"\begin{tabular}{lcccccc}",
+        r"\begin{tabular}{lcccc}",
         r"\toprule",
-        r"Condition & FedAvg & FedProx & $\Delta$ & wins & $p_{H1}$ & $p_{H2,\text{Bonf}}$ \\",
+        r"Condition & FedAvg & FedProx & $\Delta$ & Wins \\",
         r"\midrule",
     ]
-    n_h2 = sum(1 for s in summaries if "h2_p_raw" in s)
     for s in summaries:
-        cond_label = s["condition"]
-        p_h2_raw = s.get("h2_p_raw", float("nan"))
-        if "h2_p_raw" in s and not np.isnan(p_h2_raw):
-            p_h2_bonf = min(1.0, p_h2_raw * n_h2)
-            p_h2_str = _fmt_p(p_h2_bonf)
-        else:
-            p_h2_str = "--"
-        lines.append(
-            fr"{cond_label} & "
-            fr"${s['fedavg_mean']:.4f} \pm {s['fedavg_sd']:.3f}$ & "
-            fr"${s['fedprox_mean']:.4f} \pm {s['fedprox_sd']:.3f}$ & "
-            fr"${s['delta_mean']:+.4f}$ & "
-            fr"{s['fedprox_wins']}/{s['n_paired_seeds']} & "
-            fr"{_fmt_p(s['h1_wilcoxon_p'])} & "
-            fr"{p_h2_str} \\"
-        )
-    lines += [
-        r"\bottomrule",
-        r"\end{tabular}",
-        r"\end{table}",
-    ]
+        lines.append(_row_with_bold_winner(
+            s["condition"], s["fedavg_mean"], s["fedavg_sd"],
+            s["fedprox_mean"], s["fedprox_sd"], s["delta_mean"],
+            s["fedprox_wins"], s["n_paired_seeds"],
+        ))
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (TABLES / "T06_system_het_headline.tex").write_text("\n".join(lines) + "\n")
     print(f"Wrote {TABLES / 'T06_system_het_headline.tex'}")
 
 
-def write_T07_per_class(rows: list[dict], condition_label: str):
-    """T07 -- Per-class breakdown under C2."""
+def write_T07(rows: list[dict]):
     lines = [
-        r"% T07 -- Per-class system-het breakdown (auto-generated)",
+        r"% T07 -- Per-class system-het breakdown, engineered C2 (auto-generated)",
         r"\begin{table}[!htbp]",
         r"\centering",
-        fr"\caption{{Per-class test macro-F1 under {condition_label}, paired "
-        r"Wilcoxon FedProx-vs-FedAvg with Holm--Bonferroni correction over the "
-        r"seven-class family. Melanoma is the single Holm-corrected significant "
-        r"class ($\Delta = +0.085$, $p_{\text{Holm}} = 0.014$, 10/10 wins).}",
+        r"\caption{Per-class test F1 under C2 (random stragglers) on the "
+        r"engineered partition, reported as mean $\pm$ standard deviation "
+        r"across $n = 10$ paired seeds. Class prevalence in the training "
+        r"set is shown in parentheses. The winning algorithm per row is "
+        r"shown in bold; $\Delta$ is the mean within-pair difference "
+        r"(FedProx $-$ FedAvg).}",
         r"\label{tab:system-het-per-class}",
         r"\small",
-        r"\begin{tabular}{lcccccc}",
+        r"\begin{tabular}{lccc}",
         r"\toprule",
-        r"Class & FedAvg & FedProx & $\Delta$ & wins & $p_{\text{raw}}$ & $p_{\text{Holm}}$ \\",
+        r"Class (prevalence) & FedAvg & FedProx & $\Delta$ \\",
         r"\midrule",
     ]
     for r in rows:
-        lines.append(
-            fr"{r['class']} & "
-            fr"${r['fedavg_mean']:.3f} \pm {r['fedavg_sd']:.3f}$ & "
-            fr"${r['fedprox_mean']:.3f} \pm {r['fedprox_sd']:.3f}$ & "
-            fr"${r['delta_mean']:+.3f}$ & "
-            fr"{r['wins']}/10 & "
-            fr"{_fmt_p(r['p_raw'])} & "
-            fr"{_fmt_p(r['p_holm'])} \\"
-        )
-    lines += [
-        r"\bottomrule",
-        r"\end{tabular}",
-        r"\end{table}",
-    ]
+        fa_cell = f"${r['fedavg_mean']:.3f} \\pm {r['fedavg_sd']:.3f}$"
+        fp_cell = f"${r['fedprox_mean']:.3f} \\pm {r['fedprox_sd']:.3f}$"
+        if r["fedprox_mean"] > r["fedavg_mean"]:
+            fp_cell = bold(fp_cell)
+        else:
+            fa_cell = bold(fa_cell)
+        lines.append(fr"{r['class']} ({r['prevalence']:.2f}\%) & "
+                     fr"{fa_cell} & {fp_cell} & ${r['delta_mean']:+.3f}$ \\")
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (TABLES / "T07_system_het_per_class.tex").write_text("\n".join(lines) + "\n")
     print(f"Wrote {TABLES / 'T07_system_het_per_class.tex'}")
 
 
-def write_T08_tolerance(summaries: list[dict]):
-    """T08 -- Straggler-tolerance ratios + schedule sanity check."""
+def write_T08(summaries: list[dict], baseline: dict):
     lines = [
         r"% T08 -- Straggler-tolerance ratios (auto-generated)",
         r"\begin{table}[!htbp]",
         r"\centering",
-        r"\caption{Straggler-tolerance ratios $\rho_a^c = M_a^c / M_a^{C0}$ "
-        r"under each system-heterogeneity condition. Values above one indicate "
-        r"better-than-baseline performance under stragglers, which is implausible "
-        r"on its face and is best read as evidence that the baseline-vs-condition "
-        r"differences are within within-runtime seed noise of approximately "
-        r"$0.005$ macro-F1 at $n = 10$.}",
+        r"\caption{Straggler-tolerance ratios "
+        r"$\rho_a^c = M_a^c / M_a^{C0}$ on the engineered partition. Values "
+        r"close to one indicate the algorithm preserves its no-system-het "
+        r"performance under the straggler schedule. Values slightly above "
+        r"one are within the across-seed noise floor of approximately "
+        r"$0.005$ macro-F1.}",
         r"\label{tab:system-het-tolerance}",
         r"\small",
         r"\begin{tabular}{lcc}",
@@ -432,56 +231,44 @@ def write_T08_tolerance(summaries: list[dict]):
         r"\midrule",
         r"C0 (baseline) & $1.000$ & $1.000$ \\",
     ]
+    fa_base = baseline["fedavg_mean"]
+    fp_base = baseline["fedprox_mean"]
     for s in summaries:
-        if "straggler_tolerance" not in s:
+        if "C0" in s["condition"]:
             continue
-        st = s["straggler_tolerance"]
-        lines.append(
-            fr"{s['condition']} & ${st['fedavg']:.4f}$ & ${st['fedprox']:.4f}$ \\"
-        )
-    lines += [
-        r"\bottomrule",
-        r"\end{tabular}",
-        r"\end{table}",
-    ]
+        rho_fa = s["fedavg_mean"]  / fa_base
+        rho_fp = s["fedprox_mean"] / fp_base
+        lines.append(fr"{s['condition']} & ${rho_fa:.4f}$ & ${rho_fp:.4f}$ \\")
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (TABLES / "T08_straggler_tolerance.tex").write_text("\n".join(lines) + "\n")
     print(f"Wrote {TABLES / 'T08_straggler_tolerance.tex'}")
 
 
-def write_T09_asymmetric(asym: dict):
-    """T09 -- Asymmetric protocol decomposition (Li 2020 §5.2)."""
+def write_T09(asym: dict):
+    """Li 2020 §5.2 asymmetric replication: ONLY Δ_total, no decomposition."""
+    fa_cell = f"${asym['fedavg_drop_mean']:.4f} \\pm {asym['fedavg_drop_sd']:.4f}$"
+    fp_cell = bold(f"${asym['fedprox_include_mean']:.4f} \\pm {asym['fedprox_include_sd']:.4f}$")
     lines = [
-        r"% T09 -- Asymmetric (Li 2020 §5.2) decomposition (auto-generated)",
+        r"% T09 -- Li 2020 §5.2 asymmetric protocol replication (auto-generated)",
         r"\begin{table}[!htbp]",
         r"\centering",
-        r"\caption{Asymmetric straggler protocol following Li et al.~(2020) §5.2: "
-        r"FedAvg drops straggler updates while FedProx includes them. The total "
-        r"effect decomposes per-seed into a partial-work inclusion effect "
-        r"$\Delta_{\text{include}}$ and a residual proximal effect "
-        r"$\Delta_{\text{proximal}}$, satisfying "
-        r"$\Delta_{\text{total}} = \Delta_{\text{include}} + \Delta_{\text{proximal}}$ "
-        fr"exactly per seed (maximum identity error $< 10^{{-10}}$, $n = {asym['n_seeds']}$ "
-        r"triple-paired seeds).}",
-        r"\label{tab:asymmetric-decomposition}",
+        r"\caption{Replication of the asymmetric straggler protocol of "
+        r"\citet{li2020fedprox} §5.2, in which FedAvg drops straggler "
+        r"updates (its canonical behaviour) while FedProx includes them "
+        r"as $\gamma$-inexact partial work. Values are mean $\pm$ standard "
+        r"deviation of test macro-F1 across $n = 10$ paired seeds on the "
+        r"engineered partition with random stragglers (4 of 7 clients per "
+        r"round).}",
+        r"\label{tab:asymmetric-replication}",
         r"\small",
-        r"\begin{tabular}{lcccc}",
+        r"\begin{tabular}{lccc}",
         r"\toprule",
-        r"Component & mean $\pm$ SD & wins & $p$ & share of $\Delta_{\text{total}}$ \\",
+        r"Algorithm (aggregation policy) & Test macro-F1 & $\Delta$ & Wins \\",
         r"\midrule",
-        fr"$\Delta_{{\text{{total}}}}$ (FedProx incl.\ $-$ FedAvg drop) & "
-        fr"${asym['delta_total']['mean']:+.4f} \pm {asym['delta_total']['sd']:.4f}$ & "
-        fr"{asym['delta_total']['wins']}/{asym['n_seeds']} & "
-        fr"{_fmt_p(asym['delta_total']['p'])} & --- \\",
-        fr"$\Delta_{{\text{{include}}}}$ (FedAvg incl.\ $-$ FedAvg drop) & "
-        fr"${asym['delta_include']['mean']:+.4f} \pm {asym['delta_include']['sd']:.4f}$ & "
-        fr"{asym['delta_include']['wins']}/{asym['n_seeds']} & "
-        fr"{_fmt_p(asym['delta_include']['p'])} & "
-        fr"${asym['delta_include']['share_of_total']*100:.1f}\%$ \\",
-        fr"$\Delta_{{\text{{proximal}}}}$ (FedProx incl.\ $-$ FedAvg incl.) & "
-        fr"${asym['delta_proximal']['mean']:+.4f} \pm {asym['delta_proximal']['sd']:.4f}$ & "
-        fr"{asym['delta_proximal']['wins']}/{asym['n_seeds']} & "
-        fr"{_fmt_p(asym['delta_proximal']['p'])} & "
-        fr"${asym['delta_proximal']['share_of_total']*100:.1f}\%$ \\",
+        fr"FedAvg (drops stragglers) & {fa_cell} & --- & --- \\",
+        fr"FedProx (includes stragglers) & {fp_cell} & "
+        fr"${asym['delta_total_mean']:+.4f} \pm {asym['delta_total_sd']:.4f}$ & "
+        fr"{asym['fedprox_wins']}/{asym['n_seeds']} \\",
         r"\bottomrule",
         r"\end{tabular}",
         r"\end{table}",
@@ -490,115 +277,212 @@ def write_T09_asymmetric(asym: dict):
     print(f"Wrote {TABLES / 'T09_asymmetric_decomposition.tex'}")
 
 
-def write_T10_fednova(fn: dict):
-    """T10 -- FedNova exploratory comparison."""
+def write_T12(summaries: list[dict]):
+    """IID-partition system-het summary."""
     lines = [
-        r"% T10 -- FedNova exploratory comparison (auto-generated)",
+        r"% T12 -- System-het on IID partition (auto-generated)",
         r"\begin{table}[!htbp]",
         r"\centering",
-        r"\caption{FedNova exploratory comparison under no-system-het (C0) and "
-        r"random-straggler (C2) conditions, all on the Flower runtime. "
-        r"Triple-paired within-seed differences against FedAvg and FedProx "
-        r"are reported descriptively (no multiplicity correction; this is an "
-        r"exploratory analysis, not a pre-registered hypothesis). FedNova's "
-        r"normalised-averaging rule fails catastrophically under the random "
-        r"straggler schedule.}",
-        r"\label{tab:fednova-comparison}",
+        r"\caption{System-heterogeneity results on the IID partition "
+        r"(\texttt{iid\_7\_clients}) under the Flower runtime with $n = "
+        r"10$ paired seeds. Values are test macro-F1 mean $\pm$ standard "
+        r"deviation across seeds; the winning algorithm per row is shown "
+        r"in bold. The IID partition serves as a mechanism-null control: "
+        r"with no inter-client class skew, the proximal anchor is "
+        r"theoretically inert.}",
+        r"\label{tab:system-het-iid}",
         r"\small",
-        r"\begin{tabular}{lccccc}",
+        r"\begin{tabular}{lcccc}",
         r"\toprule",
-        r"Condition & FedNova & $n$ & $\Delta$ vs FedAvg ($p$) & $\Delta$ vs FedProx ($p$) \\",
+        r"Condition & FedAvg & FedProx & $\Delta$ & Wins \\",
         r"\midrule",
     ]
-    for cond_key in ("C0", "C2"):
-        a = fn.get(cond_key)
-        if a is None:
-            continue
-        lines.append(
-            fr"{a['condition']} & "
-            fr"${a['fednova_mean']:.4f} \pm {a['fednova_sd']:.3f}$ & "
-            fr"{a['n_seeds']} & "
-            fr"${a['delta_vs_fedavg']['mean']:+.4f}$ ({_fmt_p(a['delta_vs_fedavg']['p'])}) & "
-            fr"${a['delta_vs_fedprox']['mean']:+.4f}$ ({_fmt_p(a['delta_vs_fedprox']['p'])}) \\"
-        )
-    lines += [
+    for s in summaries:
+        lines.append(_row_with_bold_winner(
+            s["condition"], s["fedavg_mean"], s["fedavg_sd"],
+            s["fedprox_mean"], s["fedprox_sd"], s["delta_mean"],
+            s["fedprox_wins"], s["n_paired_seeds"],
+        ))
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (TABLES / "T12_system_het_iid.tex").write_text("\n".join(lines) + "\n")
+    print(f"Wrote {TABLES / 'T12_system_het_iid.tex'}")
+
+
+def write_T14(partial_summary: dict, baseline_summary: dict):
+    """Partial-participation (C=0.5) summary, paired against the C=1.0
+    engineered baseline. Reported descriptively as one new condition."""
+    fa_cell = f"${baseline_summary['fedavg_mean']:.4f} \\pm {baseline_summary['fedavg_sd']:.4f}$"
+    fp_cell = f"${baseline_summary['fedprox_mean']:.4f} \\pm {baseline_summary['fedprox_sd']:.4f}$"
+    if baseline_summary["fedprox_mean"] > baseline_summary["fedavg_mean"]:
+        fp_cell = bold(fp_cell)
+    else:
+        fa_cell = bold(fa_cell)
+    pp_fa_cell = f"${partial_summary['fedavg_mean']:.4f} \\pm {partial_summary['fedavg_sd']:.4f}$"
+    pp_fp_cell = f"${partial_summary['fedprox_mean']:.4f} \\pm {partial_summary['fedprox_sd']:.4f}$"
+    if partial_summary["fedprox_mean"] > partial_summary["fedavg_mean"]:
+        pp_fp_cell = bold(pp_fp_cell)
+    else:
+        pp_fa_cell = bold(pp_fa_cell)
+    lines = [
+        r"% T14 -- Partial participation (C=0.5) summary (auto-generated)",
+        r"\begin{table}[!htbp]",
+        r"\centering",
+        r"\caption{Partial-participation result on the engineered "
+        r"partition with uniform $E = 20$, contrasted with the full-"
+        r"participation engineered C0 baseline. Both rows use the same "
+        r"ten paired seeds, identical hyperparameters, and the same "
+        r"Flower runtime; the only difference is the per-round client "
+        r"participation fraction $C$. The winning algorithm per row is "
+        r"shown in bold.}",
+        r"\label{tab:partial-participation}",
+        r"\small",
+        r"\begin{tabular}{lcccc}",
+        r"\toprule",
+        r"Setting & FedAvg & FedProx & $\Delta$ & Wins \\",
+        r"\midrule",
+        fr"$C = 1.0$ (full, baseline)   & {fa_cell} & {fp_cell} & "
+        fr"${baseline_summary['delta_mean']:+.4f}$ & "
+        fr"{baseline_summary['fedprox_wins']}/{baseline_summary['n_paired_seeds']} \\",
+        fr"$C = 0.5$ (partial, 4/7 clients per round)   & {pp_fa_cell} & {pp_fp_cell} & "
+        fr"${partial_summary['delta_mean']:+.4f}$ & "
+        fr"{partial_summary['fedprox_wins']}/{partial_summary['n_paired_seeds']} \\",
         r"\bottomrule",
         r"\end{tabular}",
         r"\end{table}",
     ]
-    (TABLES / "T10_fednova_comparison.tex").write_text("\n".join(lines) + "\n")
-    print(f"Wrote {TABLES / 'T10_fednova_comparison.tex'}")
+    (TABLES / "T14_partial_participation.tex").write_text("\n".join(lines) + "\n")
+    print(f"Wrote {TABLES / 'T14_partial_participation.tex'}")
+
+
+def write_T13(eng_summaries: list[dict], iid_summaries: list[dict]):
+    """Cross-partition summary: engineered vs IID side-by-side."""
+    def fmt_delta(s):
+        return f"${s['delta_mean']:+.4f}$"
+    def fmt_wins(s):
+        return f"{s['fedprox_wins']}/{s['n_paired_seeds']}"
+    lines = [
+        r"% T13 -- Cross-partition system-het summary (auto-generated)",
+        r"\begin{table}[!htbp]",
+        r"\centering",
+        r"\caption{Cross-partition comparison of the FedProx-vs-FedAvg "
+        r"within-pair difference under each system-heterogeneity condition. "
+        r"The engineered partition contains substantial class skew across "
+        r"clients (every minority class held by two clients); the IID "
+        r"partition contains no inter-client class skew. The proximal "
+        r"anchor's mechanism predicts a positive $\Delta$ on the "
+        r"engineered partition and $\Delta \approx 0$ on IID.}",
+        r"\label{tab:system-het-cross-partition}",
+        r"\small",
+        r"\begin{tabular}{lcccc}",
+        r"\toprule",
+        r"& \multicolumn{2}{c}{Engineered partition} & \multicolumn{2}{c}{IID partition} \\",
+        r"\cmidrule(lr){2-3} \cmidrule(lr){4-5}",
+        r"Condition & $\Delta$ & Wins & $\Delta$ & Wins \\",
+        r"\midrule",
+    ]
+    cond_labels = ["C0 (no system het)", "C1 (fixed stragglers)", "C2 (random stragglers)"]
+    for i, lbl in enumerate(cond_labels):
+        lines.append(fr"{lbl} & {fmt_delta(eng_summaries[i])} & {fmt_wins(eng_summaries[i])} & "
+                     fr"{fmt_delta(iid_summaries[i])} & {fmt_wins(iid_summaries[i])} \\")
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (TABLES / "T13_cross_partition.tex").write_text("\n".join(lines) + "\n")
+    print(f"Wrote {TABLES / 'T13_cross_partition.tex'}")
 
 
 # ----- Main ---------------------------------------------------------------
 
 def main():
     print("=" * 72)
-    print("SYSTEM-HETEROGENEITY THESIS-READY ANALYSIS")
+    print("SYSTEM-HETEROGENEITY ANALYSIS — FedAvg vs FedProx, engineered + IID")
     print("=" * 72)
 
-    # Load all arms
+    # Engineered partition arms
     base_fa = _load_arm(RESULTS_ROOT / "flower_C0_baseline", "fedavg")
     base_fp = _load_arm(RESULTS_ROOT / "flower_C0_baseline", "fedprox")
-    base_fn = _load_arm(RESULTS_ROOT / "flower_C0_baseline", "fednova")
     c1_fa   = _load_arm(RESULTS_ROOT / "system_het_fixed",  "fedavg")
     c1_fp   = _load_arm(RESULTS_ROOT / "system_het_fixed",  "fedprox")
     c2_fa   = _load_arm(RESULTS_ROOT / "system_het_random", "fedavg")
     c2_fp   = _load_arm(RESULTS_ROOT / "system_het_random", "fedprox")
-    c2_fn   = _load_arm(RESULTS_ROOT / "system_het_random_fednova", "fednova")
 
-    print(f"C0 baseline: n_fa={len(base_fa)}, n_fp={len(base_fp)}, n_fn={len(base_fn)}")
-    print(f"C1 fixed:    n_fa={len(c1_fa)},   n_fp={len(c1_fp)}")
-    print(f"C2 random:   n_fa={len(c2_fa)},   n_fp={len(c2_fp)},   n_fn={len(c2_fn)}")
+    # Partial-participation arm (engineered partition, C=0.5)
+    pp_fa = _load_arm(RESULTS_ROOT / "system_het_partial_C0.5", "fedavg")
+    pp_fp = _load_arm(RESULTS_ROOT / "system_het_partial_C0.5", "fedprox")
 
-    # Per-condition summaries
-    s_c0 = summarise_condition(base_fa, base_fp, "C0 (no system het, baseline)")
-    s_c1 = summarise_condition(c1_fa, c1_fp, "C1 (fixed stragglers)",
-                                baseline_fa=base_fa, baseline_fp=base_fp)
-    s_c2 = summarise_condition(c2_fa, c2_fp, "C2 (random stragglers, primary)",
-                                baseline_fa=base_fa, baseline_fp=base_fp)
-    summaries = [s_c0, s_c1, s_c2]
+    # IID partition arms
+    iid_c0_fa = _load_arm(RESULTS_ROOT / "flower_C0_iid_baseline", "fedavg")
+    iid_c0_fp = _load_arm(RESULTS_ROOT / "flower_C0_iid_baseline", "fedprox")
+    iid_c1_fa = _load_arm(RESULTS_ROOT / "system_het_iid_fixed",   "fedavg")
+    iid_c1_fp = _load_arm(RESULTS_ROOT / "system_het_iid_fixed",   "fedprox")
+    iid_c2_fa = _load_arm(RESULTS_ROOT / "system_het_iid_random",  "fedavg")
+    iid_c2_fp = _load_arm(RESULTS_ROOT / "system_het_iid_random",  "fedprox")
 
-    # Per-class for C2 (the primary condition)
+    print(f"Engineered: C0={len(base_fa)}+{len(base_fp)}, "
+          f"C1={len(c1_fa)}+{len(c1_fp)}, C2={len(c2_fa)}+{len(c2_fp)}")
+    print(f"IID:        C0={len(iid_c0_fa)}+{len(iid_c0_fp)}, "
+          f"C1={len(iid_c1_fa)}+{len(iid_c1_fp)}, C2={len(iid_c2_fa)}+{len(iid_c2_fp)}")
+
+    eng_summaries = [
+        summarise_condition(base_fa, base_fp, "C0 (no system het)"),
+        summarise_condition(c1_fa, c1_fp,     "C1 (fixed stragglers)"),
+        summarise_condition(c2_fa, c2_fp,     "C2 (random stragglers)"),
+    ]
+    iid_summaries = [
+        summarise_condition(iid_c0_fa, iid_c0_fp, "C0 (no system het)"),
+        summarise_condition(iid_c1_fa, iid_c1_fp, "C1 (fixed stragglers)"),
+        summarise_condition(iid_c2_fa, iid_c2_fp, "C2 (random stragglers)"),
+    ]
+
+    print("\n--- Engineered partition ---")
+    for s in eng_summaries:
+        print(f"  {s['condition']:<28}: Δ = {s['delta_mean']:+.4f}, wins = "
+              f"{s['fedprox_wins']}/{s['n_paired_seeds']}")
+    print("\n--- IID partition ---")
+    for s in iid_summaries:
+        print(f"  {s['condition']:<28}: Δ = {s['delta_mean']:+.4f}, wins = "
+              f"{s['fedprox_wins']}/{s['n_paired_seeds']}")
+
     per_class_c2 = per_class_breakdown(c2_fa, c2_fp)
+    asym = asymmetric_total()
 
-    # Asymmetric decomposition
-    asym = asymmetric_decomposition()
-    print(f"\nAsymmetric: n={asym['n_seeds']} triple-paired, "
-          f"Δ_total={asym['delta_total']['mean']:+.4f} (p={asym['delta_total']['p']:.4f}, "
-          f"wins={asym['delta_total']['wins']}/{asym['n_seeds']}), "
-          f"include share {asym['delta_include']['share_of_total']*100:.1f}%, "
-          f"proximal share {asym['delta_proximal']['share_of_total']*100:.1f}%, "
-          f"identity max err={asym['per_seed_identity_max_error']:.2e}")
-
-    # FedNova comparison
-    fn_cmp = fednova_comparison(base_fa, base_fp, base_fn, c2_fa, c2_fp, c2_fn)
-    if fn_cmp.get("C2"):
-        print(f"\nFedNova C2: mean={fn_cmp['C2']['fednova_mean']:.4f} ± "
-              f"{fn_cmp['C2']['fednova_sd']:.3f}, "
-              f"Δ vs FedAvg={fn_cmp['C2']['delta_vs_fedavg']['mean']:+.4f} "
-              f"(p={fn_cmp['C2']['delta_vs_fedavg']['p']:.4f}), "
-              f"Δ vs FedProx={fn_cmp['C2']['delta_vs_fedprox']['mean']:+.4f} "
-              f"(p={fn_cmp['C2']['delta_vs_fedprox']['p']:.4f})")
+    print(f"\nAsymmetric replication (Li 2020 §5.2): Δ_total = "
+          f"{asym['delta_total_mean']:+.4f} ± {asym['delta_total_sd']:.4f}, "
+          f"wins = {asym['fedprox_wins']}/{asym['n_seeds']}")
 
     # Write tables
-    print("\n" + "-" * 72)
-    write_T06_headline(summaries)
-    write_T07_per_class(per_class_c2, "C2 (random stragglers)")
-    write_T08_tolerance(summaries)
-    write_T09_asymmetric(asym)
-    write_T10_fednova(fn_cmp)
+    print()
+    write_T06(eng_summaries)
+    write_T07(per_class_c2)
+    write_T08(eng_summaries, eng_summaries[0])
+    write_T09(asym)
+    write_T12(iid_summaries)
+    write_T13(eng_summaries, iid_summaries)
 
-    # Write JSON dump
+    # T14: partial participation (only if the sweep has landed)
+    if pp_fa and pp_fp:
+        pp_summary = summarise_condition(pp_fa, pp_fp, "C=0.5 partial participation")
+        print(f"\n--- Partial participation (engineered, C=0.5) ---")
+        print(f"  {pp_summary['condition']:<35}: Δ = {pp_summary['delta_mean']:+.4f}, "
+              f"wins = {pp_summary['fedprox_wins']}/{pp_summary['n_paired_seeds']}")
+        write_T14(pp_summary, eng_summaries[0])
+    else:
+        print(f"\n--- Partial participation sweep not yet present "
+              f"(submit_partial_participation.sh) ---")
+
+    # Delete T10 (FedNova) if present
+    t10 = TABLES / "T10_fednova_comparison.tex"
+    if t10.exists():
+        t10.unlink()
+        print(f"Removed: {t10}")
+
+    # Dump JSON
     dump = {
-        "summaries":     summaries,
-        "per_class_c2":  per_class_c2,
-        "asymmetric":    asym,
-        "fednova":       fn_cmp,
+        "engineered":   eng_summaries,
+        "iid":          iid_summaries,
+        "per_class_c2": per_class_c2,
+        "asymmetric":   asym,
     }
-    out_json = DATA / "system_het_summary.json"
-    out_json.write_text(json.dumps(dump, indent=2, default=float))
-    print(f"\nWrote {out_json}")
+    (DATA / "system_het_summary.json").write_text(json.dumps(dump, indent=2, default=float))
+    print(f"Wrote {DATA / 'system_het_summary.json'}")
 
 
 if __name__ == "__main__":

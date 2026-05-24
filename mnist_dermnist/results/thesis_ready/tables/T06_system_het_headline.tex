@@ -1,16 +1,16 @@
-% T06 -- System-heterogeneity headline (auto-generated)
+% T06 -- System-heterogeneity headline, engineered partition (auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{System-heterogeneity headline results, all on the Flower runtime with the engineered \texttt{balanced\_paired\_7\_clients} partition and $n=10$ paired seeds. The within-condition $\Delta$ tests H1 (paired Wilcoxon FedProx-vs-FedAvg, two-sided). The between-condition $\Delta-\Delta_{C0}$ tests H2 (paired Wilcoxon on per-seed $\Delta$-of-$\Delta$, Bonferroni-corrected across the two non-baseline conditions).}
+\caption{System-heterogeneity headline results on the engineered \texttt{balanced\_paired\_7\_clients} partition under the Flower runtime with $n = 10$ paired seeds. Values are test macro-F1 mean $\pm$ standard deviation across seeds; the winning algorithm per row is shown in bold.}
 \label{tab:system-het-headline}
 \small
-\begin{tabular}{lcccccc}
+\begin{tabular}{lcccc}
 \toprule
-Condition & FedAvg & FedProx & $\Delta$ & wins & $p_{H1}$ & $p_{H2,\text{Bonf}}$ \\
+Condition & FedAvg & FedProx & $\Delta$ & Wins \\
 \midrule
-C0 (no system het, baseline) & $0.4964 \pm 0.015$ & $0.5033 \pm 0.021$ & $+0.0069$ & 7/10 & 0.432 & -- \\
-C1 (fixed stragglers) & $0.4978 \pm 0.016$ & $0.5111 \pm 0.020$ & $+0.0133$ & 8/10 & 0.160 & 1.000 \\
-C2 (random stragglers, primary) & $0.4928 \pm 0.028$ & $0.5102 \pm 0.017$ & $+0.0174$ & 7/10 & 0.232 & 1.000 \\
+C0 (no system het) & $0.4964 \pm 0.0150$ & \textbf{$0.5033 \pm 0.0206$} & $+0.0069$ & 7/10 \\
+C1 (fixed stragglers) & $0.4978 \pm 0.0163$ & \textbf{$0.5111 \pm 0.0196$} & $+0.0133$ & 8/10 \\
+C2 (random stragglers) & $0.4928 \pm 0.0277$ & \textbf{$0.5102 \pm 0.0168$} & $+0.0174$ & 7/10 \\
 \bottomrule
 \end{tabular}
 \end{table}

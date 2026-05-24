@@ -1,0 +1,18 @@
+% T13 -- Cross-partition system-het summary (auto-generated)
+\begin{table}[!htbp]
+\centering
+\caption{Cross-partition comparison of the FedProx-vs-FedAvg within-pair difference under each system-heterogeneity condition. The engineered partition contains substantial class skew across clients (every minority class held by two clients); the IID partition contains no inter-client class skew. The proximal anchor's mechanism predicts a positive $\Delta$ on the engineered partition and $\Delta \approx 0$ on IID.}
+\label{tab:system-het-cross-partition}
+\small
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{Engineered partition} & \multicolumn{2}{c}{IID partition} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Condition & $\Delta$ & Wins & $\Delta$ & Wins \\
+\midrule
+C0 (no system het) & $+0.0069$ & 7/10 & $-0.0061$ & 5/10 \\
+C1 (fixed stragglers) & $+0.0133$ & 8/10 & $+0.0102$ & 6/10 \\
+C2 (random stragglers) & $+0.0174$ & 7/10 & $-0.0131$ & 3/10 \\
+\bottomrule
+\end{tabular}
+\end{table}

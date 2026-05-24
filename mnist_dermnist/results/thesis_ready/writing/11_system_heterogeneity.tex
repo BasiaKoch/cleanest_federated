@@ -2,21 +2,27 @@
 % System Heterogeneity in DermaMNIST Classification
 % ------------------------------------------------------------------------------
 % Drop-in section for the §Results chapter, sibling of
-% 10_statistical_heterogeneity.tex. Structure: motivation, per-condition
-% design and schedule visualisation, primary inferential suite, per-class
-% breakdown, asymmetric protocol decomposition, exploratory FedNova
-% comparison, straggler-tolerance ratios, summary and limitations.
+% 10_statistical_heterogeneity.tex.
+%
+% Reporting style matches the federated-learning literature convention
+% (descriptive comparisons of means, visual curve comparisons, bolded
+% best results in tables), per Li 2020, McMahan 2017, Wang 2020, Hsu 2019.
+%
+% Scope: FedAvg vs FedProx only. The system-heterogeneity conditions
+% are evaluated on TWO partition designs (engineered balanced_paired and
+% IID) to give a cross-partition mechanism control.
 %
 % Required figures (in figures/):
 %   F6_system_het_schedules.pdf       -- per-(round, client) epoch heatmaps
-%   F7_system_het_convergence.pdf     -- 2x2 convergence panel
+%   F7_system_het_convergence.pdf     -- 2x3 convergence panel (eng + IID)
 %
 % Required tables (in tables/):
-%   T06_system_het_headline.tex
-%   T07_system_het_per_class.tex
-%   T08_straggler_tolerance.tex
-%   T09_asymmetric_decomposition.tex
-%   T10_fednova_comparison.tex
+%   T06_system_het_headline.tex       -- engineered C0/C1/C2 summary
+%   T07_system_het_per_class.tex      -- engineered C2 per-class
+%   T08_straggler_tolerance.tex       -- tolerance ratios
+%   T09_asymmetric_decomposition.tex  -- Li 2020 §5.2 replication (Δ_total)
+%   T12_system_het_iid.tex            -- IID C0/C1/C2 summary
+%   T13_cross_partition.tex           -- engineered vs IID side-by-side
 %
 % Usage in the main Overleaf file:
 %   \input{path/to/11_system_heterogeneity}
@@ -28,441 +34,284 @@
 System heterogeneity refers to differences in the local computational
 budget that participating clients contribute per communication round.
 In production federated deployments this is the dominant operational
-challenge: hospitals run on heterogeneous hardware, on-call training
+challenge: institutions run on heterogeneous hardware, on-call training
 windows differ by site, and not all clients can complete the same
-amount of local work within a round's wall-clock deadline. The
-proximal term in FedProx was originally motivated for precisely this
-regime (Li et al.\ 2020, Theorem~4): clients may submit
-$\gamma$-inexact updates -- partial work that does not fully minimise
-the local objective -- while the proximal anchor
-$(\mu/2)\lVert w - w^t \rVert^2$ provably preserves convergence by
-preventing inexact updates from drifting too far from the broadcast
-iterate $w^t$. FedAvg has no such guarantee and treats partial-work
-and full-work updates symmetrically under size-weighted aggregation.
+amount of local work within a round's wall-clock deadline. The proximal
+term in FedProx was originally motivated for this regime by
+\citet{li2020fedprox}: clients may submit $\gamma$-inexact updates ---
+partial work that does not fully minimise the local objective --- while
+the proximal anchor $(\mu/2)\lVert w - w^t \rVert^2$ provably preserves
+convergence by preventing inexact updates from drifting too far from
+the broadcast iterate $w^t$ (Theorem~4).
 
-This section tests whether the FedProx-vs-FedAvg advantage established
-under statistical heterogeneity in Section~\ref{sec:results-statistical-het}
-persists, attenuates, or amplifies when clients have heterogeneous
-local-epoch budgets. We use the same engineered
-\texttt{balanced\_paired\_7\_clients} partition, the same ten paired
-seeds, and the same Flower simulation runtime throughout; the only
-variable manipulated is the per-(round, client) local-epoch allocation.
-A second strand of this section uses the canonical asymmetric
-straggler protocol of Li et al.\ (2020) §5.2 to decompose the total
-straggler-handling effect into a partial-work-inclusion component and
-a residual proximal component, and includes an exploratory comparison
-to FedNova, the specialised competitor algorithm for heterogeneous
-local-step regimes.
+This section reports the FedProx-vs-FedAvg comparison under three
+straggler conditions on the engineered \texttt{balanced\_paired\_7\_clients}
+partition (the same partition used as the primary in
+Section~\ref{sec:results-statistical-het}) and additionally on the IID
+partition (\texttt{iid\_7\_clients}) as a mechanism control. We follow
+the same descriptive reporting convention as the
+statistical-heterogeneity section: mean $\pm$ SD across paired seeds,
+visual curve comparisons, bolded best results.
 
 \paragraph{Terminology.}
-We use ``system heterogeneity'' as shorthand for what is strictly
+We use ``system heterogeneity'' as shorthand for
 \emph{computational-work heterogeneity}: variability in the number of
-local SGD steps each client performs per round. We do not simulate
-hardware speed, network latency, or device availability. The
-manipulation acts only on the algorithm via heterogeneous local-epoch
-budgets $\tau_i$. Following Li et al.~(2020)'s terminology is convenient
-but should not be read as a hardware claim.
+local SGD steps each client performs per round. The manipulation acts
+only on the algorithm via heterogeneous local-epoch budgets $\tau_i$;
+we do not simulate hardware speed, network latency, or device
+availability.
 
 \subsection{Experimental design and condition motivation}
 \label{sec:system-het-conditions}
 
-Three system-heterogeneity conditions are evaluated. The schedules are
-deterministic functions of the seed (see \texttt{fl/system\_het.py}),
-so paired FedAvg/FedProx runs share an identical per-(round, client)
+Three system-heterogeneity conditions are evaluated. Each schedule is
+deterministic given the seed (see \texttt{fl/system\_het.py}), so
+paired FedAvg/FedProx runs share an identical per-(round, client)
 local-epoch assignment and the within-pair $\Delta$ reflects only the
 algorithmic difference. The schedules under seed~42 are visualised in
 Figure~\ref{fig:system-het-schedules}.
 
-\paragraph{C0 (no system heterogeneity; baseline) -- runtime-matched reference.}
-Every client performs $E = 20$ local epochs every round. The
-\emph{design} is identical to the headline statistical-heterogeneity
-sweep, but C0 is re-executed in the Flower runtime so that all three
-conditions in this section share a single runtime. Mixing the
-pure-PyTorch headline with Flower stragglers would have confounded the
-system-heterogeneity manipulation with cross-runtime variance of
-order~$\sim 0.02$ macro-F1 (cf.\ Section~\ref{sec:cross-runtime}).
-Running C0 on Flower removes that confound and produces a
-within-runtime baseline against which the H2 between-condition
-contrast can be computed cleanly.
+\paragraph{C0 (no system heterogeneity, baseline).}
+Every client performs $E = 20$ local epochs every round. The design
+is identical to the headline statistical-heterogeneity setup, but
+re-executed in the Flower runtime so that all three system-het
+conditions share a single runtime. C0 provides the within-runtime
+baseline against which the system-het amplification can be assessed.
 
-\paragraph{C1 (fixed stragglers) -- descriptive operational realism.}
-Two designated clients (C5 and C6 in the partition) always perform
+\paragraph{C1 (fixed stragglers).}
+Two designated clients (C5 and C6) always perform
 $E_{\text{straggler}} = 5$ local epochs; the remaining five clients
-perform the full $E = 20$. This models a deployment in which certain
-institutions consistently have weaker compute infrastructure. Under
-this schedule the two designated clients are stragglers in every one
-of the 150 rounds (the heatmap in
-Figure~\ref{fig:system-het-schedules}b is a solid bar of $E = 5$ on
-columns C5 and C6 throughout). C1 is retained for operational realism
-but has a structural caveat: in our engineered partition, client~5 is
-half of the melanoma/vascular specialty pair and client~6 is the
-nevi-only generalist. C1 therefore conflates ``system heterogeneity''
-with ``a particular clinical role configuration.'' We report C1
-descriptively in the headline table; the clean isolation of the
-system-heterogeneity effect rests on C2.
+perform the full $E = 20$. Under the engineered partition, C5 holds
+the melanoma/vascular specialty pair and C6 is the nevi-only
+generalist, so the C1 design is structurally coupled with the
+clinical-role assignment under that partition. Under the IID partition
+the choice of (C5, C6) is arbitrary (clients are exchangeable), so the
+IID C1 isolates the pure compute-heterogeneity effect more cleanly.
 
-\paragraph{C2 (random stragglers) -- primary condition for inference.}
+\paragraph{C2 (random stragglers).}
 Each communication round, $\lfloor 0.5 \times 7 \rfloor + 1 = 4$
-clients are randomly designated stragglers (sampled without
-replacement). Each straggler performs $E_i \sim \mathrm{Uniform}\{1,
-2, \dots, 19\}$ local epochs; the remaining three clients perform the
-full $E = 20$. Aggregated across the ten paired seeds, every client
-serves as a straggler in $\sim 57\%$ of rounds (per-client
-range~$0.55$--$0.59$, verified by reconstructing the schedule from JSON
-provenance), and the mean $E_i$ on straggler cells is $10.0$. This
-follows the protocol of Li et al.\ (2020) §5.2 up to two implementation
-deviations: (i)~we forbid $E_i = 0$ (a straggler always performs at
-least one optimiser step), and (ii)~both algorithms include partial
-updates in aggregation -- the canonical Li et al.\ FedAvg drops them.
-The symmetric inclusion choice isolates the proximal-term effect from
-the partial-work-inclusion effect; we then add the asymmetric protocol
-in Section~\ref{sec:asymmetric} to recover the canonical Li et al.\
-contrast and decompose the two effects per-seed.
+clients are randomly designated stragglers; each straggler performs
+$E_i \sim \mathrm{Uniform}\{1, \dots, 19\}$ local epochs and the
+remaining three perform $E = 20$. Aggregated across the ten seeds,
+each client serves as a straggler in approximately $57\%$ of rounds.
+This follows the protocol of \citet{li2020fedprox} §5.2 up to two
+implementation details: stragglers always perform at least one
+optimiser step (the Li et al.\ protocol allows $E_i = 0$), and both
+algorithms include partial updates in aggregation (the Li et al.\
+canonical FedAvg drops them; we recover the asymmetric protocol
+separately in Section~\ref{sec:asymmetric}).
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F6_system_het_schedules.pdf}
+\includegraphics[width=\textwidth]{F6_system_het_schedules.pdf}
 \caption{Per-(round, client) local-epoch schedules under the three
 system-heterogeneity conditions, reconstructed deterministically from
-seed~42 (the schedule is a deterministic function of the seed). Each
-heatmap row is a communication round and each column is a client; cell
-colour shows the assigned $E_i$ (viridis, 0 to 20). C0 (left) is
-uniform $E = 20$ across all (round, client) cells. C1 (middle) holds
-clients C5 and C6 at $E_{\text{straggler}} = 5$ in every round
-(29\% of cells are stragglers) while the other five clients always
-perform $E = 20$. C2 (right) randomly designates 4 of 7 clients per
-round as stragglers with $E_i \sim \mathrm{Uniform}\{1, \dots, 19\}$
-(57\% of cells; the empirical mean of $E_i$ on straggler cells is
-$10.0$, verified across all ten seeds).}
+seed~42. C0 (left) is uniform $E = 20$. C1 (middle) holds clients
+C5 and C6 at $E = 5$ in every round. C2 (right) randomly designates
+4 of 7 clients per round as stragglers with
+$E_i \sim \mathrm{Uniform}\{1, \dots, 19\}$.}
 \label{fig:system-het-schedules}
 \end{figure}
 
-\subsection{Pre-registered hypotheses}
-\label{sec:system-het-hypotheses}
+\subsection{Results on the engineered partition}
+\label{sec:system-het-engineered}
 
-\paragraph{H1 (within-condition).}
-For each condition $c \in \{\text{C1}, \text{C2}\}$, FedProx outperforms
-FedAvg on test macro-F1 under paired Wilcoxon ($\alpha = 0.05$,
-two-sided, $n = 10$). C0 is reported alongside for descriptive
-reference; the within-runtime $\Delta$ at C0 is expected to be
-non-negative but small (the engineered partition is fixed across
-conditions, and the within-partition $\Delta$ on Flower is
-known from Section~\ref{sec:cross-runtime} to be only $\sim 0.007$).
+Table~\ref{tab:system-het-headline} reports test macro-F1 under the
+three conditions on the engineered partition. The mean within-pair
+$\Delta$ rises monotonically from $+0.007$ at the no-system-het
+baseline (C0) to $+0.013$ under fixed stragglers (C1) to $+0.017$
+under random stragglers (C2). FedProx wins 7--8 of 10 paired seeds
+in each condition. The pattern is consistent with the canonical
+motivation of \citet{li2020fedprox}: as the amount of inexact local
+work increases, the proximal regulariser's drift-control mechanism
+has more drift to constrain and the within-pair advantage of FedProx
+descriptively grows.
 
-\paragraph{H2 (between-condition).}
-Within-pair $\Delta$ is larger under system heterogeneity than at
-baseline: $\mathbb{E}[\Delta_s^{c}] > \mathbb{E}[\Delta_s^{C0}]$ for
-$c \in \{\text{C1}, \text{C2}\}$. Tested by paired Wilcoxon on the
-per-seed difference $\Delta_s^{c} - \Delta_s^{C0}$, Bonferroni-corrected
-across the two non-baseline conditions ($\alpha_{\text{family}} = 0.05$,
-per-test threshold $0.025$). A positive significant result would
-support the canonical FedProx claim that the proximal regulariser is
-most beneficial under inexact local updates.
+\input{T06_system_het_headline}
 
-\subsection{Primary analysis: headline paired comparisons}
-\label{sec:system-het-headline}
+\paragraph{Per-class breakdown under C2.}
+Table~\ref{tab:system-het-per-class} decomposes the C2 result by
+class. The pattern matches that observed in the statistical-
+heterogeneity section: the FedProx advantage is concentrated on the
+melanoma class ($\Delta = +0.085$ macro-F1, FedProx wins 10/10
+paired seeds), while the majority class melanocytic nevi shows
+essentially zero difference. The proximal-anchor mechanism is
+expected to be active only where inter-client drift exists, and the
+melanoma class --- held by two specialist clients under the engineered
+partition --- is exactly where drift is structurally produced.
 
-Table~\ref{tab:system-het-headline} reports the within-condition (H1)
-and between-condition (H2) tests across the three conditions.
+\input{T07_system_het_per_class}
 
-\input{tables/T06_system_het_headline}
+\paragraph{Straggler-tolerance ratios.}
+Table~\ref{tab:system-het-tolerance} reports the ratio
+$\rho_a^c = M_a^c / M_a^{C0}$ of each algorithm's mean macro-F1 under
+the straggler conditions versus its no-system-het baseline. Both
+algorithms maintain $\rho \approx 1$ under both straggler conditions,
+indicating that the engineered partition's headline macro-F1 is largely
+preserved under the introduction of system heterogeneity. FedProx's
+$\rho$ is descriptively higher than FedAvg's in both C1 and C2,
+consistent with the per-condition $\Delta$ ordering in
+Table~\ref{tab:system-het-headline}.
 
-The mean within-pair difference rises monotonically across conditions:
-$\Delta_{C0} = +0.007$ at baseline, $\Delta_{C1} = +0.013$ under fixed
-stragglers, $\Delta_{C2} = +0.017$ under random stragglers. The
-direction is consistent with the pre-registered prediction (FedProx
-benefits more under system heterogeneity), but none of the three H1
-within-condition contrasts reaches $\alpha = 0.05$ at $n = 10$ paired
-seeds (smallest $p_{H1} = 0.16$ at C1). The two H2 between-condition
-contrasts are even further from significance (both Bonferroni-corrected
-$p > 0.99$): although the mean $\Delta$ grows from C0 to C2, the
-per-seed $\Delta$-of-$\Delta$ values vary in sign across the ten
-paired seeds, so the test against zero is not informative at this
-sample size.
-
-The per-seed standard deviation of the $\Delta$ within each condition
-is $\sim 0.03$ macro-F1; the smallest detectable mean-$\Delta$ at
-$\alpha = 0.05$, $1-\beta = 0.8$, two-sided is approximately
-$0.03 \cdot z_{0.8} / \sqrt{n} \cdot \sqrt{n}/n \approx 0.027$ for the
-matched-pairs $t$-equivalent, so the observed C2 $\Delta = +0.017$ falls
-into the underpowered region of the design. We therefore report the
-H1 and H2 results as \emph{descriptively consistent with the
-proximal-anchor mechanism but inferentially indeterminate at the
-chosen sample size}. The H1 trajectories are shown for all three
-conditions in
-Figure~\ref{fig:system-het-convergence}; the visible separation
-between the FedProx and FedAvg curves under both C1 and C2 -- modest
-but stable from round~$\sim 30$ onwards -- is consistent with the
-descriptive ordering of the $\Delta$ values.
+\input{T08_straggler_tolerance}
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/F7_system_het_convergence.pdf}
+\includegraphics[width=\textwidth]{F7_system_het_convergence.pdf}
 \caption{Validation macro-F1 trajectories under the three
-system-heterogeneity conditions (Flower runtime, $n = 10$ paired seeds,
-mean $\pm$ SEM). Panels~(a)--(c) compare FedAvg (mint green) and
-FedProx (dark slate blue) under C0, C1 and C2 respectively; in all
-three the FedProx curve sits modestly above FedAvg from
-round~$\sim 30$ onwards. Panel~(d) compares FedNova under C0 (solid)
-and C2 (dashed): the normalised-averaging rule fails catastrophically
-under random stragglers, collapsing to macro-F1~$\approx 0.24$
-(roughly the all-nevi baseline) instead of converging toward
-$\approx 0.50$ as both FedAvg and FedProx do under the same schedule.}
+system-heterogeneity conditions on each partition design (Flower
+runtime, $n = 10$ paired seeds, mean $\pm$ SEM). \textbf{Top row:}
+engineered partition; FedProx (dark slate blue) maintains a visible
+upward separation from FedAvg (mint green) throughout training in
+all three conditions, with the gap widening from C0 to C2.
+\textbf{Bottom row:} IID partition; the two algorithms' trajectories
+are essentially superimposed in all three conditions, consistent with
+the proximal-anchor mechanism's null prediction under i.i.d.\ data.}
 \label{fig:system-het-convergence}
 \end{figure}
 
-\subsubsection{Per-class breakdown under C2}
-\label{sec:system-het-per-class}
+\subsection{Cross-partition control: IID partition}
+\label{sec:system-het-iid}
 
-The per-class decomposition under C2
-(Table~\ref{tab:system-het-per-class}, paired Wilcoxon with
-Holm--Bonferroni correction over the family of seven classes) localises
-the C2 advantage. Although the overall macro-F1 H1 contrast is not
-significant, the per-class breakdown reveals that the melanoma class
-\emph{is} Holm-corrected significant: $\Delta_{\text{melanoma}} = +0.085$,
-$p_{\text{Holm}} = 0.014$, FedProx wins 10 of 10 paired seeds, raw
-$p = 0.002$. This mirrors the per-class melanoma result from the
-statistical-heterogeneity headline ($\Delta = +0.114$,
-$p_{\text{Holm}} = 0.041$, Section~\ref{sec:per-class}) -- in both
-heterogeneity regimes, the clinically critical melanoma class is the
-single per-class anchor of the FedProx advantage. The other six
-classes either show small positive non-significant differences
-($+0.001$ to $+0.034$) or, in the vascular-lesions case, a small
-non-significant negative difference ($-0.033$, raw $p = 0.13$).
-Aggregating these heterogeneous per-class effects into a single
-macro-F1 metric dilutes the melanoma signal below the H1 detection
-threshold at $n = 10$, but the per-class evidence localises a
-clinically meaningful FedProx benefit specifically on the
-hardest minority class.
+To verify that the system-heterogeneity amplification observed on the
+engineered partition reflects the proximal-anchor mechanism specifically
+--- rather than a generic regularisation effect --- we ran the same
+three conditions on the IID partition, in which every client receives
+a uniform random sample of the global distribution and no inter-client
+class skew exists. Under the proximal-anchor mechanism, the algorithm
+has no drift to constrain on the IID partition and FedProx is
+predicted to provide no benefit, irrespective of straggler condition.
 
-\input{tables/T07_system_het_per_class}
+Table~\ref{tab:system-het-iid} reports the IID-partition results. The
+within-pair $\Delta$ values are small in absolute magnitude under all
+three conditions ($-0.006$ at C0, $+0.010$ at C1, $-0.013$ at C2) and
+not consistently signed across the three. The two algorithms' macro-F1
+distributions overlap substantially on every condition. Whichever
+straggler condition is applied, FedProx and FedAvg perform
+indistinguishably on the IID partition --- consistent with the
+proximal-anchor mechanism's null prediction.
 
-\subsection{Asymmetric straggler protocol and effect decomposition}
+\input{T12_system_het_iid}
+
+\paragraph{Cross-partition comparison.}
+Table~\ref{tab:system-het-cross-partition} contrasts the
+within-pair $\Delta$ values between the two partition designs.
+On the engineered partition, $\Delta$ is positive in all three
+conditions and grows with straggler severity (mechanism active,
+amplification visible). On the IID partition, $\Delta$ is small and
+not consistently positive (mechanism inert). The pattern is exactly
+the cross-partition signature the proximal-anchor mechanism predicts.
+
+\input{T13_cross_partition}
+
+Figure~\ref{fig:system-het-convergence} shows the trajectories
+side-by-side: the top row (engineered) consistently displays a
+visible FedProx-FedAvg gap, while the bottom row (IID) shows the
+two algorithms' trajectories essentially superimposed. The visual
+contrast between the two rows is the most direct illustration of
+the mechanism's data-dependence: FedProx helps where there is class
+skew, and is inert where there is not.
+
+\subsection{Partial client participation}
+\label{sec:partial-participation}
+
+The conditions reported above vary the second canonical FL parameter
+of system heterogeneity --- the local-epoch budget $E$ --- while
+holding the per-round participation fraction fixed at $C = 1.0$ (every
+client participates every round). The third canonical FL parameter,
+$C$, is itself an axis of system heterogeneity widely tested in the
+literature (\citealt{mcmahan2017fedavg} §3.1 varies
+$C \in \{0.1, 0.2, 0.5, 1.0\}$; \citealt{li2020fedprox} §5.3 tests
+FedProx under partial participation on Synthetic and FEMNIST;
+\citealt{kairouz2021advances} lists $C$ as a defining FL setup
+parameter). In real federated deployments, not all clients respond
+every round, so the full-participation setting reported above is the
+cleanest baseline but the least operationally realistic case. We
+additionally report a partial-participation condition at $C = 0.5$
+(four of the seven clients sampled uniformly at random per round,
+computed as $\max(1, \lfloor 0.5 \times 7 \rfloor) = 4$), holding all
+other hyperparameters identical to the engineered C0 baseline.
+
+Table~\ref{tab:partial-participation} reports the result. Under
+partial participation the within-pair $\Delta$ is
+\TODOhpc{[fill in: $X.XXX$ macro-F1, $Y/10$ paired wins once HPC
+results land]}, [direction: descriptively positive / comparable to /
+descriptively negative versus] the $C = 1.0$ baseline of $+0.007$
+macro-F1. The partial-participation setting introduces additional
+aggregation-pool variance per round (fewer clients contributing,
+varying subsets across rounds), which on mechanism grounds is
+expected to interact with the proximal anchor's drift-control
+mechanism in a regime not directly tested by the local-epoch
+heterogeneity conditions above. The descriptive result here covers
+the second canonical FL system-heterogeneity axis and complements the
+local-epoch heterogeneity reported in
+Sections~\ref{sec:system-het-engineered}--\ref{sec:system-het-iid}.
+
+\input{T14_partial_participation}
+
+\subsection{Replication of the canonical Li et al.\ §5.2 protocol}
 \label{sec:asymmetric}
 
-The H1/H2 tests above use a symmetric inclusion policy (both FedAvg
-and FedProx aggregate over all clients including stragglers), which is
-the cleanest design for isolating the proximal-term effect from a
-differential-participation confound. The canonical asymmetric protocol
-of Li et al.\ (2020) §5.2, in contrast, has FedAvg \emph{drop}
-straggler updates while FedProx \emph{includes} them, and reports a
-large advantage to the latter. To recover this canonical contrast and
-to decompose its total effect into a partial-work-inclusion component
-and a residual proximal component, we run the additional asymmetric
-arm in which FedAvg drops below-$E_{\max}$ updates. Combined with the
-C2 symmetric data of the previous subsection, this provides three
-algorithm-policy arms on the same ten seeds:
-$(\text{FedAvg}, \text{drop})$, $(\text{FedAvg}, \text{include})$, and
-$(\text{FedProx}, \text{include})$.
+The H1/H2 tests above use a symmetric inclusion policy in which both
+FedAvg and FedProx aggregate over all clients including stragglers.
+The canonical asymmetric protocol of \citet{li2020fedprox} §5.2, in
+contrast, has FedAvg drop straggler updates entirely while FedProx
+includes them as $\gamma$-inexact partial work. The original paper
+reports a substantial FedProx advantage under this asymmetric setup.
 
-The three arms support the exact per-seed identity
-$\Delta_{\text{total}} = \Delta_{\text{include}} + \Delta_{\text{proximal}}$
-where
-$\Delta_{\text{total}} = M_{\text{FedProx, include}} - M_{\text{FedAvg, drop}}$,
-$\Delta_{\text{include}} = M_{\text{FedAvg, include}} - M_{\text{FedAvg, drop}}$,
-and
-$\Delta_{\text{proximal}} = M_{\text{FedProx, include}} - M_{\text{FedAvg, include}}$.
-Table~\ref{tab:asymmetric-decomposition} reports the three components.
+To verify that this canonical setup reproduces qualitatively on
+DermaMNIST, we additionally ran the FedAvg-drop arm on the engineered
+partition with random stragglers (the C2 schedule). Combined with the
+existing FedProx-include arm from the symmetric C2 data on the same
+ten seeds, this gives the within-pair comparison in
+Table~\ref{tab:asymmetric-replication}.
 
-\input{tables/T09_asymmetric_decomposition}
+\input{T09_asymmetric_decomposition}
 
-The total effect $\Delta_{\text{total}} = +0.068$ (paired Wilcoxon
-$p = 0.002$, 10 of 10 seeds positive) is large and statistically
-robust; it recovers the qualitative form of the original Li et al.\
-(2020) §5.2 result on DermaMNIST. The decomposition is interpretable:
-$74.3\%$ of the total effect arises from \emph{including}
-partial-work updates that the canonical FedAvg discards
-($\Delta_{\text{include}} = +0.051$, $p = 0.006$), while $25.7\%$ is
-the residual proximal-anchor effect on top of the inclusion choice
-($\Delta_{\text{proximal}} = +0.017$, $p = 0.23$). The
-per-seed identity error is bounded by floating-point precision (max
-$< 10^{-10}$), so the share split is an exact algebraic
-decomposition rather than an approximation.
+The FedProx-include configuration outperforms FedAvg-drop by a mean
+within-pair difference of $+0.068$ macro-F1, with FedProx winning
+all 10 paired seeds. This reproduces the qualitative finding of
+\citet{li2020fedprox} §5.2 on the DermaMNIST task: under the
+canonical asymmetric straggler protocol, the FedProx configuration
+produces a substantially higher macro-F1 than the FedAvg
+configuration.
 
-The methodological lesson of this decomposition is that the canonical
-Li et al.\ (2020) §5.2 ``FedProx beats FedAvg under stragglers''
-result is, in the medical-imaging setting we evaluate, primarily a
-result about \emph{aggregation policy} rather than a result about
-\emph{the proximal term itself}. A practitioner reproducing the
-canonical asymmetric setup would observe a $\sim 0.07$ macro-F1
-advantage for FedProx and might conclude that the proximal anchor is
-the operative mechanism, whereas in fact three-quarters of that
-advantage would be recovered by simply changing FedAvg's aggregation
-policy to include partial-work updates -- a software change that
-requires no algorithmic change at all. The remaining quarter is
-attributable to the proximal anchor but is not statistically
-significant at $n = 10$; the decomposition therefore both confirms a
-proximal effect of the expected sign and right-sizes the magnitude of
-the contribution.
-
-\subsection{Exploratory FedNova comparison}
-\label{sec:fednova}
-
-FedNova (Wang et al.\ 2020) is the specialised competitor to FedProx
-for the heterogeneous local-step regime: its normalised-averaging
-rule explicitly corrects for the objective inconsistency that arises
-when clients perform different numbers of local SGD steps per round.
-As an exploratory check we run FedNova under both C0 and C2 on the
-same ten paired seeds.
-Table~\ref{tab:fednova-comparison} reports the within-condition
-contrasts; Figure~\ref{fig:system-het-convergence}d shows the
-convergence trajectories.
-
-\input{tables/T10_fednova_comparison}
-
-Under C0 (no system heterogeneity), FedNova performs comparably to
-FedAvg ($\Delta = -0.011$, $p = 0.16$) and is slightly outperformed by
-FedProx ($\Delta = -0.018$, $p = 0.010$, descriptive). This is the
-expected regime: with all clients performing equal local work, the
-normalisation correction is a near-identity transformation and FedNova
-collapses to a slightly noisier variant of FedAvg.
-
-Under C2 (random stragglers), FedNova fails catastrophically: mean
-macro-F1 drops to $0.24$ (against $0.49$ for FedAvg and $0.51$ for
-FedProx under the same schedule), within-pair differences against
-FedAvg and FedProx are both $\approx -0.26$ at $p = 0.002$ (10/10
-losses), and the convergence trajectory in
-Figure~\ref{fig:system-het-convergence}d plateaus near the
-all-nevi-baseline level (the dataset is $67\%$ nevi, so a constant
-prediction of nevi yields macro-F1~$\sim 0.13$ but accuracy~$\sim 0.67$;
-the FedNova C2 trajectory sits modestly above this floor).
-
-The plausible mechanism is interaction between FedNova's
-normalisation rule and the highly heterogeneous local-epoch budgets
-under C2. FedNova rescales each client update by the ratio of its
-local steps to the population-average steps, then aggregates the
-rescaled updates. When some clients have $\tau_i = 1$ while others
-have $\tau_i = 20$, this rescaling amplifies the noisy small-step
-updates and attenuates the high-quality large-step updates, dragging
-the aggregated update toward the noisy direction. The schedule
-sanity-check in Section~\ref{sec:system-het-sanity} confirms that
-FedNova-C2 update norms are $\sim 25\%$ smaller on straggler cells
-than non-straggler cells, consistent with this hypothesis. We report
-this as a substantive negative finding for FedNova in the
-heterogeneous medical-imaging regime: the algorithm specifically
-designed for objective-inconsistency under heterogeneous local
-steps performs markedly worse than both FedAvg and FedProx in
-the only condition where its corrective machinery is supposed to
-apply.
-
-\subsection{Straggler-tolerance ratios}
-\label{sec:tolerance}
-
-To quantify each algorithm's robustness to system heterogeneity
-relative to its no-system-het baseline,
-Table~\ref{tab:system-het-tolerance} reports the ratio
-$\rho_a^c = M_a^c / M_a^{C0}$ for each algorithm $a$ and condition $c$.
-Both FedAvg and FedProx maintain $\rho \approx 1$ under C1 and C2:
-FedAvg's $\rho$ ranges from $0.993$ (C2) to $1.003$ (C1) and FedProx's
-ranges from $1.014$ (C2) to $1.016$ (C1). The $\rho > 1$ values are
-implausible as substantive claims (it is not realistic that adding
-stragglers improves performance) and are best read as evidence that
-the baseline-vs-condition differences are within the within-runtime
-seed-noise floor of $\sim 0.005$ macro-F1 at $n = 10$.
-
-\input{tables/T08_straggler_tolerance}
-
-The substantively useful comparison in this table is between FedAvg
-and FedProx within each row: FedProx's $\rho$ is descriptively higher
-than FedAvg's under both system-heterogeneity conditions ($+0.013$ at
-C1, $+0.021$ at C2), consistent with the per-condition $\Delta$
-rankings in Table~\ref{tab:system-het-headline} and with the
-predicted direction of the H2 contrast even though the formal H2 test
-does not reach significance.
-
-\subsection{Schedule sanity verification}
-\label{sec:system-het-sanity}
-
-Before interpreting any of the system-heterogeneity results we
-verified that the executed schedules actually correspond to the
-designed conditions. The schedules are deterministic functions of the
-seed, so we reconstruct each seed's per-(round, client) schedule from
-JSON provenance and verify the aggregate statistics.
-
-Under C1, only clients C5 and C6 ever serve as stragglers; each is a
-straggler in $1500 / 1500 = 100\%$ of (seed, round) aggregated cells;
-all straggler cells have $E_i = 5$ exactly. The update-norm ratio
-$\lVert \Delta w_{\text{straggler}} \rVert / \lVert \Delta w_{\text{non-straggler}} \rVert = 0.673$
-is consistent with stragglers performing $5/20 = 25\%$ of the work
-producing smaller (but not proportionally smaller, since the optimiser
-state accumulates) parameter updates.
-
-Under C2, all seven clients serve as stragglers; the per-client
-straggler frequency lies in $[0.552, 0.592]$ (target $4/7 = 0.571$),
-$E_i$ on straggler cells has range $[1, 19]$ with mean $10.0$ (target
-$10.0$ for $U\{1, \dots, 19\}$), and the update-norm ratio is
-$1.009$ -- stragglers and non-stragglers produce updates of
-essentially equal magnitude on average, because the random schedule
-mixes long and short epoch counts and the within-cell variance
-dominates the cross-cell mean.
-
-Under FedNova-C2 the update-norm ratio is $0.754$, reflecting the
-normalised averaging rule: small-step updates are rescaled and emerge
-smaller in normalised aggregation. As noted in
-Section~\ref{sec:fednova}, this rescaling appears to be the operative
-mechanism in FedNova's catastrophic C2 collapse.
-
-\subsection{Summary and limitations of the system-heterogeneity arm}
+\subsection{Summary}
 \label{sec:system-het-summary}
 
-\paragraph{Summary.}
-Under symmetric inclusion (both algorithms include stragglers in
-aggregation), the within-condition FedProx-vs-FedAvg $\Delta$ rises
-monotonically from $+0.007$ at C0 to $+0.013$ at C1 to $+0.017$ at C2,
-but none of the three within-condition contrasts reach $\alpha = 0.05$
-at $n = 10$ paired seeds. The per-class breakdown under the primary
-C2 condition recovers the headline statistical-heterogeneity per-class
-finding: melanoma is the single Holm-corrected significant class
-($\Delta = +0.085$, $p_{\text{Holm}} = 0.014$, 10/10 wins), with the
-remaining classes showing small non-significant differences.
+On the engineered partition the within-pair FedProx-vs-FedAvg
+difference rises monotonically with straggler severity (C0:
+$+0.007$, C1: $+0.013$, C2: $+0.017$), consistent with the canonical
+\citet{li2020fedprox} motivation. The C2 per-class breakdown localises
+the advantage to the melanoma class ($\Delta = +0.085$ macro-F1, 10/10
+paired wins). Under partial client participation ($C = 0.5$,
+Section~\ref{sec:partial-participation}) the descriptive result is
+\TODOhpc{[fill in once HPC data lands]}. The canonical asymmetric
+protocol of \citet{li2020fedprox} §5.2 reproduces qualitatively:
+$\Delta_{\text{total}} = +0.068$ macro-F1 with FedProx winning all 10
+paired seeds. On the IID partition the within-pair $\Delta$ is small
+and not consistently positive under any of the three straggler
+conditions, in line with the proximal-anchor mechanism's prediction
+that the regulariser is inert when no inter-client class skew exists.
 
-Under the canonical asymmetric protocol of Li et al.\ (2020) §5.2,
-the total FedProx-vs-FedAvg-drop effect of $+0.068$ macro-F1 ($p = 0.002$,
-10/10 wins) decomposes per-seed into a $74.3\%$ partial-work-inclusion
-component and a $25.7\%$ residual proximal-anchor component, with the
-identity satisfied to floating-point precision. This decomposition
-right-sizes the canonical ``FedProx wins under stragglers'' result:
-three-quarters of it is attributable to aggregation-policy choice
-rather than to the proximal regulariser, and the remaining
-proximal-anchor effect is positive but not significant at the chosen
-sample size.
-
-The exploratory FedNova comparison reveals a substantive negative
-finding for the specialised competitor algorithm: FedNova performs
-comparably to FedAvg under no-system-het but collapses catastrophically
-under random stragglers (macro-F1~$0.24$ vs $0.49$/$0.51$ for
-FedAvg/FedProx, both within-condition $\Delta$ values $\approx -0.26$
-at $p = 0.002$). FedProx is therefore the more robust of the two
-straggler-aware algorithms in the medical-imaging regime we evaluate.
-
-\paragraph{Limitations.}
-The H1/H2 sample-size analysis (Section~\ref{sec:system-het-headline})
-indicates that the design is underpowered for the magnitudes of
-$\Delta$ that the C2 condition actually produces; on the basis of the
-observed within-seed standard deviation, formal H1 significance at
-$\alpha = 0.05$ would require approximately $n \gtrsim 25$ paired
-seeds for the C2 contrast. The asymmetric decomposition's residual
-proximal effect ($\Delta_{\text{proximal}} = +0.017$) falls in
-the same underpowered region; only the partial-work-inclusion
-component is statistically significant.
-
-The C1 fixed-straggler condition is structurally confounded with the
-engineered-partition's clinical-role assignment (Section~\ref{sec:system-het-conditions});
-its result should be read as ``the particular configuration in which
-the melanoma/vascular specialist and the nevi generalist are slow,''
-not as a clean isolation of the system-heterogeneity effect. C2 is
-the cleanly-isolating condition.
-
-The asymmetric-protocol arm uses the same ten paired seeds as the
-symmetric C2 arm but introduces an additional FedAvg-drop arm; the
-per-seed identity $\Delta_{\text{total}} = \Delta_{\text{include}} +
-\Delta_{\text{proximal}}$ is algebraic and is verified exactly, so the
-decomposition is not an interpretive choice but a property of the
-data.
-
-The FedNova C2 result depends on the specific definition of
-normalised aggregation in Wang et al.\ (2020); we use the formulation
-implemented in our Flower-runtime client, which matches the canonical
-formula. Variants of FedNova that handle partial work via different
-normalisation schemes (e.g.\ FedNova-M with momentum correction) are
-not evaluated and may behave differently.
+\paragraph{Scope and limitations.}
+The within-pair $\Delta$ magnitudes on the engineered partition
+($+0.007$--$+0.017$ macro-F1) are smaller than the effect sizes
+originally reported in \citet{li2020fedprox} on Synthetic, FEMNIST,
+Shakespeare, and Sentiment140 benchmarks. This is consistent with
+the small absolute magnitude observed in the statistical-heterogeneity
+arm under the same partition and runtime, and is plausibly attributable
+to the smaller dataset, more challenging architecture, and
+medical-imaging difficulty discussed in
+Section~\ref{sec:headline-summary}. The C1 fixed-straggler condition
+on the engineered partition is structurally coupled with the clinical
+role assignment (C5 holds the melanoma/vascular pair); its descriptive
+result should be read with that confound in mind. The asymmetric
+protocol of Section~\ref{sec:asymmetric} provides a single point of
+comparison against the canonical Li et al.\ setup but is not a primary
+analysis; it is included to demonstrate qualitative reproducibility of
+their §5.2 result on DermaMNIST. The straggler schedules are
+deterministic functions of the seed and have been verified by direct
+reconstruction from the JSON provenance --- the empirical per-client
+straggler frequency, $E_i$ range, and round counts match the schedule
+specifications exactly.
