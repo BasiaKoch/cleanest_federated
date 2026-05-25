@@ -1,0 +1,163 @@
+% ==============================================================================
+% Centralised Baseline section -- Overleaf-ready, drop-in.
+% Reporting style: descriptive (mean +/- SD across seeds), bolded best where
+% comparing methods, no formal hypothesis testing -- matches the FL literature
+% convention used throughout this dissertation.
+%
+% Required tables (none external -- table is inline in this .tex).
+% Required figures: none for this section.
+%
+% Cross-references used:
+%   sec:dataset       -- DermaMNIST dataset description in Methods chapter
+%   sec:model         -- DermMNISTCNN architecture in Methods chapter
+%   sec:metrics       -- metric definitions in Methods chapter
+%   sec:fl-results    -- federated-learning results chapter (forward reference)
+%
+% Usage: \input{15_centralised_baseline}
+% ==============================================================================
+
+\section{Centralised Baseline}
+\label{sec:centralised-baseline}
+
+Before evaluating any federated configuration, we establish a
+centralised non-federated reference. The centralised baseline trains
+the same \texttt{DermMNISTCNN} architecture
+(Section~\ref{sec:model}) on the pooled DermaMNIST training set with
+no federation. It provides an upper bound on what can be achieved on
+this task with this architecture, against which the federated
+results in Section~\ref{sec:fl-results} are interpreted as
+fractional recoveries of the centralised performance.
+
+\subsection{Training setup}
+\label{sec:centralised-setup}
+
+The centralised baseline pools all 7{,}007 training samples, the
+1{,}003 validation samples, and the 2{,}005 test samples described
+in Section~\ref{sec:dataset} into a single non-federated training
+loop. The model architecture is held identical to the federated
+experiments (Section~\ref{sec:model}): a four-block GroupNorm CNN
+with 423{,}175 trainable parameters operating on $28\times28$ RGB
+inputs. The optimiser is SGD with learning rate $0.01$, momentum
+$0.9$, weight decay $0.0$, and batch size $32$ --- the same
+hyperparameters used by each client in the federated experiments,
+chosen for direct comparability rather than for centralised
+optimum. The model is trained for $50$ epochs, with the test set
+evaluated once at the epoch of highest validation macro-F1
+(\emph{best-validation checkpoint} protocol).
+
+To match the federated experiments and support a paired-seed
+analysis where applicable, the centralised baseline is repeated
+across the same ten random seeds used for the federated runs:
+$\{42,\,123,\,456,\,789,\,999,\,2024,\,31337,\,8675309,\,161803,\,$
+$271828\}$. Within each seed the data shuffle, model initialisation,
+and training trajectory are deterministic; the seed-level variation
+quantifies optimisation noise on this task.
+
+\subsection{Results}
+\label{sec:centralised-results}
+
+Table~\ref{tab:centralised-results} reports test performance at the
+best-validation checkpoint across the ten seeds. The centralised
+model reaches a mean test macro-F1 of $0.560\pm0.024$ with mean
+classification accuracy $0.764\pm0.012$ and mean balanced accuracy
+$0.561\pm0.034$. The per-seed test macro-F1 ranges from $0.518$ to
+$0.597$. The best-validation epoch is consistently in the second
+half of training, with a median of $47$ out of $50$ epochs, so the
+$50$-epoch training budget is appropriate for this task and
+architecture.
+
+\begin{table}[!htbp]
+\centering
+\caption{Centralised baseline test performance at the
+best-validation checkpoint, reported as mean $\pm$ standard
+deviation across $n=10$ seeds. Per-class F1 is the F1 score on
+each of the seven DermaMNIST classes; class prevalence in the
+training set is shown in parentheses.}
+\label{tab:centralised-results}
+\small
+\begin{tabular}{lc}
+\toprule
+Metric & Test value (mean $\pm$ SD) \\
+\midrule
+Macro-F1                        & $\mathbf{0.5600 \pm 0.0240}$ \\
+Balanced accuracy               & $0.5608 \pm 0.0341$ \\
+Overall accuracy                & $0.7637 \pm 0.0123$ \\
+Cross-entropy loss              & $0.7778 \pm 0.0653$ \\
+\midrule
+\multicolumn{2}{l}{\textit{Per-class F1:}} \\
+\quad Actinic keratoses (3.27\%)              & $0.4923 \pm 0.0433$ \\
+\quad Basal cell carcinoma (5.13\%)           & $0.5380 \pm 0.0263$ \\
+\quad Benign keratosis (10.97\%)              & $0.5285 \pm 0.0397$ \\
+\quad Dermatofibroma (1.15\%)                 & $0.3359 \pm 0.0961$ \\
+\quad Melanoma (11.11\%)                      & $0.4551 \pm 0.0349$ \\
+\quad Melanocytic nevi (67.05\%)              & $0.8896 \pm 0.0088$ \\
+\quad Vascular lesions (1.41\%)               & $0.6807 \pm 0.0680$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The per-class breakdown reveals the task's structure clearly. The
+majority class \emph{melanocytic nevi} (67\% prevalence) is the
+easiest to learn, reaching $F1 = 0.890$ with very small across-seed
+variance ($\pm 0.009$). The two rarest classes,
+\emph{dermatofibroma} ($1.15\%$) and \emph{vascular lesions}
+($1.41\%$), show the largest across-seed variance ($\pm 0.096$ and
+$\pm 0.068$), reflecting the difficulty of stably learning classes
+represented by only $80$ and $99$ training samples respectively.
+The two clinically critical classes \emph{melanoma} and
+\emph{basal cell carcinoma} reach mean F1 of $0.455$ and $0.538$
+respectively --- well above chance but substantially below the
+majority class, consistent with the medical-imaging literature on
+small CNNs at $28\times28$ resolution.
+
+The macro-F1 of $0.56$ is a benchmark-typical result for
+DermaMNIST at this resolution and architecture, comparable to
+published values on the MedMNIST v2 benchmark. It is not intended
+as a clinical-grade performance estimate; the input resolution is
+deliberately compressed and the architecture is a small CNN, both
+chosen for comparability across the federated experiments in this
+dissertation rather than for clinical deployment.
+
+\subsection{Role in the subsequent analysis}
+\label{sec:centralised-role}
+
+The centralised baseline serves three purposes throughout the rest
+of the dissertation.
+
+First, it is the \emph{upper bound} against which federated
+configurations are measured. Subsequent results report recovery
+percentages relative to the $0.5600$ centralised mean
+(e.g.\ ``FedProx recovers $90.7\%$ of centralised performance''),
+which makes the absolute magnitude of federation costs
+interpretable. The within-federation algorithmic differences
+discussed in Sections~\ref{sec:results-statistical-het}
+and~\ref{sec:results-system-het} are then framed against this
+fixed reference rather than against each other in isolation.
+
+Second, the across-seed variance of the centralised baseline
+($\pm 0.024$ macro-F1) sets a noise floor below which seed-level
+differences in federated experiments cannot be reliably
+distinguished from optimisation noise alone. Federated results
+with within-pair $\Delta$ values smaller than this in magnitude
+should be read as descriptive rather than substantive.
+
+Third, the per-class profile in
+Table~\ref{tab:centralised-results} establishes the
+\emph{intrinsic difficulty} of each class on this task,
+independent of any federation effect. The federated per-class
+breakdowns reported later in the dissertation can be interpreted
+relative to this profile: a class that already shows high
+variance in the centralised setting is unlikely to support strong
+inferential claims in the federated setting either.
+
+\subsection{Summary}
+\label{sec:centralised-summary}
+
+The centralised baseline establishes that the $28\times28$
+DermaMNIST classification task with the \texttt{DermMNISTCNN}
+architecture supports a mean test macro-F1 of approximately $0.56$
+under non-federated training, with the majority class melanocytic
+nevi at near-ceiling performance ($F1 \approx 0.89$) and the
+rarest classes at substantially lower and noisier per-class F1.
+This serves as the reference against which all federated results
+in the remainder of the dissertation are interpreted.

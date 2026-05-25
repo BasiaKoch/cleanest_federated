@@ -1,0 +1,2373 @@
+% ==============================================================================
+% clean_federated_overleaf.tex
+%
+% Clean, compilable thesis starter file. Currently contains only the
+% Centralised Baseline section. Build up the thesis by adding additional
+% \section{...} blocks within the Results chapter as each experiment is
+% written.
+%
+% Reporting style: descriptive (mean +/- SD across seeds), bolded best
+% where comparing methods, no formal hypothesis testing -- matches the FL
+% literature convention.
+%
+% To add a new section in the future:
+%   1. Insert \section{Your section title} after the existing one.
+%   2. Add \subsection{...} blocks for setup, results, role, summary.
+%   3. Place tables inline as in this template, or split into a tables/
+%      subfolder and use \input{tables/T01_xxx}.
+%   4. Cross-references will resolve once corresponding \label{} markers
+%      are added in other sections.
+%
+% Compiles standalone with pdflatex; no external .bib required yet.
+% Bibliography will be added later when references are finalised.
+% ==============================================================================
+
+\documentclass[11pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{bm}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\title{Federated Optimisation on DermaMNIST:\\
+A Paired-Seed Empirical Comparison of FedAvg and FedProx\\
+Under Statistical and Computational-Work Heterogeneity}
+\author{Barbara Koch}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+% ==============================================================================
+\chapter{Methods}
+\label{ch:methods}
+% ==============================================================================
+
+This chapter describes the dataset, model, federated-learning
+setup, algorithms, evaluation protocol, and implementation used
+throughout the dissertation. The descriptions are at the
+protocol-and-algorithm level; precise hyperparameter values are
+collected in summary tables. The training/evaluation pipeline is
+held identical across all experiments unless explicitly noted in a
+given results section.
+
+% ==============================================================================
+\section{Dataset}
+\label{sec:methods-dataset}
+% ==============================================================================
+
+All experiments use DermaMNIST, the dermatoscopic-imaging
+benchmark from the MedMNIST~v2 collection. DermaMNIST is a
+seven-class classification task on dermatoscopic skin-lesion
+images sampled from HAM10000; representative samples from each
+class are shown in Figure~\ref{fig:dataset-classes}. The
+benchmark provides a canonical training/validation/test split,
+summarised in Table~\ref{tab:dataset-splits}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_dataset_classes.pdf}
+\caption{Representative training sample from each of the seven
+DermaMNIST classes.}
+\label{fig:dataset-classes}
+\end{figure}
+
+\begin{table}[!htbp]
+\centering
+\caption{DermaMNIST split sizes used throughout the dissertation.}
+\label{tab:dataset-splits}
+\small
+\begin{tabular}{lc}
+\toprule
+Split & Samples \\
+\midrule
+Training   & $7{,}007$ \\
+Validation & $1{,}003$ \\
+Test       & $2{,}005$ \\
+\midrule
+Total      & $10{,}015$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Class distribution.}
+The seven DermaMNIST classes are listed in
+Table~\ref{tab:dataset-classes} together with their training-set
+prevalence. The distribution is heavily skewed: the majority class
+\emph{melanocytic nevi} accounts for $67.05\%$ of the training
+set, while the rarest class \emph{dermatofibroma} accounts for
+only $1.15\%$. This class imbalance is a feature of clinical
+dermatology benchmarks (it reflects real-world incidence rates)
+and is preserved without resampling so that all reported metrics
+reflect performance on a realistic prior.
+
+\begin{table}[!htbp]
+\centering
+\caption{DermaMNIST classes and training-set prevalence.}
+\label{tab:dataset-classes}
+\small
+\begin{tabular}{lcc}
+\toprule
+Class & Training samples & Prevalence \\
+\midrule
+Actinic keratoses          & $228$   & $3.27\%$  \\
+Basal cell carcinoma       & $359$   & $5.13\%$  \\
+Benign keratosis           & $769$   & $10.97\%$ \\
+Dermatofibroma             & $80$    & $1.15\%$  \\
+Melanoma                   & $779$   & $11.11\%$ \\
+Melanocytic nevi           & $4{,}693$ & $67.05\%$ \\
+Vascular lesions           & $99$    & $1.41\%$  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Preprocessing.}
+DermaMNIST is loaded from the canonical \texttt{dermamnist\_64.npz}
+distribution at $64\times64$ RGB resolution and resized to
+$28\times28$ for all experiments. The downsampling is a
+compute-economy choice: at $28\times28$ each communication round
+completes in $\sim 3$--$5$~seconds on an A100, making ten paired
+seeds tractable on a single-GPU SLURM allocation. The $28\times28$
+resolution is the historical MedMNIST~v1 default and matches the
+input resolution at which prior FL-on-DermaMNIST results in the
+literature are reported. Pixel values are normalised using the
+canonical ImageNet mean and standard deviation.
+
+The $28\times28$ resolution heavily compresses dermatology-relevant
+visual features such as pigment networks and asymmetry boundaries,
+so absolute test performance reported in this dissertation should
+be read as benchmark performance for FL-algorithm comparison rather
+than as a clinical-grade dermatology estimate.
+
+% ==============================================================================
+\section{Model Architecture}
+\label{sec:methods-model}
+% ==============================================================================
+
+The classifier used throughout this dissertation is
+\texttt{DermMNISTCNN}, a four-block convolutional neural network
+with $423{,}175$ trainable parameters. Each block consists of one
+$3\times3$ convolution (\texttt{padding=1}) followed by a
+GroupNorm normalisation layer, a ReLU activation, and a
+$2\times2$ max-pooling operation; the final block replaces
+max-pooling with adaptive global average pooling. The four
+convolutional blocks expand the feature dimension as
+$3 \to 32 \to 64 \to 128 \to 256$; a small fully-connected head
+($256 \to 128 \to 7$) with dropout $0.2$ produces the class
+logits. Table~\ref{tab:model-summary} summarises the architecture.
+
+\begin{table}[!htbp]
+\centering
+\caption{\texttt{DermMNISTCNN} architecture summary. Each
+convolutional block applies a $3\times3$ convolution (padding
+$1$, stride $1$), GroupNorm with group count $g$, ReLU, and
+spatial pooling. Input: $3 \times 28 \times 28$ RGB image;
+output: $7$-class logits.}
+\label{tab:model-summary}
+\small
+\begin{tabular}{llc}
+\toprule
+Stage & Operations & Output \\
+\midrule
+Block 1 & Conv $3 \to 32$ $+$ GN $g{=}4$ $+$ ReLU $+$ MaxPool $2\times2$    & $32 \times 14 \times 14$ \\
+Block 2 & Conv $32 \to 64$ $+$ GN $g{=}8$ $+$ ReLU $+$ MaxPool $2\times2$   & $64 \times 7 \times 7$ \\
+Block 3 & Conv $64 \to 128$ $+$ GN $g{=}16$ $+$ ReLU $+$ MaxPool $2\times2$ & $128 \times 3 \times 3$ \\
+Block 4 & Conv $128 \to 256$ $+$ GN $g{=}16$ $+$ ReLU $+$ AdaptiveAvgPool   & $256$ \\
+Head    & Linear $256 \to 128$ $+$ ReLU $+$ Dropout $0.2$ $+$ Linear $128 \to 7$ & $7$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{GroupNorm rather than BatchNorm.}
+The choice of GroupNorm rather than BatchNorm is deliberate.
+Per-client BatchNorm statistics encode that client's local data
+distribution; when the global model is constructed by parameter
+averaging, these batch statistics are averaged across heterogeneous
+clients in a way that can corrupt the running estimates and harm
+generalisation. Hsieh et al.\ (2020) document this effect and
+recommend normalisation layers whose statistics are computed
+within each example (GroupNorm, LayerNorm) for federated learning
+on non-IID data. We adopt GroupNorm following this recommendation.
+
+% ==============================================================================
+\section{Federated Learning Setup}
+\label{sec:methods-fl-setup}
+% ==============================================================================
+
+The federated learning protocol is cross-silo and synchronous,
+matching the canonical formulation surveyed in Kairouz et al.\
+(2021). The training set is partitioned across $K = 7$ simulated
+clients (the per-experiment partition assignment is described
+in the relevant Results section). At each communication round
+$t$, the central server broadcasts the current global model
+parameters $w^t$ to all clients; each participating client $i$
+performs $E$ epochs of local SGD on its local training subset
+$\mathcal{D}_i$, yielding updated parameters $w_i^{t+1}$. The
+server then forms the next global iterate by size-weighted
+parameter averaging:
+\[
+w^{t+1} = \sum_{i=1}^{K} \frac{n_i}{\sum_j n_j}\, w_i^{t+1},
+\]
+where $n_i = |\mathcal{D}_i|$ is the number of training samples
+held by client $i$. The size-weighting rule is the standard
+FedAvg aggregation of McMahan et al.\ (2017). Table~\ref{tab:fl-setup}
+collects the federated-learning hyperparameters.
+
+\begin{table}[!htbp]
+\centering
+\caption{Federated learning hyperparameters held constant across
+experiments unless explicitly noted in the relevant Results
+section.}
+\label{tab:fl-setup}
+\small
+\begin{tabular}{lc}
+\toprule
+Hyperparameter & Value \\
+\midrule
+Number of clients $K$                & $7$ \\
+Client participation $C$             & $1.0$ (all clients per round) \\
+Communication rounds $R$             & $150$ \\
+Local epochs $E$                     & $20$ \\
+Aggregation rule                     & Size-weighted parameter averaging \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Client count.}
+The choice of $K = 7$ clients reflects a deliberate trade-off
+between simulating multi-institutional federation and keeping
+each client's training set large enough to support stable local
+optimisation. With $K = 7$ and $7{,}007$ training samples, each
+client receives on the order of $10^3$ samples, which is
+sufficient for the 423K-parameter \texttt{DermMNISTCNN} to learn
+stably; with $K \gg 10$ the per-client sample count would fall
+below the regime in which an architecture of this capacity
+converges reliably at $28\times28$ resolution.
+
+% ==============================================================================
+\section{Algorithms}
+\label{sec:methods-algorithms}
+% ==============================================================================
+
+Two federated optimisation algorithms are compared throughout
+the dissertation: FedAvg (McMahan et al., 2017) and FedProx
+(Li et al., 2020). Both use the same server-side size-weighted
+parameter averaging defined above; they differ only in the local
+training objective each client minimises.
+
+\paragraph{FedAvg.}
+Each client $i$ minimises the standard local cross-entropy loss
+on its local data:
+\[
+\min_{w} \; F_i(w) \;=\; \frac{1}{n_i} \sum_{(x, y) \in \mathcal{D}_i}
+\ell\big(f_w(x),\, y\big),
+\]
+where $\ell$ is the cross-entropy loss and $f_w$ is the network
+parameterised by $w$. Local optimisation uses SGD for $E$ epochs
+starting from the broadcast global parameters $w^t$.
+
+\paragraph{FedProx.}
+Each client $i$ minimises an augmented local objective that adds
+a proximal regulariser pulling the local parameters toward the
+broadcast global anchor:
+\[
+\min_{w} \; F_i(w) \;+\; \frac{\mu}{2} \lVert w - w^t \rVert_2^2,
+\]
+where $\mu \geq 0$ is the proximal coefficient. The first term is
+the local objective minimised by FedAvg; the second is the
+proximal regulariser. Setting $\mu = 0$ recovers the FedAvg local
+objective exactly, so the two algorithms differ only through the
+proximal term when $\mu > 0$. Throughout the main experiments we
+set $\mu = 0.01$, the value reported by Li et al.\ (2020) as a
+robust default across their benchmark matrix; the choice is
+fixed a priori and is not tuned per experiment.
+
+\paragraph{Equivalence check at $\mu = 0$.}
+The FedProx implementation contains an explicit zero-mu branch
+that bypasses the proximal gradient contribution when $\mu = 0$,
+making the FedProx local-training loop bit-equivalent to the
+FedAvg loop in that regime. This equivalence is verified by
+running both algorithms with $\mu = 0$ on the same seed and
+confirming identical parameter trajectories. The two algorithms
+therefore differ \emph{only} through the $\mu > 0$ proximal
+contribution.
+
+% ==============================================================================
+\section{Training and Evaluation Protocol}
+\label{sec:methods-protocol}
+% ==============================================================================
+
+\paragraph{Optimiser and local training.}
+All clients use stochastic gradient descent with the
+hyperparameters in Table~\ref{tab:training-hparams}. The
+local-training loop is identical across both algorithms: $E$
+epochs of mini-batched SGD on the client's local training
+subset, with the local loss function differing only through the
+optional proximal term (Section~\ref{sec:methods-algorithms}).
+
+\begin{table}[!htbp]
+\centering
+\caption{Optimiser and local-training hyperparameters.}
+\label{tab:training-hparams}
+\small
+\begin{tabular}{lc}
+\toprule
+Hyperparameter & Value \\
+\midrule
+Optimiser                        & SGD \\
+Learning rate                    & $0.01$ \\
+Momentum                         & $0.9$ \\
+Weight decay                     & $0$ \\
+Batch size                       & $32$ \\
+Local epochs per round $E$       & $20$ \\
+Local loss                       & Cross-entropy \\
+FedProx proximal coefficient $\mu$ & $0.01$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Evaluation.}
+The server evaluates the global model on the centralised
+validation set after every communication round, recording
+validation cross-entropy loss, validation accuracy, validation
+balanced accuracy, validation macro-F1, and per-class
+validation F1. At the end of training, the test set is
+evaluated \emph{once} on the global model produced at the
+round of highest validation macro-F1 (the
+\emph{best-validation checkpoint} protocol). Test-set
+macro-F1 at this checkpoint is the headline metric reported
+throughout the dissertation; per-class F1, balanced accuracy,
+and overall accuracy on the test set are reported as
+secondary measures. The validation set is held fixed across
+all experiments; the test set is never seen by the model
+during training and is evaluated exactly once per run.
+
+% ==============================================================================
+\section{Paired-Seed Protocol}
+\label{sec:methods-paired-seed}
+% ==============================================================================
+
+A defining design choice of the experimental protocol used in
+this dissertation is the \emph{paired-seed} comparison
+structure. For every FedAvg-vs-FedProx contrast reported in
+the Results chapter, the two algorithms are run on the same
+set of ten random seeds: $\{42,\, 123,\, 456,\, 789,\, 999,\,
+2024,\, 31337,\, 8675309,\, 161803,\, 271828\}$. Within each
+seed, the following sources of stochasticity are fixed to
+identical values across the FedAvg and FedProx runs:
+
+\begin{itemize}
+\setlength\itemsep{2pt}
+\item the random partition of training samples to clients;
+\item the initial model parameters $w^0$;
+\item the per-(round, client) dataloader shuffle order;
+\item the per-(round, client) local-epoch schedule, where
+      applicable (for the system-heterogeneity experiments
+      in Chapter~\ref{ch:results});
+\item the random sampling of participating clients per round,
+      where applicable.
+\end{itemize}
+
+Because all these sources of stochasticity are matched
+within-pair, the within-pair difference
+\[
+\Delta_s \;=\; \text{test macro-F1}_{\text{FedProx}, s}
+              - \text{test macro-F1}_{\text{FedAvg}, s}
+\]
+on seed $s$ reflects only the algorithmic difference (the
+gated proximal term), not random-state divergence. Aggregate
+within-pair differences across the ten seeds therefore have
+substantially tighter variance than the corresponding
+independent-seed comparison would, allowing meaningful
+estimates of small algorithmic effects at modest sample size.
+
+\paragraph{Reporting style.}
+We follow the convention of the federated-learning literature
+(McMahan et al.\ 2017, Li et al.\ 2020, Wang et al.\ 2020,
+Hsu et al.\ 2019, Acar et al.\ 2021) in reporting paired
+results descriptively: mean $\pm$ standard deviation across
+seeds, visual curve comparisons with shaded $\pm$~SEM bands,
+bolded best results in tables, and within-pair $\Delta$
+values with the count of paired-seed wins. Formal hypothesis
+testing is not used in the Results chapter; differences
+smaller in magnitude than the across-seed standard deviation
+are described as ``descriptively positive/negative'' rather
+than as significant or null effects.
+
+% ==============================================================================
+\section{Implementation and Compute}
+\label{sec:methods-implementation}
+% ==============================================================================
+
+The experiments are implemented in two complementary code paths
+that share the same algorithmic logic but use different runtimes.
+
+\paragraph{Pure-PyTorch reference loop.}
+A single-process sequential implementation in PyTorch that
+iterates through clients in deterministic order, holds the
+global parameter state in-memory, and performs explicit
+size-weighted aggregation after each round. This implementation
+is used as the algorithmic reference and is the primary runtime
+for the headline statistical-heterogeneity result
+(Section~\ref{sec:engineered-headline}).
+
+\paragraph{Flower simulation runtime.}
+A federated-learning simulation using the Flower framework
+(Beutel et al., 2020) with each client implemented as a Ray
+actor. The server-side aggregation passes through Flower's
+\texttt{FedAvg} strategy with size-weighted averaging; the
+client-side FedAvg/FedProx local training loop is functionally
+identical to the pure-PyTorch path. This runtime is used for
+the cross-runtime sensitivity check
+(Section~\ref{sec:runtime-sensitivity}) and for all
+robustness, system-heterogeneity, and partial-participation
+experiments in the Results chapter.
+
+The two implementations have been verified to use bit-equivalent
+local objectives at $\mu = 0$ (the FedProx code path collapses
+to FedAvg in the $\mu = 0$ branch in both runtimes). Differences
+in per-seed results between the two runtimes therefore arise
+from implementation-level factors --- floating-point
+non-associativity of summation order in aggregation, parameter
+serialisation across Ray actor process boundaries, and
+random-number-generator routing through Ray scheduling ---
+rather than from algorithmic differences. The cross-runtime
+sensitivity check in Section~\ref{sec:runtime-sensitivity}
+characterises the magnitude of this implementation-level
+variance.
+
+\paragraph{Compute.}
+Pure-PyTorch experiments are executed on the Cambridge HPC
+ampere partition (NVIDIA A100~80GB). Flower-runtime
+experiments are executed on either the same Cambridge HPC
+partition or on rented A100/H100 instances on RunPod where
+queue priority constrains turnaround. All result JSON files
+record the host machine, CUDA device, framework version, git
+commit, and start/finish timestamps for full reproducibility.
+A single training run completes in approximately $5$~minutes
+(centralised) to $20$~minutes (federated $150$-round) on an
+A100, with FedProx runs taking $\sim 40\%$ longer than FedAvg
+runs at matched conditions due to the per-step computation of
+the proximal regulariser.
+
+\paragraph{Reproducibility.}
+The complete experimental matrix can be reproduced from the
+SLURM submission scripts in \texttt{mnist\_dermnist/scripts/}
+in the project repository. Each script declares the partition,
+seed list, algorithm, and hyperparameters explicitly; together
+with the run-time provenance recorded in each result JSON,
+this makes every reported number traceable to a specific
+submission script, git commit, and machine.
+
+% ==============================================================================
+\chapter{Results and Discussion}
+\label{ch:results}
+% ==============================================================================
+
+This chapter reports the empirical findings of the dissertation,
+starting with a centralised non-federated reference and then
+progressing through the federated experiments. Methodological
+observations and mechanism interpretation are interleaved with the
+empirical results rather than relegated to a separate discussion
+chapter.
+
+% ==============================================================================
+\section{Centralised Baseline}
+\label{sec:centralised-baseline}
+% ==============================================================================
+
+Before evaluating any federated configuration, we establish a
+centralised non-federated reference. The centralised baseline trains
+the same \texttt{DermMNISTCNN} architecture used in the federated
+experiments on the pooled DermaMNIST training set with no
+federation. It provides an upper bound on what can be achieved on
+this task with this architecture, against which the federated
+results reported in the remainder of this chapter are interpreted
+as fractional recoveries of the centralised performance.
+
+\subsection{Training setup}
+\label{sec:centralised-setup}
+
+The centralised baseline pools all $7{,}007$ training samples,
+$1{,}003$ validation samples, and $2{,}005$ test samples of the
+DermaMNIST benchmark into a single non-federated training loop.
+The model architecture is held identical to the federated
+experiments: a four-block GroupNorm CNN with $423{,}175$ trainable
+parameters operating on $28\times28$ RGB inputs. The optimiser is
+SGD with learning rate $0.01$, momentum $0.9$, weight decay $0$,
+and batch size $32$ --- the same hyperparameters used by each
+client in the subsequent federated experiments, chosen for direct
+comparability rather than for centralised optimum. The model is
+trained for $50$ epochs; test set performance is reported at the
+epoch of highest validation macro-F1 (the
+\emph{best-validation checkpoint} protocol).
+
+To match the federated experiments and enable paired-seed analyses
+where applicable, the centralised baseline is repeated across the
+same ten random seeds used for all federated runs:
+$\{42,\,123,\,456,\,789,\,999,\,2024,\,31337,\,8675309,\,161803,\,$
+$271828\}$. Within each seed the data shuffle, model
+initialisation, and training trajectory are deterministic; the
+across-seed variation quantifies optimisation noise on this task.
+
+\subsection{Results}
+\label{sec:centralised-results}
+
+Table~\ref{tab:centralised-results} reports test performance at
+the best-validation checkpoint across the ten seeds. The
+centralised model reaches a mean test macro-F1 of
+$0.560\pm0.024$, mean classification accuracy of
+$0.764\pm0.012$, and mean balanced accuracy of
+$0.561\pm0.034$. The per-seed test macro-F1 ranges from
+$0.518$ to $0.597$. The best-validation epoch is consistently in
+the second half of training (median $47$ out of $50$ epochs),
+indicating that the $50$-epoch training budget is appropriate
+for this task and architecture.
+
+\begin{table}[!htbp]
+\centering
+\caption{Centralised baseline test performance at the
+best-validation checkpoint, reported as mean $\pm$ standard
+deviation across $n=10$ seeds. Per-class F1 is the F1 score on
+each of the seven DermaMNIST classes; class prevalence in the
+training set is shown in parentheses.}
+\label{tab:centralised-results}
+\small
+\begin{tabular}{lc}
+\toprule
+Metric & Test value (mean $\pm$ SD) \\
+\midrule
+Macro-F1                        & $\mathbf{0.5600 \pm 0.0240}$ \\
+Balanced accuracy               & $0.5608 \pm 0.0341$ \\
+Overall accuracy                & $0.7637 \pm 0.0123$ \\
+Cross-entropy loss              & $0.7778 \pm 0.0653$ \\
+\midrule
+\multicolumn{2}{l}{\textit{Per-class F1:}} \\
+\quad Actinic keratoses (3.27\%)              & $0.4923 \pm 0.0433$ \\
+\quad Basal cell carcinoma (5.13\%)           & $0.5380 \pm 0.0263$ \\
+\quad Benign keratosis (10.97\%)              & $0.5285 \pm 0.0397$ \\
+\quad Dermatofibroma (1.15\%)                 & $0.3359 \pm 0.0961$ \\
+\quad Melanoma (11.11\%)                      & $0.4551 \pm 0.0349$ \\
+\quad Melanocytic nevi (67.05\%)              & $0.8896 \pm 0.0088$ \\
+\quad Vascular lesions (1.41\%)               & $0.6807 \pm 0.0680$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The per-class breakdown reveals the task's structure clearly.
+The majority class \emph{melanocytic nevi} ($67\%$ prevalence)
+is the easiest to learn, reaching $F1 = 0.890$ with very small
+across-seed variance ($\pm 0.009$). The two rarest classes,
+\emph{dermatofibroma} ($1.15\%$ prevalence, $80$ training
+samples) and \emph{vascular lesions} ($1.41\%$ prevalence,
+$99$ training samples), show the largest across-seed variance
+($\pm 0.096$ and $\pm 0.068$), reflecting the difficulty of
+stably learning classes represented by such small absolute
+counts. The two clinically critical classes \emph{melanoma}
+and \emph{basal cell carcinoma} reach mean F1 of $0.455$ and
+$0.538$ respectively --- well above chance but substantially
+below the majority class, consistent with the medical-imaging
+literature on small CNNs at $28\times28$ resolution.
+
+The macro-F1 of $0.56$ is a benchmark-typical result for
+DermaMNIST at this resolution and architecture, comparable to
+published values on the MedMNIST v2 benchmark. It is not
+intended as a clinical-grade performance estimate; the input
+resolution is deliberately compressed and the architecture is a
+small CNN, both chosen for comparability across the federated
+experiments in this dissertation rather than for clinical
+deployment.
+
+\subsection{Role in the subsequent analysis}
+\label{sec:centralised-role}
+
+The centralised baseline serves three purposes throughout the
+remainder of this chapter.
+
+First, it is the \emph{upper bound} against which federated
+configurations are measured. Subsequent results report recovery
+percentages relative to the $0.5600$ centralised mean
+(e.g.\ ``FedProx recovers $90.7\%$ of centralised performance''),
+which makes the absolute magnitude of federation costs
+interpretable. Within-federation algorithmic differences are
+then framed against this fixed reference rather than against
+each other in isolation.
+
+Second, the across-seed standard deviation of the centralised
+baseline ($\pm 0.024$ macro-F1) sets a noise floor below which
+seed-level differences in federated experiments cannot be
+reliably distinguished from optimisation noise alone. Federated
+within-pair differences smaller than this in magnitude are read
+as descriptive rather than substantive in the remainder of this
+chapter.
+
+Third, the per-class profile in
+Table~\ref{tab:centralised-results} establishes the
+\emph{intrinsic difficulty} of each class on this task,
+independent of any federation effect. Federated per-class
+breakdowns reported later are interpreted relative to this
+profile: a class that already shows high variance in the
+centralised setting is unlikely to support strong inferential
+claims in the federated setting either.
+
+\subsection{Summary}
+\label{sec:centralised-summary}
+
+The centralised baseline establishes that the $28\times28$
+DermaMNIST classification task with the \texttt{DermMNISTCNN}
+architecture supports a mean test macro-F1 of approximately
+$0.56$ under non-federated training, with the majority class
+melanocytic nevi at near-ceiling performance ($F1 \approx 0.89$)
+and the rarest classes at substantially lower and noisier
+per-class F1. This serves as the reference against which all
+federated results in the rest of this chapter are interpreted.
+
+% ==============================================================================
+\section{IID Federated Baseline}
+\label{sec:iid-baseline}
+% ==============================================================================
+
+Before evaluating the FedProx-vs-FedAvg comparison under
+heterogeneous client data distributions, we establish a federated
+baseline in which every client holds an i.i.d.\ sample of the
+global training distribution. The IID configuration is the
+\emph{mechanism null} condition: when local objectives $F_i$ are
+i.i.d.\ samples of the same underlying distribution, the bounded-
+dissimilarity argument of Li et al.\ (2020)~\S4.1 predicts that
+no inter-client drift exists for the proximal anchor to constrain
+and FedProx should provide no benefit over FedAvg. A positive
+$\Delta$ under IID would therefore contradict the mechanism
+interpretation that the subsequent non-IID experiments rely on.
+This section confirms the mechanism null empirically.
+
+\subsection{Partition and training setup}
+\label{sec:iid-setup}
+
+The IID partition (\texttt{iid\_7\_clients}) assigns the
+$7{,}007$ training samples to seven simulated clients by uniform
+random shuffling of the global index list and splitting into
+seven equal shards. Each client receives $1{,}001$ training
+samples; the per-client class distribution matches the global
+distribution in expectation, with all seven classes present in
+every client at proportional frequency.
+
+All other hyperparameters match the centralised baseline of
+Section~\ref{sec:centralised-baseline}: identical
+\texttt{DermMNISTCNN} architecture, SGD with learning rate
+$0.01$, momentum $0.9$, batch size $32$, weight decay $0$.
+Federated-specific hyperparameters are: full participation
+($C = 1.0$, all seven clients per round), $R = 150$ communication
+rounds, $E = 20$ local epochs, FedProx proximal coefficient
+$\mu = 0.01$. The Flower simulation framework is used as the
+canonical FL runtime throughout. The same ten paired seeds as
+the centralised baseline are used; within each seed the partition,
+initial model weights, and client-side data shuffling are
+deterministic and identical across the FedAvg and FedProx arms,
+so within-pair differences reflect only the algorithmic gating
+of the proximal term.
+
+\subsection{Results}
+\label{sec:iid-results}
+
+Table~\ref{tab:iid-results} reports test performance at the
+best-validation checkpoint across the ten seeds. FedAvg and
+FedProx reach indistinguishable mean test macro-F1
+($0.585 \pm 0.020$ and $0.579 \pm 0.019$ respectively); the
+within-pair mean difference is $-0.006 \pm 0.019$ and FedProx
+wins on $5$ of $10$ paired seeds.
+
+\begin{table}[!htbp]
+\centering
+\caption{IID federated baseline. Test performance at the
+best-validation checkpoint, mean $\pm$ standard deviation across
+$n = 10$ paired seeds. The winning algorithm per row is shown in
+bold; for rows where the two algorithms are within $\pm 0.001$
+neither is bolded. Per-class F1 is the F1 score on each of the
+seven DermaMNIST classes, with class prevalence in the training
+set in parentheses.}
+\label{tab:iid-results}
+\small
+\begin{tabular}{lccc}
+\toprule
+Metric & FedAvg & FedProx & $\Delta$ \\
+\midrule
+Test macro-F1                 & $\mathbf{0.5846 \pm 0.0197}$ & $0.5786 \pm 0.0190$ & $-0.0061$ \\
+Balanced accuracy             & $\mathbf{0.5852 \pm 0.0290}$ & $0.5802 \pm 0.0245$ & $-0.0050$ \\
+Overall accuracy              & $0.7625 \pm 0.0094$          & $0.7613 \pm 0.0083$ & $-0.0012$ \\
+\midrule
+\multicolumn{4}{l}{\textit{Per-class F1:}} \\
+\quad Actinic keratoses (3.27\%)   & $\mathbf{0.523 \pm 0.034}$ & $0.507 \pm 0.030$ & $-0.016$ \\
+\quad Basal cell carcinoma (5.13\%)& $\mathbf{0.557 \pm 0.011}$ & $0.542 \pm 0.034$ & $-0.015$ \\
+\quad Benign keratosis (10.97\%)   & $0.538 \pm 0.024$          & $0.537 \pm 0.020$ & $-0.001$ \\
+\quad Dermatofibroma (1.15\%)      & $\mathbf{0.412 \pm 0.075}$ & $0.406 \pm 0.069$ & $-0.006$ \\
+\quad Melanoma (11.11\%)           & $\mathbf{0.462 \pm 0.020}$ & $0.456 \pm 0.018$ & $-0.007$ \\
+\quad Melanocytic nevi (67.05\%)   & $0.894 \pm 0.004$          & $0.894 \pm 0.004$ & $+0.000$ \\
+\quad Vascular lesions (1.41\%)    & $0.707 \pm 0.040$          & $0.708 \pm 0.036$ & $+0.001$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The two algorithms are descriptively indistinguishable across
+all reported metrics. The mean within-pair difference is
+small and negative ($-0.006$ macro-F1, $-0.005$ balanced
+accuracy) but lies within the across-seed standard deviation of
+either algorithm. The per-class breakdown shows the same pattern
+on every class: differences are at most $0.016$ in absolute
+value and have no consistent direction. Notably, the majority
+class \emph{melanocytic nevi} produces a per-pair difference
+of $+0.0001$ macro-F1 with FedProx and FedAvg matching to three
+decimal places ($0.894$ vs $0.894$); this is the most
+mechanistically transparent class because it is structurally
+held by every client at the same proportion, and its near-zero
+$\Delta$ is the expected signature of an inert proximal anchor.
+
+Figure~\ref{fig:iid-convergence} shows the per-round validation
+macro-F1 trajectories on the IID partition; the FedAvg and FedProx
+curves are essentially superimposed across all 150 rounds,
+visually confirming the null $\Delta$ reported in
+Table~\ref{tab:iid-results}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{F_iid_convergence.pdf}
+\caption{Validation macro-F1 over 150 communication rounds on
+the IID partition (Flower runtime, $n = 10$ paired seeds,
+mean $\pm$ SEM band). FedAvg and FedProx produce essentially
+identical trajectories from round $\sim 10$ onwards, consistent
+with the proximal-anchor mechanism's prediction that the
+regulariser is inert when no inter-client class skew exists.}
+\label{fig:iid-convergence}
+\end{figure}
+
+An independent IID replication is available in
+\texttt{results/iid/}, which uses the same partition,
+hyperparameters, and ten seeds but was run as a separate sweep.
+The independent replication produces a mean within-pair
+difference of $-0.007 \pm 0.022$ macro-F1 with FedProx winning
+$4$ of $10$ paired seeds, agreeing with the canonical IID
+baseline to within $0.001$ macro-F1. The two independent sweeps
+converging on the same near-zero $\Delta$ provides additional
+evidence that the IID null is genuine rather than a feature of
+any single sweep's random seed draws.
+
+\subsection{Role in the subsequent analysis}
+\label{sec:iid-role}
+
+The IID baseline serves two roles in the remainder of the
+chapter. First, it provides the empirical confirmation of the
+\emph{mechanism null prediction}: in a setting where local
+objectives are i.i.d.\ samples of the same global distribution,
+the proximal anchor has no inter-client drift to constrain and
+FedProx does not differ meaningfully from FedAvg. Any positive
+within-pair $\Delta$ observed in subsequent non-IID experiments
+can therefore be interpreted as evidence of mechanism activation
+relative to this null, rather than as an artefact of the
+algorithm or the architecture.
+
+Second, the IID across-seed standard deviation of approximately
+$\pm 0.020$ macro-F1 sets a noise floor for FL paired-comparison
+analyses on this task at $n = 10$ seeds. Within-pair $\Delta$
+values of comparable or smaller magnitude in subsequent
+non-IID experiments are read as descriptive rather than as
+substantive findings.
+
+\subsection{Summary}
+\label{sec:iid-summary}
+
+Under uniform random partitioning of the DermaMNIST training set
+into seven clients, FedAvg and FedProx produce
+indistinguishable test performance (mean $\Delta = -0.006$
+macro-F1, FedProx wins $5/10$ paired seeds; independent
+replication: $\Delta = -0.007$, $4/10$). This is the predicted
+behaviour of the proximal anchor mechanism when no inter-client
+class skew exists. The IID baseline confirms that any positive
+$\Delta$ observed in the subsequent non-IID experiments is
+attributable to the partition design rather than to a
+spurious algorithmic advantage of FedProx under any
+partitioning.
+
+% ==============================================================================
+\section{Engineered Non-IID Partition: Primary Result}
+\label{sec:engineered-headline}
+% ==============================================================================
+
+The IID baseline of Section~\ref{sec:iid-baseline} established
+that without inter-client class skew, FedProx and FedAvg are
+empirically indistinguishable. This section reports the primary
+non-IID result of the dissertation: the FedAvg-vs-FedProx
+comparison on the engineered \texttt{balanced\_paired\_7\_clients}
+partition, which deliberately creates non-IID class skew
+designed to expose the proximal anchor's drift-control
+mechanism. Because cross-runtime sensitivity is a known
+methodological concern in federated learning, the same paired
+comparison is reported on two independent implementations of the
+algorithms (a pure-PyTorch sequential reference loop and the
+Flower simulation framework) so that runtime-induced variation
+can be assessed alongside the headline effect.
+
+\subsection{Partition design}
+\label{sec:engineered-partition}
+
+The engineered partition assigns each of the seven minority
+classes to exactly two of the seven clients (a
+\emph{paired-co-training} design), with the majority class
+\emph{melanocytic nevi} held in equal proportion by all seven
+clients. Three of the seven clients hold actinic keratoses +
+basal cell carcinoma; two hold benign keratosis + dermatofibroma;
+two hold melanoma + vascular lesions; one client (client~6)
+holds only melanocytic nevi. Per-client sample counts lie
+between $673$ and $1{,}110$, with quantity skew kept
+intentionally mild ($1.65\times$ range) so the partition
+isolates the label-skew axis from the quantity-skew axis. Every
+minority class is therefore held by exactly two co-trained
+clients that must drift apart during local training and be
+reconciled at aggregation, while the majority class is held by
+every client and provides a within-experiment per-class control
+where the proximal anchor is mechanistically inert (cf.\ the
+mel-nevi observation in the IID baseline).
+
+\subsection{Training setup}
+\label{sec:engineered-setup}
+
+All training hyperparameters are held identical to the IID
+baseline of Section~\ref{sec:iid-setup}: SGD with learning rate
+$0.01$, momentum $0.9$, batch size $32$, weight decay $0$,
+$R = 150$ communication rounds, $E = 20$ local epochs, full
+participation $C = 1.0$, FedProx proximal coefficient
+$\mu = 0.01$, and the same ten paired seeds. The only variable
+relative to the IID baseline is the partition design.
+
+The paired comparison is executed under two independent
+implementations of FedAvg and FedProx:
+
+\begin{itemize}
+\item \textbf{Pure-PyTorch reference loop:} a single-process
+sequential implementation in \texttt{fl/server\_loop.py} with
+deterministic client iteration, in-memory parameter passing, and
+explicit size-weighted aggregation. This serves as the
+algorithmic reference.
+\item \textbf{Flower simulation framework:} the standard
+\texttt{flwr.simulation} runtime with each client implemented
+as a Ray actor. Parameter aggregation passes through Flower's
+\texttt{FedAvg} strategy, with parameters serialised across
+process boundaries.
+\end{itemize}
+
+Both implementations have been verified to use bit-equivalent
+local objectives at $\mu = 0$ (the FedProx code path collapses
+to FedAvg in the $\mu = 0$ branch in both runtimes) and to use
+identical hyperparameters. Within each runtime, paired-seed
+controls are applied so that within-pair differences reflect
+only the algorithmic gating of the proximal term.
+
+\subsection{Results}
+\label{sec:engineered-results}
+
+Table~\ref{tab:engineered-results} reports test performance at
+the best-validation checkpoint across the ten paired seeds on
+each runtime. Figure~\ref{fig:engineered-convergence} shows the
+per-round validation macro-F1 trajectories.
+
+\begin{table}[!htbp]
+\centering
+\caption{Engineered \texttt{balanced\_paired\_7\_clients}
+partition. Test performance at the best-validation checkpoint,
+mean $\pm$ standard deviation across $n = 10$ paired seeds. The
+winning algorithm per runtime is shown in bold.}
+\label{tab:engineered-results}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Runtime & FedAvg & FedProx & $\Delta$ & FedProx wins \\
+\midrule
+Pure-PyTorch (reference) & $0.4814 \pm 0.0254$ & $\mathbf{0.5081 \pm 0.0140}$ & $+0.0267$ & $9/10$ \\
+Flower (simulation)      & $0.4964 \pm 0.0150$ & $\mathbf{0.5033 \pm 0.0206}$ & $+0.0069$ & $7/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Under both runtimes the direction of effect is positive: FedProx
+outperforms FedAvg in mean macro-F1, with FedProx winning the
+majority of paired seeds. The magnitude differs substantially
+between runtimes: the within-pair difference is $+0.027$ on
+pure-PyTorch and $+0.007$ on Flower --- a factor of approximately
+four. Per-seed wins are $9$ of $10$ under pure-PyTorch and $7$ of
+$10$ under Flower; the lone losing seed under pure-PyTorch
+($\Delta = -0.020$ on seed~789) shifts to a winning seed under
+Flower, and three of the nine pure-PyTorch winning seeds shift
+to losing seeds under Flower. The pure-PyTorch result also shows
+a notably smaller across-seed standard deviation for FedProx
+($\pm 0.014$) than for FedAvg ($\pm 0.025$); under Flower the SDs
+are closer ($\pm 0.021$ vs $\pm 0.015$).
+
+The convergence trajectories
+(Figure~\ref{fig:engineered-convergence}) show that on both
+runtimes FedProx maintains a higher validation macro-F1 than
+FedAvg throughout training, with the gap visible from
+round~$\sim 10$ onwards. The pure-PyTorch gap is consistently
+larger across the entire training horizon, not just at the
+best-validation checkpoint, consistent with the larger headline
+$\Delta$ reported in Table~\ref{tab:engineered-results}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_engineered_convergence.pdf}
+\caption{Validation macro-F1 over 150 communication rounds on
+the engineered \texttt{balanced\_paired\_7\_clients} partition
+under two independent implementations ($n = 10$ paired seeds,
+mean $\pm$ SEM band). FedProx (dark slate blue) maintains a
+higher trajectory than FedAvg (mint green) under both runtimes;
+the gap is visibly larger under pure-PyTorch (left) than under
+Flower (right).}
+\label{fig:engineered-convergence}
+\end{figure}
+
+\subsection{Runtime sensitivity}
+\label{sec:runtime-sensitivity}
+
+The $4\times$ difference in headline $\Delta$ between runtimes
+on the same partition with the same seeds is a substantively
+larger gap than the within-runtime across-seed standard
+deviations would predict for replicating implementations of the
+same algorithm. To check whether this gap is a systematic
+per-seed shift or a high-variance noise effect, we computed the
+per-seed difference $\Delta_{\mathrm{PT},s} -
+\Delta_{\mathrm{Flower},s}$. The per-seed differences are not
+consistently signed: five seeds show $\Delta_{\mathrm{PT}} >
+\Delta_{\mathrm{Flower}}$ and five show
+$\Delta_{\mathrm{Flower}} \geq \Delta_{\mathrm{PT}}$. The
+across-seed mean of the differences is $+0.020$, but the
+distribution spans both signs --- indicating that the runtime
+gap is a noisy mean-level effect rather than a systematic
+per-seed shift.
+
+Three implementation-level differences plausibly contribute:
+the Flower runtime runs each client in a separate Ray actor
+with parameter serialisation across process boundaries, which
+introduces floating-point operations whose order is not
+guaranteed identical to the single-process pure-PyTorch loop;
+the per-(round, client) random-number-generator state is
+threaded differently through Flower's scheduling than through
+the pure-PyTorch loop, even when the same user-level seed is
+supplied; and Flower's \texttt{FedAvg} aggregation strategy
+sums client updates in an order determined by actor return
+times rather than client identity, which makes the aggregated
+parameter vector sensitive to floating-point non-associativity
+across 150 rounds and 7 clients. None of these differences are
+algorithmic --- the FedAvg/FedProx local objectives and the
+size-weighted aggregation rule are bit-equivalent at the
+mathematical level --- but they are sufficient to produce
+noise-floor differences in the aggregated parameter trajectory
+that compound over training.
+
+We therefore interpret the runtime-magnitude difference as
+\emph{implementation-level variance} that affects the
+estimated effect size but not the direction. Both runtimes
+produce a positive within-pair $\Delta$ with FedProx winning
+the majority of paired seeds; the magnitude of the effect is
+sensitive to the runtime choice in a way that is consistent
+with high-variance noise rather than a systematic per-seed
+mechanism.
+
+\subsection{Summary}
+\label{sec:engineered-summary}
+
+On the engineered non-IID partition designed to create inter-
+client drift on every minority class, FedProx outperforms
+FedAvg by $+0.027$ macro-F1 (FedProx wins $9/10$ paired seeds)
+under the pure-PyTorch reference implementation and by
+$+0.007$ macro-F1 (FedProx wins $7/10$ paired seeds) under the
+Flower simulation framework. The direction of effect is
+consistent across both runtimes and is the opposite of the
+IID-baseline null reported in
+Section~\ref{sec:iid-baseline}, consistent with the
+proximal-anchor mechanism activating when inter-client class
+skew is present. The magnitude differs between runtimes by a
+factor of approximately four, attributable to implementation-
+level variance (floating-point non-associativity in parameter
+aggregation, RNG routing through Ray scheduling, serialisation
+across process boundaries) rather than to systematic per-seed
+algorithmic differences. The pure-PyTorch result is treated as
+the primary inferential result throughout the remainder of the
+dissertation; the Flower result is treated as a cross-runtime
+robustness check.
+
+% ==============================================================================
+\section{Per-Class Breakdown on the Engineered Partition}
+\label{sec:engineered-per-class}
+% ==============================================================================
+
+The headline result in Section~\ref{sec:engineered-headline}
+reports an aggregate $+0.027$ macro-F1 advantage for FedProx
+over FedAvg on the engineered partition, averaged across the
+seven DermaMNIST classes. The aggregate alone does not reveal
+\emph{which} classes drive the improvement, and the proximal-
+anchor mechanism makes a class-specific prediction that can be
+tested directly: the regulariser should be active on classes
+held by only a subset of clients (where inter-client drift
+exists) and inert on classes held by every client (where no
+drift exists). This section decomposes the headline by class
+to test the prediction and to localise the clinical content of
+the FedProx benefit.
+
+\subsection{Setup}
+\label{sec:engineered-per-class-setup}
+
+The data are the same pure-PyTorch primary runs analysed in
+Section~\ref{sec:engineered-headline}: ten paired seeds on the
+engineered \texttt{balanced\_paired\_7\_clients} partition with
+$E = 20$ local epochs, $R = 150$ communication rounds, $\mu =
+0.01$ for FedProx and $\mu = 0$ for FedAvg. The per-class F1
+scores reported below are computed on the same global test set
+($n = 2{,}005$) at the per-seed best-validation checkpoint, and
+are extracted directly from the \texttt{per\_class\_f1} field of
+each result JSON. The paired-seed structure is preserved: within
+each seed, FedProx and FedAvg share identical partition, initial
+weights, and dataloader RNG state, so within-pair differences on
+each class reflect only the proximal-term gating.
+
+\subsection{Results}
+\label{sec:engineered-per-class-results}
+
+Table~\ref{tab:engineered-per-class} reports per-class test
+F1 scores for FedAvg and FedProx across the ten paired seeds,
+along with the within-pair $\Delta$ and the number of seeds on
+which FedProx outperforms FedAvg.
+Figure~\ref{fig:engineered-per-class} shows the per-class
+validation F1 trajectories over 150 communication rounds.
+
+\begin{table}[!htbp]
+\centering
+\caption{Per-class test F1 on the engineered partition
+(pure-PyTorch primary, $n = 10$ paired seeds, mean $\pm$
+standard deviation across seeds). The winning algorithm per
+row is shown in bold; the $\Delta$ column is the mean within-
+pair difference (FedProx $-$ FedAvg). Wins are the count of
+paired seeds in which FedProx outperforms FedAvg on that class.}
+\label{tab:engineered-per-class}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Class (prevalence) & FedAvg & FedProx & $\Delta$ & Wins \\
+\midrule
+Actinic keratoses (3.27\%)        & $0.404 \pm 0.111$ & $\mathbf{0.471 \pm 0.040}$ & $+0.067$ & $9/10$ \\
+Basal cell carcinoma (5.13\%)     & $\mathbf{0.475 \pm 0.046}$ & $0.473 \pm 0.027$ & $-0.001$ & $4/10$ \\
+Benign keratosis (10.97\%)        & $0.440 \pm 0.033$ & $\mathbf{0.444 \pm 0.041}$ & $+0.004$ & $7/10$ \\
+Dermatofibroma (1.15\%)           & $0.283 \pm 0.141$ & $\mathbf{0.296 \pm 0.070}$ & $+0.013$ & $4/10$ \\
+Melanoma (11.11\%)                & $0.187 \pm 0.101$ & $\mathbf{0.301 \pm 0.026}$ & $\mathbf{+0.114}$ & $\mathbf{9/10}$ \\
+Melanocytic nevi (67.05\%)        & $0.884 \pm 0.003$ & $\mathbf{0.886 \pm 0.004}$ & $+0.002$ & $7/10$ \\
+Vascular lesions (1.41\%)         & $\mathbf{0.698 \pm 0.078}$ & $0.686 \pm 0.043$ & $-0.012$ & $5/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The per-class breakdown reveals a strongly non-uniform
+distribution of the FedProx benefit across the seven classes.
+The melanoma class stands out as the dominant contributor:
+FedProx improves melanoma F1 by $+0.114$ on average, wins on
+nine of ten paired seeds, and reduces the across-seed standard
+deviation from $\pm 0.101$ (FedAvg) to $\pm 0.026$ (FedProx).
+Actinic keratoses shows the next-largest improvement
+($\Delta = +0.067$, $9/10$ wins). The remaining five classes
+show small differences in either direction
+($-0.012 \leq \Delta \leq +0.013$), all within their across-seed
+standard deviations and not consistently signed across seeds.
+
+The majority class \emph{melanocytic nevi} provides the
+mechanism-cleanest observation: $\Delta = +0.002$ with both
+algorithms reaching $F1 \approx 0.885$ and very small
+across-seed standard deviations ($\pm 0.003$ for FedAvg,
+$\pm 0.004$ for FedProx). Under the engineered partition,
+melanocytic nevi is held in equal proportion by every one of
+the seven clients, so no inter-client class skew exists on this
+class for the proximal anchor to act on. The near-zero $\Delta$
+and the tight across-seed agreement on the universal class is
+the empirical signature predicted by the drift-control
+mechanism: where there is no drift, FedProx produces the same
+result as FedAvg, on every seed, on the same class. The
+mel-nevi result is the within-experiment per-class control
+introduced by the partition design.
+
+The pattern visible in
+Figure~\ref{fig:engineered-per-class} confirms the tabular
+finding visually. The melanoma panel (bottom-left) shows the
+largest persistent gap between the two algorithms across all
+$150$ rounds: FedAvg plateaus at $\mathrm{F1} \approx 0.20$
+while FedProx reaches $\mathrm{F1} \approx 0.30$, with the gap
+visible from approximately round $50$ onwards. The melanocytic
+nevi panel (bottom-centre) shows two curves that are essentially
+indistinguishable across the entire training horizon. The other
+five class panels show modest or noisy differences without a
+visually persistent gap.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_engineered_per_class.pdf}
+\caption{Validation F1 over 150 communication rounds for each of
+the seven DermaMNIST classes on the engineered partition (pure-
+PyTorch primary, $n = 10$ paired seeds, mean $\pm$ SEM band).
+Each panel shows the per-class trajectory for one class with the
+class prevalence in parentheses and the within-pair test-set
+$\Delta$ (FedProx $-$ FedAvg) annotated. The melanoma panel
+(bottom-left) shows the largest persistent FedProx-FedAvg gap;
+the melanocytic nevi panel (bottom-centre) shows two
+indistinguishable trajectories, consistent with the
+proximal-anchor mechanism being inert on a class held by every
+client.}
+\label{fig:engineered-per-class}
+\end{figure}
+
+\subsection{Mechanism interpretation}
+\label{sec:engineered-per-class-mechanism}
+
+The per-class pattern aligns with the engineered partition's
+structural design and with the proximal-anchor mechanism's
+prediction. The melanoma class is held by exactly two of the
+seven clients (clients C4 and C5, the melanoma/vascular
+specialty pair) and represents $11.1\%$ of the global training
+distribution; under FedAvg, the two melanoma-holding clients
+drift toward an over-specialised local optimum that
+under-represents the other classes, and the aggregated update
+incorporates this drift into the global model proportionally to
+the clients' sample counts. The proximal anchor constrains how
+far the two melanoma specialists can move per round, which
+preserves a more balanced representation of melanoma in the
+global model while still allowing the specialist clients to
+exploit their local data. The melanocytic nevi class is held by
+all seven clients in equal proportion ($670$--$673$ samples per
+client), so all clients see the same melanocytic nevi
+distribution locally and no inter-client drift exists on this
+class for the proximal anchor to constrain --- yielding the
+near-zero $\Delta$ observed empirically.
+
+The contrast between the two clinically critical minority
+classes \emph{melanoma} and \emph{actinic keratoses} (large
+positive $\Delta$, mechanism-active) and the universal class
+\emph{melanocytic nevi} (near-zero $\Delta$, mechanism-inert)
+within the same experiment, on the same model, on the same
+seeds, is the strongest single piece of per-class evidence for
+the drift-control interpretation in this dissertation.
+
+\subsection{Summary}
+\label{sec:engineered-per-class-summary}
+
+The $+0.027$ macro-F1 advantage reported in
+Section~\ref{sec:engineered-headline} is class-localised: the
+melanoma class contributes $+0.114$ macro-F1 in mean within-pair
+$\Delta$ ($9/10$ paired wins), the actinic keratoses class
+contributes $+0.067$ ($9/10$ wins), and the remaining five
+classes contribute small differences within across-seed noise.
+The mechanism-null prediction for the universal class
+\emph{melanocytic nevi} is empirically confirmed
+($\Delta = +0.002$, both algorithms within $\pm 0.005$ across
+seeds). The class-by-class pattern is consistent with the
+proximal anchor activating only where inter-client class skew
+exists, as predicted by the engineered partition's structural
+design.
+
+% ==============================================================================
+\section{Robustness Across Partition Designs}
+\label{sec:partition-robustness}
+% ==============================================================================
+
+The headline result of Section~\ref{sec:engineered-headline} is
+established on a single engineered partition that was designed
+to maximise the proximal-anchor mechanism's effect. To check
+that the FedProx-vs-FedAvg comparison reproduces beyond this
+specific design --- and to contrast against the IID null
+established in Section~\ref{sec:iid-baseline} --- we ran the
+same paired-seed protocol on three alternative non-IID
+partition designs covering different non-IID structures from
+the federated-learning literature: a literature-standard
+random-skew design (Dirichlet $\alpha = 0.1$), an extreme
+singleton-specialist counterfactual, and the engineered
+balanced-paired partition itself replicated on the Flower
+runtime. All comparisons in this section share the Flower
+runtime and the same ten paired seeds, so the only variable
+between rows is the partition design.
+
+\subsection{Partition designs}
+\label{sec:partition-designs}
+
+\paragraph{Dirichlet $\alpha = 0.1$.}
+The Dirichlet partitioning protocol of Hsu et al.\ (2019) is
+the de-facto standard for synthetic non-IID benchmarking in
+federated learning. For each class $c$ a $7$-client probability
+vector $\boldsymbol{q}_c \sim \mathrm{Dir}_7(\alpha\boldsymbol{1})$ is
+sampled, and the class-$c$ training samples are distributed to
+the seven clients in proportions $q_{c,1}, \dots, q_{c,7}$. At
+$\alpha = 0.1$ the resulting per-client distributions are
+severely skewed: in the realisation used, client sample counts
+range from $91$ to $3{,}721$ and individual classes are
+concentrated on small subsets of clients. This combines label
+skew with substantial quantity skew, which is the regime in
+which most published non-IID benchmarks report FedAvg
+degradation.
+
+\paragraph{Specialist (1-of-7).}
+The specialist partition assigns each minority class to
+\emph{exactly one} client (rather than two, as in the
+engineered design) while matching the per-client total sample
+counts of the engineered partition exactly. Under this design
+no inter-client drift exists on any minority class because each
+minority class is held by only one client. The specialist
+partition therefore tests the contrapositive of the engineered
+design's mechanism prediction: if the proximal anchor's benefit
+requires multiple clients to share a minority class, the
+specialist partition should show a smaller per-class effect on
+those minority classes than the engineered partition does.
+
+\paragraph{Engineered balanced-paired (Flower).}
+The same engineered partition used in
+Section~\ref{sec:engineered-headline}, here run on the Flower
+runtime so that all four partitions in this section share a
+single runtime. This is the cross-runtime replication of the
+primary result, included in this table for direct
+within-runtime comparison.
+
+\subsection{Results}
+\label{sec:partition-robustness-results}
+
+Table~\ref{tab:partition-robustness} reports test macro-F1
+across the ten paired seeds on each partition. The IID baseline
+from Section~\ref{sec:iid-baseline} is included as the reference
+row. Figure~\ref{fig:partition-robustness} shows the per-round
+validation macro-F1 trajectories on each partition.
+
+\begin{table}[!htbp]
+\centering
+\caption{Robustness across four partition designs on the
+Flower runtime, $n = 10$ paired seeds, all hyperparameters
+held identical (only the partition function varies between
+rows). Test macro-F1 reported as mean $\pm$ standard deviation
+across seeds; the winning algorithm per row is shown in bold.
+The IID row is the mechanism-null reference from
+Section~\ref{sec:iid-baseline}.}
+\label{tab:partition-robustness}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Partition & FedAvg & FedProx & $\Delta$ & Wins \\
+\midrule
+IID                          & $\mathbf{0.5846 \pm 0.0197}$ & $0.5786 \pm 0.0190$ & $-0.006$ & $5/10$ \\
+Dirichlet $\alpha = 0.1$     & $0.4796 \pm 0.0355$ & $\mathbf{0.4875 \pm 0.0341}$ & $+0.008$ & $6/10$ \\
+Specialist (1-of-7)          & $0.4365 \pm 0.0236$ & $\mathbf{0.4446 \pm 0.0172}$ & $+0.008$ & $7/10$ \\
+Engineered balanced-paired   & $0.4964 \pm 0.0150$ & $\mathbf{0.5033 \pm 0.0206}$ & $+0.007$ & $7/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The direction of the FedProx-vs-FedAvg effect is consistent
+across the three non-IID partition designs (Dirichlet,
+specialist, engineered): all three produce a positive mean
+within-pair $\Delta$ in the range $+0.007$ to $+0.008$ macro-F1,
+with FedProx winning the majority of paired seeds in each case
+($6/10$, $7/10$, $7/10$). The IID partition produces the
+opposite sign of small magnitude ($\Delta = -0.006$, FedProx
+wins $5/10$). The four-way contrast between IID and the three
+non-IID designs reproduces the qualitative pattern expected of
+the proximal-anchor mechanism: positive direction under
+non-IID, near-zero direction under IID. The magnitudes on
+the three non-IID partitions are similar in size to the
+across-seed standard deviations of either algorithm
+($\sim 0.02$--$0.03$), so we report them as descriptive
+observations of direction rather than as quantitatively
+distinguishable effect sizes.
+
+The absolute macro-F1 levels vary substantially across
+partitions, reflecting differences in task difficulty: IID is
+the easiest setting ($\sim 0.58$ macro-F1) because every client
+sees the global class distribution proportionally; the
+specialist partition is the hardest ($\sim 0.44$) because each
+minority class is held by only one client and the global model
+must aggregate over highly specialised local optima; the
+Dirichlet $\alpha = 0.1$ and engineered partitions sit between
+the two extremes. The within-pair $\Delta$ comparison in
+Table~\ref{tab:partition-robustness} is paired-seed within each
+row and therefore controls for these absolute-level differences
+across partitions.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_partition_robustness.pdf}
+\caption{Validation macro-F1 over $150$ communication rounds
+on four DermaMNIST partition designs (Flower runtime, $n = 10$
+paired seeds, mean $\pm$ SEM band). The IID panel (top-left)
+shows the two algorithms' trajectories essentially
+superimposed; the three non-IID panels (top-right, bottom-left,
+bottom-right) show a small but visible persistent gap with
+FedProx above FedAvg from approximately round~$30$ onwards.}
+\label{fig:partition-robustness}
+\end{figure}
+
+\subsection{Cross-design observation}
+\label{sec:partition-cross-design}
+
+The three non-IID partitions tested differ substantially in
+their structural design: the Dirichlet $\alpha = 0.1$ partition
+produces random and severe class skew with large per-client
+quantity differences (client sample counts $91$ to $3{,}721$);
+the specialist partition assigns each minority class to exactly
+one client; the engineered partition assigns each minority
+class to exactly two co-training clients with mild quantity
+skew. Despite these substantial structural differences, the
+three partitions produce within-pair $\Delta$ values within
+$\pm 0.001$ macro-F1 of each other ($+0.007$, $+0.008$,
+$+0.008$). At the chosen sample size of $n = 10$ paired seeds,
+the across-seed noise dominates any potential structural
+difference between non-IID designs at the aggregate macro-F1
+level.
+
+A more discriminating cross-design observation emerges at the
+per-class level. On the melanoma class, the engineered
+partition produces $\Delta_{\mathrm{melanoma}} = +0.068$ ($7/10$
+paired wins) while the specialist partition produces
+$\Delta_{\mathrm{melanoma}} = -0.015$ ($4/10$ wins). The
+structural explanation aligns with the proximal-anchor
+mechanism: under the engineered partition, melanoma is held by
+two clients (the melanoma/vascular specialty pair), which
+drift apart during local SGD and require reconciliation at
+aggregation --- the regime in which the proximal anchor is
+mechanically active. Under the specialist partition, melanoma
+is held by only one client, so no inter-client drift exists on
+the melanoma class and the proximal anchor is structurally
+inert for that class. The per-class melanoma contrast between
+engineered and specialist therefore corroborates the
+mechanism-based interpretation of the per-class breakdown in
+Section~\ref{sec:engineered-per-class}: the proximal anchor's
+contribution is conditional on multiple clients sharing the
+class.
+
+\subsection{Summary}
+\label{sec:partition-robustness-summary}
+
+Across three structurally different non-IID partition designs
+(Dirichlet $\alpha = 0.1$, specialist, engineered
+balanced-paired), the within-pair $\Delta$ is positive and
+similar in magnitude ($+0.007$ to $+0.008$ macro-F1, FedProx
+wins $6$--$7$ of $10$ paired seeds in each case). Under the
+IID partition the within-pair $\Delta$ is near-zero and
+negative ($-0.006$). The four-way contrast reproduces the
+direction expected of the proximal-anchor mechanism while
+revealing that, at $n = 10$ paired seeds and at the aggregate
+macro-F1 level, the choice of non-IID partition design does
+not strongly modulate the magnitude of the FedProx benefit.
+A more discriminating per-class contrast --- melanoma under
+engineered vs specialist --- corroborates the mechanism-based
+interpretation that the proximal anchor is active when
+multiple clients share a minority class and inert when only
+one client holds it.
+
+% ==============================================================================
+\section{Direct Mechanism Evidence: Per-Client Update Norms}
+\label{sec:update-norms}
+% ==============================================================================
+
+The results reported so far in this chapter argue for the
+proximal-anchor mechanism \emph{indirectly}, by interpreting
+patterns in test macro-F1 (cross-partition direction
+consistency, per-class melanoma vs mel-nevi contrast, IID
+null). A more direct line of evidence is available: because the
+proximal regulariser $(\mu/2)\lVert w - w^t \rVert^2$ is a
+penalty on the parameter increment, FedProx is expected to
+produce systematically smaller per-client parameter updates
+than FedAvg when client drift is present. This section reports
+this measurement directly, using per-round per-client update-
+norm logging from the Flower runtime sweeps.
+
+\subsection{What is measured}
+\label{sec:update-norms-setup}
+
+For each communication round $t$ and each client $i$, we log
+the Euclidean distance between that client's locally-updated
+parameter vector at the end of the round and the global
+parameter vector broadcast at the start of the round:
+\[
+\rho_{t,i} \;=\; \lVert w_i^{t+1} - w^t \rVert_2.
+\]
+This quantity has a clean mechanism interpretation: under
+FedAvg, $\rho_{t,i}$ is determined entirely by the local
+training trajectory; under FedProx, the proximal regulariser
+explicitly penalises $\lVert w - w^t \rVert$ during local
+training, so $\rho_{t,i}$ is expected to be smaller. The
+proximal anchor's drift-control effect, if present, should
+appear directly in this measurement, independent of any
+outcome-level metric.
+
+The Flower runtime client-side training code logs $\rho_{t,i}$
+for every (round, client) pair when the
+\texttt{--log-update-norms} flag is enabled. This was the case
+for the Flower engineered-partition baseline sweep
+(\texttt{flower\_C0\_baseline}) and the Flower IID baseline
+sweep (\texttt{flower\_C0\_iid\_baseline}); the remaining
+Flower statistical-heterogeneity sweeps used in
+Section~\ref{sec:partition-robustness} do not have update-norm
+logging in their result directories. We therefore report
+update-norm results on the engineered and IID partitions, the
+two endpoints of the heterogeneity-intensity axis.
+
+\subsection{Results}
+\label{sec:update-norms-results}
+
+Table~\ref{tab:update-norms} reports the mean update norm
+across all (round, client) pairs, averaged across paired seeds,
+for FedAvg and FedProx on each partition.
+Figure~\ref{fig:update-norms} shows the per-round trajectory of
+the mean update norm across the 150 communication rounds.
+
+\begin{table}[!htbp]
+\centering
+\caption{Per-client update norm
+$\lVert w_i^{t+1} - w^t \rVert_2$ averaged across all (round,
+client) pairs and across paired seeds (Flower runtime). The
+ratio column reports the mean FedAvg norm divided by the mean
+FedProx norm for each partition.}
+\label{tab:update-norms}
+\small
+\begin{tabular}{lccc}
+\toprule
+Partition & FedAvg $\lVert \Delta w \rVert$ & FedProx $\lVert \Delta w \rVert$ & Ratio (FA / FP) \\
+\midrule
+Engineered (non-IID)   & $1.523$ & $\mathbf{1.029}$ & $\mathbf{1.48\times}$ \\
+IID (mechanism null)   & $0.825$ & $\mathbf{0.724}$ & $1.14\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two observations follow from Table~\ref{tab:update-norms}.
+
+First, on both partitions FedProx produces smaller per-client
+update norms than FedAvg --- the direction predicted by the
+proximal regulariser. This is the direct empirical signature
+of the drift-control mechanism: when the proximal regulariser
+is active, per-round client updates are bounded in magnitude.
+
+Second, the magnitude of the FedAvg/FedProx ratio differs
+substantially between the two partitions. On the engineered
+non-IID partition the FedAvg update norm is $1.48\times$ that of
+FedProx ($1.523$ vs $1.029$); on the IID partition the ratio
+shrinks to $1.14\times$ ($0.825$ vs $0.724$). The same
+proximal coefficient $\mu = 0.01$ produces a substantially
+stronger empirical drift-control effect on the non-IID
+partition than on the IID partition. This is mechanism-
+consistent: under IID, all clients are drifting toward
+similar local optima (because their local objectives are
+i.i.d.\ samples of the same global distribution), so there is
+little client drift to constrain and the proximal anchor's
+empirical effect is modest. Under the engineered non-IID
+partition, clients drift toward distinct specialised local
+optima, and the proximal anchor's effect is substantially
+larger.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_update_norms.pdf}
+\caption{Per-client update norm
+$\lVert w_i^{t+1} - w^t \rVert_2$ across $150$ communication
+rounds on the Flower runtime, averaged across clients within
+each round and across paired seeds (mean $\pm$ SEM band). On
+the engineered non-IID partition (left), FedProx maintains a
+visibly smaller per-client update norm than FedAvg from
+round~$1$ onwards; the gap persists across the entire $150$-
+round horizon. On the IID partition (right), both algorithms'
+update norms decay rapidly toward zero by round~$\sim 80$ and
+the FedProx-FedAvg gap is correspondingly smaller. The cross-
+partition contrast shows the proximal anchor's empirical effect
+scales with the amount of inter-client drift present in the
+training setup.}
+\label{fig:update-norms}
+\end{figure}
+
+The convergence-time profile of the update norms also differs
+between partitions. On the IID partition, both algorithms'
+update norms decay to near zero by round $\sim 80$, indicating
+that all seven clients have approximately converged to the
+same global optimum and per-round changes are minimal. On the
+engineered partition, the update norms decay more slowly and
+remain non-trivial across the entire $150$-round horizon ---
+clients continue to make meaningful per-round parameter
+changes even in late training because their local optima
+differ from the global aggregate. The FedAvg/FedProx ratio
+remains stable across the late-training horizon on the
+engineered partition rather than collapsing toward one,
+indicating that the proximal regulariser remains active
+throughout training rather than becoming inert at convergence.
+
+\subsection{Trajectory-volatility corroboration}
+\label{sec:update-norms-volatility}
+
+An outcome-level signal that corroborates the parameter-level
+finding is the per-round volatility of the validation
+macro-F1 trajectory. Smaller per-client parameter updates
+should produce smoother round-to-round changes in the global
+model and therefore smoother validation curves; larger
+updates should produce more volatile trajectories. We
+quantify this by the mean absolute round-to-round change
+in validation macro-F1 across the $150$ communication rounds,
+averaged across the ten paired seeds of the pure-PyTorch
+primary sweep:
+\[
+\text{volatility}_a \;=\;
+\mathrm{mean}_r \big|\mathrm{F1}_a(r) - \mathrm{F1}_a(r-1)\big|.
+\]
+On the pure-PyTorch engineered headline,
+$\text{volatility}_{\mathrm{FedAvg}} = 0.0414$ and
+$\text{volatility}_{\mathrm{FedProx}} = 0.0225$, with the
+FedAvg/FedProx ratio of $1.84\times$. Crucially, the ratio
+exceeds one on every one of the ten paired seeds (per-seed
+range: $1.30\times$ to $2.95\times$), so this is not a feature
+of any single seed. FedProx's smoother validation trajectory
+is a downstream consequence of its smaller per-client update
+norm.
+
+\subsection{Summary}
+\label{sec:update-norms-summary}
+
+Direct measurement of per-client parameter updates confirms
+the proximal-anchor mechanism empirically. On the engineered
+non-IID partition, the mean FedAvg per-client update norm is
+$1.48\times$ that of FedProx; on the IID partition, the ratio
+shrinks to $1.14\times$. The same proximal coefficient
+produces a substantially larger empirical effect on parameter
+updates when more inter-client drift is present, matching the
+mechanism prediction that the regulariser acts on client
+drift. The outcome-level signature of this parameter-level
+effect is a $1.84\times$ smoother validation-macro-F1
+trajectory under FedProx than under FedAvg on the engineered
+partition, holding on every paired seed.
+
+% ==============================================================================
+\section{Federation Tax}
+\label{sec:federation-tax}
+% ==============================================================================
+
+To contextualise the within-federation FedAvg-vs-FedProx
+comparison against the absolute scale set by
+Section~\ref{sec:centralised-baseline}, we express each
+federated configuration's mean test macro-F1 as a percentage of
+the centralised reference ($0.5600$ macro-F1). The four
+federated configurations all use the engineered
+\texttt{balanced\_paired\_7\_clients} partition, $n = 10$ paired
+seeds, and identical hyperparameters.
+
+\begin{table}[!htbp]
+\centering
+\caption{Federation tax. Each row's recovery percentage is its
+test macro-F1 mean divided by the centralised baseline mean of
+$0.5600$.}
+\label{tab:federation-tax}
+\small
+\begin{tabular}{lcc}
+\toprule
+Configuration & Test macro-F1 & Recovery vs centralised \\
+\midrule
+Centralised (non-federated)         & $\mathbf{0.5600 \pm 0.0240}$ & $100.0\%$ \\
+FedAvg, pure-PyTorch                & $0.4814 \pm 0.0254$ & $86.0\%$ \\
+FedProx, pure-PyTorch               & $0.5081 \pm 0.0140$ & $90.7\%$ \\
+FedAvg, Flower                      & $0.4964 \pm 0.0150$ & $88.6\%$ \\
+FedProx, Flower                     & $0.5033 \pm 0.0206$ & $89.9\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The federation tax --- the gap between centralised training
+and any federated configuration --- is $9$--$14$ percentage
+points of macro-F1, substantially larger than the within-
+federation FedProx-vs-FedAvg improvement ($4.7$ percentage
+points on pure-PyTorch, $1.3$ on Flower). The thesis result
+is therefore best framed not as ``federated training matches
+centralised'' but as ``federated FedProx closes a modest
+portion of the federation gap that federated FedAvg leaves
+open.'' The remaining $9$--$10$ percentage-point gap to
+centralised is the cost of federation itself and is not
+addressed by the choice of FL algorithm.
+
+% ==============================================================================
+\section{System Heterogeneity: Motivation and Scope}
+\label{sec:system-het-motivation}
+% ==============================================================================
+
+The chapter up to this point has focused on \emph{statistical}
+heterogeneity --- differences in the data distribution held by
+each client. Federated-learning theory and practice identifies
+a second canonical axis of heterogeneity, equally important in
+production deployments: \emph{system} heterogeneity, in which
+clients differ in the amount of local computation they can
+contribute per communication round. In real federated
+deployments, institutions run on heterogeneous hardware, have
+different on-call training windows, and cannot all complete the
+same amount of local work within a round's wall-clock deadline.
+Some clients (``stragglers'') return partial updates after fewer
+local optimisation steps; the question is how the FL algorithm
+should handle these partial updates.
+
+The proximal term in FedProx was originally motivated for this
+regime. Li et al.\ (2020), Theorem~4, proves a convergence
+guarantee for FedProx under \emph{$\gamma$-inexact} local
+updates: each client may submit a parameter vector
+$w_i^{t+1}$ that does not fully minimise its local objective,
+provided the residual inexactness is bounded. The proximal
+regulariser $(\mu/2)\lVert w - w^t \rVert^2$ constrains how far
+an inexact local update can drift from the broadcast global
+anchor $w^t$, making partial work from stragglers usable for
+aggregation without destabilising the global model. FedAvg has
+no such guarantee, and its size-weighted aggregation rule
+treats partial-work and full-work updates symmetrically,
+weighted only by dataset size.
+
+This chapter tests whether the FedProx-vs-FedAvg pattern
+established under statistical heterogeneity in the preceding
+sections persists, attenuates, or amplifies when clients have
+heterogeneous per-round local-epoch budgets. The same
+engineered \texttt{balanced\_paired\_7\_clients} partition,
+the same ten paired seeds, and the same Flower simulation
+runtime are used throughout, so that the only variable
+between this chapter's experiments and the engineered
+non-IID baseline of Section~\ref{sec:engineered-headline} is
+the per-(round, client) local-epoch allocation. An IID
+cross-partition control mirrors the contrast structure used in
+Section~\ref{sec:partition-robustness}.
+
+\paragraph{Scope and terminology.}
+We use ``system heterogeneity'' as shorthand for what is
+strictly \emph{computational-work heterogeneity}: variability
+in the number of local SGD steps each client performs per
+round. We do not simulate hardware speed, network latency, or
+device availability; the manipulation acts only on the
+algorithm via heterogeneous per-(round, client) local-epoch
+budgets $\tau_i$. We restrict scope to the FedAvg/FedProx
+comparison; alternative algorithms designed specifically for
+heterogeneous local-step regimes are out of scope for this
+chapter.
+
+% ==============================================================================
+\section{Experimental Design and Conditions}
+\label{sec:system-het-design}
+% ==============================================================================
+
+Three system-heterogeneity conditions are evaluated, denoted
+$C_0$, $C_1$, and $C_2$. Each condition defines a per-(round,
+client) local-epoch schedule that is fully determined by the
+random seed; paired FedAvg/FedProx runs at the same seed
+therefore see an identical schedule and the within-pair
+$\Delta$ reflects only the algorithmic gating of the proximal
+term. The schedules under seed~$42$ are visualised in
+Figure~\ref{fig:sh-schedules}.
+
+\paragraph{C0 --- no system heterogeneity (baseline).}
+Every client performs $E = 20$ local epochs every round, for
+all $150$ communication rounds. This is the same setting used
+in the engineered-partition headline of
+Section~\ref{sec:engineered-headline} and provides the
+within-runtime within-partition baseline against which the
+two system-heterogeneity conditions are compared. In the
+schedule heatmap (Figure~\ref{fig:sh-schedules}, left), every
+(round, client) cell is yellow, indicating the maximum
+local-epoch budget.
+
+\paragraph{C1 --- fixed stragglers.}
+Two designated clients (C5 and C6) always perform
+$E_{\text{straggler}} = 5$ local epochs; the remaining five
+clients always perform the full $E = 20$. This represents the
+deployment pattern in which specific institutions consistently
+have weaker compute infrastructure or shorter training windows.
+The schedule heatmap (Figure~\ref{fig:sh-schedules}, centre)
+shows a solid vertical bar of $E = 5$ on columns C5 and C6
+across all $150$ rounds, with the remaining columns at
+$E = 20$.
+
+\paragraph{Caveat on the C1 design.} On the engineered
+\texttt{balanced\_paired\_7\_clients} partition, client~C5 is
+part of the melanoma/vascular specialty pair (the pair that
+drives the per-class melanoma advantage in
+Section~\ref{sec:engineered-per-class}), and client~C6 is the
+melanocytic-nevi-only generalist. C1 therefore couples the
+``system heterogeneity'' manipulation with a specific clinical
+role assignment under the engineered partition. The C2
+condition below does not have this confound (the straggler
+identity rotates randomly per round), so C2 is the cleaner
+test of the pure system-heterogeneity effect. C1 is retained
+for descriptive realism and as a contrast to C2.
+
+\paragraph{C2 --- random stragglers.}
+Each communication round, $\lfloor 0.5 \times 7 \rfloor + 1 = 4$
+clients are randomly designated stragglers (sampled without
+replacement). Each straggler performs $E_i \sim
+\mathrm{Uniform}\{1, 2, \dots, 19\}$ local epochs; the
+remaining three clients perform the full $E = 20$. Aggregated
+across the ten paired seeds, every client serves as a
+straggler in approximately $57\%$ of rounds. The schedule
+heatmap (Figure~\ref{fig:sh-schedules}, right) shows the
+characteristic salt-and-pepper pattern of randomised straggler
+assignment, with mean per-cell value of approximately $14.1$
+epochs (mixture of full-work cells at $E = 20$ and partial-work
+cells at $E_i \in \{1, \dots, 19\}$). C2 follows the protocol
+of Li et al.\ (2020), §5.2 up to two implementation details:
+stragglers always perform at least one local optimisation step
+(the Li et al.\ protocol allows $E_i = 0$), and both algorithms
+include partial updates in aggregation. We replicate the
+canonical Li et al.\ asymmetric setup (FedAvg drops stragglers
+while FedProx includes them) separately in
+Section~\ref{sec:sh-asymmetric}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_sh_schedules.pdf}
+\caption{Per-(round, client) local-epoch schedules under the
+three system-heterogeneity conditions, reconstructed
+deterministically from seed~$42$. Each heatmap row is a
+communication round (rounds $1$--$150$, bottom to top) and
+each column is one of the seven clients; cell colour shows the
+local-epoch budget $E$ assigned to that (round, client) pair
+on a $0$--$20$ scale. \textbf{Left (C0):} every client performs
+the maximum $E = 20$ in every round (uniform yellow).
+\textbf{Centre (C1):} clients C5 and C6 always perform
+$E = 5$ (solid dark band on the two rightmost columns); the
+remaining five clients always perform $E = 20$.
+\textbf{Right (C2):} four of seven clients per round are
+randomly designated stragglers with $E_i$ uniformly drawn from
+$\{1, \dots, 19\}$; the remaining three clients perform the
+full $E = 20$.}
+\label{fig:sh-schedules}
+\end{figure}
+
+\paragraph{Training setup (held constant across conditions).}
+All hyperparameters other than the schedule are held identical
+to the engineered-partition headline of
+Section~\ref{sec:engineered-headline}: same
+\texttt{DermMNISTCNN} architecture, SGD with learning rate
+$0.01$, momentum $0.9$, batch size $32$, weight decay $0$,
+$R = 150$ communication rounds, full participation $C = 1.0$,
+FedProx proximal coefficient $\mu = 0.01$, and the same ten
+paired seeds. The Flower simulation runtime is used throughout
+this chapter so that all C0/C1/C2 results share a single
+runtime and the within-condition $\Delta$ does not mix
+algorithmic effect with cross-runtime variation.
+
+% ==============================================================================
+\section{Results on the Engineered Partition}
+\label{sec:sh-engineered-results}
+% ==============================================================================
+
+This section reports the FedAvg-vs-FedProx paired comparison
+under each of the three system-heterogeneity conditions on the
+engineered partition. The same ten paired seeds are used across
+all conditions; within each seed, FedAvg and FedProx share an
+identical local-epoch schedule, partition assignment, and
+initial weights, so within-pair differences reflect only the
+algorithmic gating of the proximal term.
+
+\subsection{Results}
+\label{sec:sh-engineered-table}
+
+Table~\ref{tab:sh-engineered} reports test macro-F1 at the
+best-validation checkpoint across the ten paired seeds under
+each condition. Figure~\ref{fig:sh-engineered-convergence}
+shows the corresponding per-round validation macro-F1
+trajectories.
+
+\begin{table}[!htbp]
+\centering
+\caption{System-heterogeneity results on the engineered
+partition (Flower runtime, $n = 10$ paired seeds). Test
+macro-F1 reported as mean $\pm$ standard deviation across
+seeds; the winning algorithm per row is shown in bold. The
+$\Delta$ column is the mean within-pair difference (FedProx
+$-$ FedAvg). The C0 baseline row reproduces the engineered-
+partition Flower result from
+Section~\ref{sec:engineered-headline} for direct comparison.}
+\label{tab:sh-engineered}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Condition & FedAvg & FedProx & $\Delta$ & Wins \\
+\midrule
+C0 (no system het)                & $0.4964 \pm 0.0150$ & $\mathbf{0.5033 \pm 0.0206}$ & $+0.007$ & $7/10$ \\
+C1 (fixed stragglers, C5+C6 @ E=5) & $0.4978 \pm 0.0163$ & $\mathbf{0.5111 \pm 0.0196}$ & $+0.013$ & $8/10$ \\
+C2 (random stragglers, 4/7)        & $0.4928 \pm 0.0277$ & $\mathbf{0.5102 \pm 0.0168}$ & $+0.017$ & $7/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_sh_engineered_convergence.pdf}
+\caption{Validation macro-F1 over $150$ communication rounds
+on the engineered \texttt{balanced\_paired\_7\_clients}
+partition under each of the three system-heterogeneity
+conditions (Flower runtime, $n = 10$ paired seeds, mean $\pm$
+SEM band). The FedProx curve (dark slate blue) maintains a
+visible upward separation from the FedAvg curve (mint green)
+in all three conditions, with the gap widening from C0 (left)
+to C2 (right).}
+\label{fig:sh-engineered-convergence}
+\end{figure}
+
+\subsection{Interpretation}
+\label{sec:sh-engineered-interpretation}
+
+The within-pair $\Delta$ rises monotonically with straggler
+severity across the three conditions: $+0.007$ macro-F1 at the
+baseline C0, $+0.013$ at C1 with two consistently slow clients,
+and $+0.017$ at C2 with four randomly designated stragglers
+per round. FedProx wins the majority of paired seeds in each
+condition ($7/10$, $8/10$, $7/10$). The convergence figure
+shows this pattern visually: the FedAvg-vs-FedProx gap is
+narrowest under C0 and visibly wider under C1 and C2,
+particularly in the late-training plateau.
+
+The monotonic increase aligns with the canonical motivation
+of Li et al.\ (2020) for the proximal regulariser. As more
+local computation per client becomes inexact ($E_i < E_{\max}$
+on a growing fraction of (round, client) cells across the
+three conditions), the parameter-update trajectories of the
+participating clients diverge more from the broadcast global
+anchor $w^t$. The proximal anchor's drift-control role is
+therefore expected to contribute more under increasing
+straggler severity, and the empirical monotonic pattern in
+Table~\ref{tab:sh-engineered} is consistent with this
+mechanism.
+
+The absolute magnitudes are small in macro-F1 units
+($0.007$--$0.017$), comparable in size to the across-seed
+standard deviation of either algorithm under each condition
+($\pm 0.015$--$\pm 0.028$). We therefore report the
+condition-level $\Delta$ values descriptively, as a
+qualitatively consistent direction-of-effect pattern rather
+than as quantitatively distinguishable effect sizes between
+adjacent conditions. The direction-of-effect pattern (positive
+under non-IID stragglers, monotonic with severity) is the
+substantive observation.
+
+The C1 condition's positive $\Delta$ should be read together
+with the partition-design caveat noted in
+Section~\ref{sec:system-het-design}: under the engineered
+partition, the two designated C1 stragglers (C5 and C6) are
+the melanoma/vascular specialist client and the nevi-only
+generalist client respectively. The C1 result therefore
+reflects the specific scenario in which a clinical specialist
+client and the generalist client are both consistently slow.
+The C2 condition rotates straggler identity randomly per
+round and therefore does not have this confound; the $+0.017$
+macro-F1 advantage under C2 is the cleaner direct test of the
+system-heterogeneity effect in the engineered-partition
+configuration.
+
+\subsection{Connection to the parameter-level evidence}
+\label{sec:sh-engineered-connection}
+
+The outcome-level pattern reported in
+Table~\ref{tab:sh-engineered} is consistent with the direct
+parameter-level mechanism evidence established in
+Section~\ref{sec:update-norms}. In particular, the per-client
+update-norm ratio $\lVert \Delta w \rVert_{\mathrm{FedAvg}} /
+\lVert \Delta w \rVert_{\mathrm{FedProx}}$ on the engineered
+partition was $1.48\times$ at the C0 baseline. The
+system-heterogeneity conditions, in which local-epoch counts
+$E_i$ vary across (round, client) cells, are precisely the
+regime in which the proximal anchor's drift-control role is
+theoretically most useful (Li et al.\ 2020, Theorem~4); the
+larger within-pair $\Delta$ values observed under C1 and C2
+relative to C0 are the outcome-level manifestation of this
+broader drift-control role.
+
+\subsection{Summary}
+\label{sec:sh-engineered-summary}
+
+Under the three system-heterogeneity conditions on the
+engineered partition, the FedProx-vs-FedAvg within-pair
+$\Delta$ rises monotonically with straggler severity (C0:
+$+0.007$, C1: $+0.013$, C2: $+0.017$ macro-F1), and FedProx
+wins the majority of paired seeds in each condition. The
+absolute magnitudes are small but the direction-of-effect
+pattern is consistent with the canonical proximal-anchor
+mechanism: more inexact local work produces more
+opportunity for the drift-control term to act, and the
+empirical $\Delta$ increases correspondingly. The
+randomised-straggler C2 condition is the cleanest test (no
+clinical-role confounding) and produces the largest
+within-pair advantage.
+
+% ==============================================================================
+\section{Per-Class Breakdown under C2}
+\label{sec:sh-c2-per-class}
+% ==============================================================================
+
+The aggregate macro-F1 result reported in
+Section~\ref{sec:sh-engineered-results} averages over the seven
+DermaMNIST classes and does not reveal which classes contribute
+to the $+0.017$ within-pair $\Delta$ under the C2 random-
+straggler condition. This section decomposes the C2 result by
+class, mirroring the per-class breakdown performed for the
+no-system-het engineered baseline in
+Section~\ref{sec:engineered-per-class}. The expected pattern,
+based on the partition's structural design, is that classes
+held by exactly two clients should show a positive $\Delta$
+(inter-client drift exists for the proximal anchor to act on)
+while the majority class melanocytic nevi (held by every
+client) should show $\Delta \approx 0$.
+
+\subsection{Setup}
+\label{sec:sh-c2-per-class-setup}
+
+The data are the same C2 paired runs analysed in
+Section~\ref{sec:sh-engineered-results}: ten paired seeds on
+the engineered \texttt{balanced\_paired\_7\_clients} partition
+with the random-straggler schedule, $\mu = 0.01$ for FedProx
+and $\mu = 0$ for FedAvg, all other hyperparameters identical
+to the C0 baseline. Per-class F1 scores are computed on the
+global test set ($n = 2{,}005$ samples) at each run's best-
+validation checkpoint.
+
+\subsection{Results}
+\label{sec:sh-c2-per-class-results}
+
+Table~\ref{tab:sh-c2-per-class} reports per-class test F1
+across the ten paired seeds. Figure~\ref{fig:sh-c2-per-class}
+shows the corresponding per-class validation F1 trajectories.
+
+\begin{table}[!htbp]
+\centering
+\caption{Per-class test F1 under the C2 random-straggler
+condition on the engineered partition (Flower runtime, $n = 10$
+paired seeds, mean $\pm$ standard deviation across seeds).
+The winning algorithm per row is shown in bold; the $\Delta$
+column is the mean within-pair difference (FedProx $-$ FedAvg).
+Wins are the count of paired seeds in which FedProx outperforms
+FedAvg on that class.}
+\label{tab:sh-c2-per-class}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Class (prevalence) & FedAvg & FedProx & $\Delta$ & Wins \\
+\midrule
+Actinic keratoses (3.27\%)        & $0.454 \pm 0.060$ & $\mathbf{0.481 \pm 0.038}$ & $+0.026$ & $7/10$ \\
+Basal cell carcinoma (5.13\%)     & $0.492 \pm 0.057$ & $\mathbf{0.497 \pm 0.023}$ & $+0.005$ & $4/10$ \\
+Benign keratosis (10.97\%)        & $0.428 \pm 0.066$ & $\mathbf{0.432 \pm 0.045}$ & $+0.003$ & $4/10$ \\
+Dermatofibroma (1.15\%)           & $0.255 \pm 0.065$ & $\mathbf{0.288 \pm 0.103}$ & $+0.034$ & $6/10$ \\
+Melanoma (11.11\%)                & $0.233 \pm 0.065$ & $\mathbf{0.318 \pm 0.058}$ & $\mathbf{+0.085}$ & $\mathbf{10/10}$ \\
+Melanocytic nevi (67.05\%)        & $0.884 \pm 0.005$ & $\mathbf{0.886 \pm 0.004}$ & $+0.001$ & $7/10$ \\
+Vascular lesions (1.41\%)         & $\mathbf{0.703 \pm 0.066}$ & $0.670 \pm 0.039$ & $-0.033$ & $4/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The per-class decomposition under C2 closely mirrors the
+per-class structure observed in the no-system-het baseline of
+Section~\ref{sec:engineered-per-class}. Melanoma stands out as
+the dominant contributor: FedProx improves melanoma F1 by
+$+0.085$ on average and wins on \emph{every} one of the ten
+paired seeds. The actinic keratoses class shows the next-
+largest positive difference ($\Delta = +0.026$, $7/10$ wins),
+followed by dermatofibroma ($\Delta = +0.034$, $6/10$ wins).
+The majority class melanocytic nevi again produces a
+near-zero $\Delta$ ($+0.001$ macro-F1, both algorithms within
+$\pm 0.005$ across seeds) --- the expected signature of the
+proximal-anchor mechanism on a class held by every client.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_sh_c2_per_class.pdf}
+\caption{Validation F1 over $150$ communication rounds for each
+of the seven DermaMNIST classes under the C2 random-straggler
+condition on the engineered partition (Flower runtime, $n = 10$
+paired seeds, mean $\pm$ SEM band). Each panel shows the per-
+class trajectory for one class with the class prevalence in
+parentheses and the within-pair test-set $\Delta$ (FedProx $-$
+FedAvg) annotated. The melanoma panel (bottom-left) shows the
+largest persistent FedProx-vs-FedAvg gap; the melanocytic nevi
+panel (bottom-centre) shows two indistinguishable trajectories.}
+\label{fig:sh-c2-per-class}
+\end{figure}
+
+\subsection{Comparison with the C0 baseline}
+\label{sec:sh-c2-per-class-vs-c0}
+
+The C0 (no system het) baseline reported in
+Section~\ref{sec:engineered-per-class} showed a melanoma
+$\Delta$ of $+0.114$ on the pure-PyTorch primary; under the
+Flower runtime which is used in this chapter the corresponding
+C0 melanoma $\Delta$ is $+0.068$ ($7/10$ wins). The C2
+random-straggler condition produces a melanoma $\Delta$ of
+$+0.085$ ($10/10$ wins) --- larger in mean magnitude than the
+Flower C0 baseline and unanimous in direction across seeds.
+The melanocytic-nevi $\Delta$ remains near zero in both
+conditions ($+0.002$ at C0 Flower, $+0.001$ at C2). The
+per-class pattern that the macro-F1 advantage is concentrated
+on the melanoma class and absent on the universal melanocytic
+nevi class is preserved under system heterogeneity, with the
+melanoma signal becoming slightly stronger and more
+seed-consistent under C2 than under C0.
+
+\subsection{Summary}
+\label{sec:sh-c2-per-class-summary}
+
+The $+0.017$ macro-F1 advantage reported under C2 in
+Section~\ref{sec:sh-engineered-results} is class-localised
+in the same way as the no-system-het engineered headline:
+melanoma contributes a within-pair $\Delta$ of $+0.085$ with
+FedProx winning all $10$ paired seeds, and the universal class
+melanocytic nevi shows $\Delta \approx 0$ as predicted by the
+drift-control mechanism. The per-class structure of the
+FedProx advantage is therefore preserved under the random-
+straggler schedule, with the melanoma class --- the clinically
+most important diagnosis in this dataset --- as the dominant
+contributor to the aggregate macro-F1 effect.
+
+% ==============================================================================
+\section{Replication of Li et al.\ (2020) §5.2 Asymmetric Protocol}
+\label{sec:sh-asymmetric}
+% ==============================================================================
+
+The C0/C1/C2 results reported in
+Sections~\ref{sec:sh-engineered-results}--\ref{sec:sh-c2-per-class}
+use a \emph{symmetric} inclusion policy: both FedAvg and FedProx
+aggregate over all clients including stragglers, weighted by
+dataset size. The canonical straggler protocol of
+Li et al.\ (2020), §5.2 is asymmetric: FedAvg \emph{drops}
+straggler updates (clients that do not complete the full
+$E_{\max}$ local epochs are excluded from aggregation), while
+FedProx \emph{includes} their partial updates as
+$\gamma$-inexact contributions. To verify that the canonical
+asymmetric setup reproduces qualitatively on DermaMNIST, we
+additionally run the FedAvg-drop arm on the engineered
+partition under the C2 random-straggler schedule. Combined with
+the existing FedProx-include arm from the symmetric C2 data of
+Section~\ref{sec:sh-engineered-results} on the same ten seeds,
+this gives the paired comparison in
+Table~\ref{tab:sh-asymmetric}.
+
+\begin{table}[!htbp]
+\centering
+\caption{Replication of the Li et al.\ (2020) §5.2 asymmetric
+straggler protocol on the engineered partition with C2 random
+stragglers (Flower runtime, $n = 10$ paired seeds). Test
+macro-F1 reported as mean $\pm$ standard deviation across
+seeds; the winning configuration is shown in bold.}
+\label{tab:sh-asymmetric}
+\small
+\begin{tabular}{lccc}
+\toprule
+Configuration & Test macro-F1 & $\Delta$ & Wins \\
+\midrule
+FedAvg (drops straggler updates)         & $0.4423 \pm 0.0192$ & ---       & ---           \\
+FedProx (includes straggler updates)     & $\mathbf{0.5102 \pm 0.0168}$ & $\mathbf{+0.068}$ & $\mathbf{10/10}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The FedProx-include configuration outperforms FedAvg-drop by a
+mean within-pair difference of $+0.068$ macro-F1, with FedProx
+winning all $10$ paired seeds. This reproduces the qualitative
+finding of Li et al.\ (2020), §5.2 on the DermaMNIST task: the
+canonical asymmetric straggler setup produces a substantially
+higher macro-F1 under FedProx than under FedAvg. The magnitude
+is approximately four times larger than the symmetric C2
+$\Delta$ of $+0.017$ reported in
+Section~\ref{sec:sh-engineered-results}, primarily because the
+asymmetric setup makes two simultaneous changes to FedAvg
+relative to FedProx (dropping partial updates and lacking the
+proximal regulariser) rather than only one.
+
+% ==============================================================================
+\section{Partial Client Participation}
+\label{sec:sh-partial-participation}
+% ==============================================================================
+
+The system-heterogeneity conditions reported in
+Sections~\ref{sec:sh-engineered-results}--\ref{sec:sh-asymmetric}
+vary the second canonical FL parameter of system heterogeneity ---
+the local-epoch budget $E$ --- while holding the per-round
+participation fraction fixed at $C = 1.0$ (every client
+participates every round). The third canonical FL parameter, $C$,
+is itself an axis of system heterogeneity widely tested in the
+literature. McMahan et al.\ (2017) vary
+$C \in \{0.1, 0.2, 0.5, 1.0\}$ in the original FedAvg paper;
+Li et al.\ (2020), §5.3 test FedProx under partial participation
+on Synthetic and FEMNIST; Kairouz et al.\ (2021) list $C$ among
+the defining FL setup parameters. In real federated deployments,
+not all institutions respond every round, so the full-participation
+setting used so far in this chapter is the cleanest mathematical
+baseline but the least operationally realistic case. This section
+reports the FedAvg-vs-FedProx paired comparison under partial
+client participation at $C = 0.5$ (four of seven clients sampled
+uniformly at random per round), holding all other hyperparameters
+identical to the C0 engineered baseline of
+Section~\ref{sec:sh-engineered-results}.
+
+\paragraph{Mechanism prediction.}
+Under partial participation, the per-round aggregation pool is
+smaller and its composition varies across rounds. Any single
+client's drift therefore contributes a larger fraction of the
+aggregated update than under full participation, and the
+round-to-round aggregation variance is higher. The proximal
+anchor's drift-control mechanism is theoretically more useful in
+this regime: with more drift to constrain and more aggregation
+variance to smooth, FedProx is expected to produce a larger
+within-pair $\Delta$ than at $C = 1.0$. The expected direction is
+positive; the magnitude is not strongly predicted by the theory
+and is reported descriptively below.
+
+\subsection{Setup}
+\label{sec:sh-partial-setup}
+
+At each communication round, $\lfloor 0.5 \times 7 \rfloor + 1 = 4$
+clients are sampled uniformly at random (without replacement)
+from the seven available clients; the remaining three clients do
+not participate in that round and their parameters are not
+updated. All other hyperparameters are held identical to the
+engineered C0 baseline (Section~\ref{sec:sh-engineered-results}):
+the same \texttt{balanced\_paired\_7\_clients} partition, $E = 20$
+local epochs, $R = 150$ communication rounds, FedProx proximal
+coefficient $\mu = 0.01$, SGD with learning rate $0.01$ and
+momentum $0.9$, batch size $32$, and the same ten paired seeds.
+The Flower simulation runtime is used. Within each paired seed,
+the per-round client-sampling realisation is identical for the
+FedAvg and FedProx arms, so within-pair $\Delta$ values reflect
+only the algorithmic gating of the proximal term and not random
+sampling differences.
+
+\subsection{Results}
+\label{sec:sh-partial-results}
+
+Table~\ref{tab:sh-partial} reports the test macro-F1 at the
+best-validation checkpoint under partial participation, side by
+side with the full-participation engineered C0 baseline from
+Section~\ref{sec:sh-engineered-results}.
+Figure~\ref{fig:sh-partial-convergence} shows the corresponding
+per-round validation macro-F1 trajectories.
+
+\begin{table}[!htbp]
+\centering
+\caption{Partial-participation result on the engineered partition
+($n = 10$ paired seeds, Flower runtime). The first row reproduces
+the full-participation baseline from
+Section~\ref{sec:sh-engineered-results}; the second row reports
+the partial-participation result. The winning algorithm per row
+is shown in bold. The $\Delta$ column is the mean within-pair
+difference (FedProx $-$ FedAvg).}
+\label{tab:sh-partial}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Setting & FedAvg & FedProx & $\Delta$ & Wins \\
+\midrule
+$C = 1.0$ (full participation)         & $0.4964 \pm 0.0150$ & $\mathbf{0.5033 \pm 0.0206}$ & $+0.007$ & $7/10$ \\
+$C = 0.5$ (partial, 4/7 per round)     & $0.4780 \pm 0.0234$ & $\mathbf{0.4944 \pm 0.0185}$ & $+0.016$ & $9/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The within-pair $\Delta$ approximately doubles from $+0.007$
+under full participation to $+0.016$ under partial participation,
+and FedProx wins on $9$ of $10$ paired seeds at $C = 0.5$
+(up from $7/10$ at $C = 1.0$). The direction is consistent with
+the mechanism prediction: with the per-round aggregation pool
+reduced from seven clients to four, the proximal anchor's
+drift-control role becomes more useful and the within-pair
+$\Delta$ enlarges correspondingly. Per-seed differences range
+from $-0.032$ (the single seed on which FedAvg wins, seed~$123$)
+to $+0.054$ (the largest single-seed FedProx win, seed~$271828$).
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_partial_participation.pdf}
+\caption{Validation macro-F1 over $150$ communication rounds on
+the engineered partition under full and partial client
+participation (Flower runtime, $n = 10$ paired seeds, mean $\pm$
+SEM band). \textbf{Left ($C = 1.0$):} all seven clients
+participate every round; FedProx maintains a modest separation
+from FedAvg. \textbf{Right ($C = 0.5$):} four of seven clients
+are sampled uniformly at random per round; the FedProx-vs-FedAvg
+gap is visibly wider than under full participation, with FedProx
+($0.494$ test macro-F1) clearly above FedAvg ($0.478$) throughout
+late training.}
+\label{fig:sh-partial-convergence}
+\end{figure}
+
+\paragraph{Algorithmic robustness to partial participation.}
+A complementary observation is that the two algorithms differ in
+how much absolute test macro-F1 they lose when participation is
+reduced from $C = 1.0$ to $C = 0.5$. FedAvg loses $0.018$ macro-F1
+in absolute terms ($0.496 \to 0.478$), while FedProx loses only
+$0.009$ ($0.503 \to 0.494$). The proximal anchor therefore
+makes FedProx approximately twice as robust to the reduction in
+participation fraction as FedAvg in this setup. Both algorithms
+remain operational under partial participation; the difference
+is the rate at which performance degrades as the participation
+fraction shrinks.
+
+\subsection{Per-class breakdown}
+\label{sec:sh-partial-per-class}
+
+Table~\ref{tab:sh-partial-per-class} decomposes the
+partial-participation $\Delta$ by class. The pattern matches the
+per-class structure observed under both the engineered C0
+baseline and the C2 random-straggler condition: the melanoma
+class is the dominant contributor, and the universal class
+melanocytic nevi is mechanistically inert.
+
+\begin{table}[!htbp]
+\centering
+\caption{Per-class test F1 under partial participation $C = 0.5$
+on the engineered partition (Flower runtime, $n = 10$ paired
+seeds, mean $\pm$ standard deviation across seeds). The winning
+algorithm per row is shown in bold; the $\Delta$ column is the
+mean within-pair difference (FedProx $-$ FedAvg).}
+\label{tab:sh-partial-per-class}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Class (prevalence) & FedAvg & FedProx & $\Delta$ & Wins \\
+\midrule
+Actinic keratoses (3.27\%)        & $0.453 \pm 0.040$ & $\mathbf{0.462 \pm 0.044}$ & $+0.008$ & $6/10$ \\
+Basal cell carcinoma (5.13\%)     & $0.454 \pm 0.045$ & $\mathbf{0.472 \pm 0.040}$ & $+0.018$ & $6/10$ \\
+Benign keratosis (10.97\%)        & $0.403 \pm 0.069$ & $\mathbf{0.410 \pm 0.052}$ & $+0.006$ & $6/10$ \\
+Dermatofibroma (1.15\%)           & $0.238 \pm 0.093$ & $\mathbf{0.277 \pm 0.077}$ & $+0.039$ & $7/10$ \\
+Melanoma (11.11\%)                & $0.199 \pm 0.063$ & $\mathbf{0.282 \pm 0.033}$ & $\mathbf{+0.084}$ & $\mathbf{9/10}$ \\
+Melanocytic nevi (67.05\%)        & $\mathbf{0.881 \pm 0.007}$ & $0.882 \pm 0.004$ & $+0.002$ & $3/10$ \\
+Vascular lesions (1.41\%)         & $\mathbf{0.718 \pm 0.036}$ & $0.675 \pm 0.052$ & $-0.043$ & $1/10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The melanoma per-class result under partial participation
+($\Delta = +0.084$, FedProx wins $9/10$ paired seeds) is almost
+identical to that observed under the C2 random-straggler
+condition ($\Delta = +0.085$, $10/10$; cf.\
+Section~\ref{sec:sh-c2-per-class}) and larger than that observed
+under the C0 full-participation baseline
+($\Delta = +0.068$, $7/10$; cf.\ Section~\ref{sec:engineered-per-class}).
+The melanocytic-nevi $\Delta$ remains effectively zero
+($+0.002$, both algorithms within $\pm 0.007$ across seeds),
+preserving the mechanism-null pattern observed in every previous
+condition. The clinical localisation of the FedProx advantage on
+the melanoma class therefore generalises across both axes of
+system heterogeneity (variable local epochs and variable client
+participation).
+
+The single class that consistently regresses under partial
+participation is \emph{vascular lesions}
+($\Delta = -0.043$, FedProx wins $1/10$). Vascular lesions are
+held by clients C4 and C5 in the engineered partition (the
+melanoma/vascular specialty pair). Under $C = 0.5$, both C4 and
+C5 are sampled out of any given round with joint probability
+$\binom{5}{4} / \binom{7}{4} \approx 14\%$, so vascular receives
+no training signal in roughly one in every seven rounds. The
+small absolute count of vascular training samples
+($n = 99$ globally) means the model has limited capacity to
+recover from these zero-signal rounds. This class-specific
+regression is a deployment-relevant observation: in production
+federations with rare classes concentrated on a small number of
+clients, partial participation may degrade performance on those
+classes even where the macro-F1 aggregate improves.
+
+\subsection{Mechanism evidence: update norms}
+\label{sec:sh-partial-update-norms}
+
+The parameter-level mechanism evidence introduced in
+Section~\ref{sec:update-norms} can also be measured under
+partial participation. Table~\ref{tab:sh-partial-norms} reports
+the mean per-client update norm $\lVert w_i^{t+1} - w^t \rVert_2$
+under each participation regime.
+
+\begin{table}[!htbp]
+\centering
+\caption{Per-client update norm averaged across all (round,
+client) pairs and across paired seeds, on the engineered
+partition (Flower runtime). The ratio column reports the FedAvg
+mean update norm divided by the FedProx mean update norm under
+each participation regime.}
+\label{tab:sh-partial-norms}
+\small
+\begin{tabular}{lccc}
+\toprule
+Setting & FedAvg $\lVert \Delta w \rVert$ & FedProx $\lVert \Delta w \rVert$ & Ratio FA/FP \\
+\midrule
+$C = 1.0$ (full participation)    & $1.523$ & $\mathbf{1.029}$ & $1.48\times$ \\
+$C = 0.5$ (partial participation) & $1.669$ & $\mathbf{1.078}$ & $\mathbf{1.55\times}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two observations follow.
+
+First, both algorithms produce larger per-client update norms
+under partial participation than under full participation
+(FedAvg $1.52 \to 1.67$, FedProx $1.03 \to 1.08$). With fewer
+clients aggregating per round, each remaining client's local
+trajectory must travel further to ``absorb'' the global model's
+adjustment toward its local distribution, producing larger
+per-round parameter updates on both algorithms.
+
+Second, the FedAvg-to-FedProx update-norm ratio \emph{increases}
+from $1.48\times$ under full participation to $1.55\times$ under
+partial participation. The proximal regulariser is empirically
+more active in restraining client drift when the per-round
+aggregation pool is smaller --- the regime in which the
+mechanism prediction said it should be most useful. The
+parameter-level signature of the mechanism therefore strengthens
+in the same direction as the outcome-level $\Delta$ enlarges:
+both signals move together, in the direction predicted before
+running the experiment.
+
+\subsection{Summary}
+\label{sec:sh-partial-summary}
+
+Under partial client participation at $C = 0.5$ on the
+engineered partition, the within-pair FedProx-vs-FedAvg $\Delta$
+approximately doubles relative to the full-participation
+baseline ($+0.016$ vs $+0.007$ macro-F1) and FedProx wins on
+$9$ of $10$ paired seeds (up from $7/10$). The per-class
+structure is preserved: melanoma is the dominant contributor
+($\Delta = +0.084$, $9/10$ wins) and the universal class
+melanocytic nevi remains mechanism-inert ($\Delta = +0.002$).
+The parameter-level mechanism evidence strengthens in parallel:
+the FedAvg-to-FedProx update-norm ratio enlarges from
+$1.48\times$ to $1.55\times$. Both the outcome-level and the
+parameter-level measurements move in the direction predicted
+before the experiment was run, with magnitudes at the upper end
+of what across-seed variability at $n = 10$ would make
+detectable. The single per-class regression (vascular lesions,
+$\Delta = -0.043$) is mechanism-coherent with the engineered
+partition's concentration of vascular samples on the
+specialty pair (C4, C5) and is reported as a
+deployment-relevant caveat rather than a contradiction.
+
+% ==============================================================================
+% Future sections to be added below in subsequent writing iterations:
+%
+%   \section{Statistical Heterogeneity}
+%     \subsection{Experimental design and partition motivation}
+%     \subsection{IID baseline (mechanism null)}
+%     \subsection{Engineered partition (primary results)}
+%     \subsection{Per-class breakdown}
+%     \subsection{Cross-runtime sensitivity}
+%     \subsection{Robustness across partition designs}
+%     \subsection{Direct mechanism evidence: update norms}
+%     \subsection{Federation tax}
+%
+%   \section{System Heterogeneity}
+%     \subsection{Experimental design and condition motivation}
+%     \subsection{Results on the engineered partition}
+%     \subsection{Cross-partition control: IID partition}
+%     \subsection{Partial client participation}
+%     \subsection{Replication of the canonical Li et al. 5.2 protocol}
+%
+%   \section{Summary and limitations}
+% ==============================================================================
+
+\end{document}
