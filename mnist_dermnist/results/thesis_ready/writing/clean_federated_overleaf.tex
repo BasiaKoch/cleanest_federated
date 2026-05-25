@@ -659,10 +659,39 @@ This section confirms the mechanism null empirically.
 The IID partition (\texttt{iid\_7\_clients}) assigns the
 $7{,}007$ training samples to seven simulated clients by uniform
 random shuffling of the global index list and splitting into
-seven equal shards. Each client receives $1{,}001$ training
-samples; the per-client class distribution matches the global
-distribution in expectation, with all seven classes present in
-every client at proportional frequency.
+seven equal shards. Each client therefore receives the same
+number of samples and, in expectation, the same class
+composition as the global training set --- so client-local
+distributions differ from one another only through finite-sample
+sampling noise, not by design.
+
+Figure~\ref{fig:iid-partition} visualises the resulting
+per-(client, class) sample counts at seed $42$. All seven
+clients hold exactly $1{,}001$ samples, and each client's
+stacked composition mirrors the global class distribution within
+the small variation expected from random partitioning of a
+$7{,}007$-sample pool. In absolute counts, every client receives
+approximately $670$ melanocytic nevi, $110$ melanoma, $110$
+benign keratosis, $50$ basal cell carcinoma, $33$ actinic
+keratoses, $14$ vascular lesions, and $11$ dermatofibroma
+samples; all seven classes are present in every client, including
+the three rarest ones. The IID partition therefore represents
+the limit case in which no client carries class-specialised
+information: any class that a client must learn to predict, it
+already sees locally in roughly the global proportion.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{F_iid_partition.pdf}
+\caption{IID partition of the $7{,}007$-sample DermaMNIST
+training set across the seven simulated clients (seed $42$).
+Each bar is one client; segment heights show the number of
+samples of each class. All clients receive exactly $1{,}001$
+samples and the stacks are visually near-identical, confirming
+that the per-client class composition matches the global
+distribution up to finite-sample sampling noise.}
+\label{fig:iid-partition}
+\end{figure}
 
 All other hyperparameters match the centralised baseline of
 Section~\ref{sec:centralised-baseline}: identical
@@ -697,7 +726,9 @@ $n = 10$ paired seeds. The winning algorithm per row is shown in
 bold; for rows where the two algorithms are within $\pm 0.001$
 neither is bolded. Per-class F1 is the F1 score on each of the
 seven DermaMNIST classes, with class prevalence in the training
-set in parentheses.}
+set in parentheses --- these prevalences are global and, under
+IID partitioning, also describe each client's expected local
+class distribution (see Figure~\ref{fig:iid-partition}).}
 \label{tab:iid-results}
 \small
 \begin{tabular}{lccc}
@@ -821,23 +852,59 @@ can be assessed alongside the headline effect.
 \subsection{Partition design}
 \label{sec:engineered-partition}
 
-The engineered partition assigns each of the seven minority
-classes to exactly two of the seven clients (a
-\emph{paired-co-training} design), with the majority class
-\emph{melanocytic nevi} held in equal proportion by all seven
-clients. Three of the seven clients hold actinic keratoses +
-basal cell carcinoma; two hold benign keratosis + dermatofibroma;
-two hold melanoma + vascular lesions; one client (client~6)
-holds only melanocytic nevi. Per-client sample counts lie
-between $673$ and $1{,}110$, with quantity skew kept
-intentionally mild ($1.65\times$ range) so the partition
-isolates the label-skew axis from the quantity-skew axis. Every
-minority class is therefore held by exactly two co-trained
+The engineered \texttt{balanced\_paired\_7\_clients} partition
+assigns each of the six minority classes to exactly two of the
+seven clients (a \emph{paired-co-training} design), with the
+majority class \emph{melanocytic nevi} held in equal proportion
+by all seven clients. The seven minority-class slots are paired
+as follows: clients $C_0$ and $C_1$ jointly hold actinic
+keratoses and basal cell carcinoma; $C_2$ and $C_3$ hold benign
+keratosis and dermatofibroma; $C_4$ and $C_5$ hold melanoma and
+vascular lesions; and $C_6$ is a nevi-only generalist that holds
+no minority-class samples. Within each pair, samples of the
+shared classes are split as evenly as the integer counts allow
+(e.g.\ basal cell carcinoma is split $180$/$179$ between $C_0$
+and $C_1$). Concretely, $C_0$ holds $114$ actinic keratoses
+$+\,180$ basal cell carcinoma $+\,670$ mel-nevi ($n = 964$);
+$C_2$ holds $385$ benign keratosis $+\,40$ dermatofibroma
+$+\,670$ mel-nevi ($n = 1{,}095$); $C_4$ holds $390$ melanoma
+$+\,50$ vascular lesions $+\,670$ mel-nevi ($n = 1{,}110$); and
+$C_6$ holds $673$ mel-nevi only. Per-client totals therefore lie
+between $673$ and $1{,}110$ samples --- a $1.65\times$ range
+that keeps quantity skew intentionally mild relative to label
+skew, so the partition isolates the label-skew axis as the
+primary source of inter-client drift.
+
+Figure~\ref{fig:engineered-partition} visualises the resulting
+per-(client, class) sample counts in the same format as the IID
+partition figure (Figure~\ref{fig:iid-partition}), enabling a
+direct visual contrast: under IID every client's stack is a
+scaled copy of the global distribution, whereas under the
+engineered partition the stacks differ structurally --- four of
+the seven clients hold zero samples of a given minority class.
+Every minority class is therefore held by exactly two co-trained
 clients that must drift apart during local training and be
 reconciled at aggregation, while the majority class is held by
 every client and provides a within-experiment per-class control
 where the proximal anchor is mechanistically inert (cf.\ the
 mel-nevi observation in the IID baseline).
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{F_engineered_partition.pdf}
+\caption{Engineered \texttt{balanced\_paired\_7\_clients}
+partition of the $7{,}007$-sample DermaMNIST training set.
+Each bar is one client; segment heights show the number of
+samples of each class. Per-client totals range from $673$ to
+$1{,}110$. Each minority class appears on exactly two clients
+(its co-training pair), and four of the seven clients hold no
+samples of any given minority class --- the structural label
+skew that the FedProx proximal anchor is designed to control.
+Direct visual comparison with Figure~\ref{fig:iid-partition}
+makes the qualitative difference between the two partitions
+explicit.}
+\label{fig:engineered-partition}
+\end{figure}
 
 \subsection{Training setup}
 \label{sec:engineered-setup}
@@ -1201,6 +1268,38 @@ between rows is the partition design.
 
 \subsection{Partition designs}
 \label{sec:partition-designs}
+
+The IID and engineered (balanced-paired) partitions used as
+reference rows in this section were introduced and visualised
+earlier in the chapter
+(Figures~\ref{fig:iid-partition}~and~\ref{fig:engineered-partition}).
+Figure~\ref{fig:partition-comparison-dir-spec} introduces the
+two new partition designs used here --- Dirichlet $\alpha = 0.1$
+and the specialist (1-of-7) partition --- using the same
+stacked-bar format and class palette so the structural
+differences across all four partitions can be read by glancing
+between the relevant figures. Per-panel $y$-axes are independent
+because Dirichlet produces per-client totals that differ from
+the other designs by more than an order of magnitude; the count
+above each bar makes quantity skew explicit. Each design is
+described in turn below.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{F_partition_comparison_dir_spec.pdf}
+\caption{The two new partition designs introduced for the
+robustness analysis (seed $42$). (a) Dirichlet $\alpha = 0.1$:
+class-by-class proportions drawn from a Dirichlet, producing
+severe joint label-and-quantity skew (per-client totals range
+$91$--$3{,}721$). (b) Specialist (1-of-7): every minority class
+is held by \emph{exactly one} client, with per-client sample
+totals matched to the engineered partition
+(Figure~\ref{fig:engineered-partition}) so that the only
+variable between the engineered and specialist designs is the
+structural change from paired to singleton minority-class
+ownership.}
+\label{fig:partition-comparison-dir-spec}
+\end{figure}
 
 \paragraph{Dirichlet $\alpha = 0.1$.}
 The Dirichlet partitioning protocol of Hsu et al.\ (2019) is
@@ -2102,8 +2201,8 @@ the defining FL setup parameters. In real federated deployments,
 not all institutions respond every round, so the full-participation
 setting used so far in this chapter is the cleanest mathematical
 baseline but the least operationally realistic case. This section
-reports the FedAvg-vs-FedProx paired comparison under partial
-client participation at $C = 0.5$ (four of seven clients sampled
+reports the FedAvg-vs-FedProx comparison under partial client
+participation at $C = 0.5$ (four of seven clients sampled
 uniformly at random per round), holding all other hyperparameters
 identical to the C0 engineered baseline of
 Section~\ref{sec:sh-engineered-results}.
@@ -2116,10 +2215,11 @@ aggregated update than under full participation, and the
 round-to-round aggregation variance is higher. The proximal
 anchor's drift-control mechanism is theoretically more useful in
 this regime: with more drift to constrain and more aggregation
-variance to smooth, FedProx is expected to produce a larger
-within-pair $\Delta$ than at $C = 1.0$. The expected direction is
-positive; the magnitude is not strongly predicted by the theory
-and is reported descriptively below.
+variance to smooth, the proximal regulariser is expected to
+exert a stronger relative restraint on per-client updates than at
+$C = 1.0$. The expected direction is positive; the magnitude is
+not strongly predicted by the theory and is reported
+descriptively below.
 
 \subsection{Setup}
 \label{sec:sh-partial-setup}
@@ -2133,12 +2233,25 @@ engineered C0 baseline (Section~\ref{sec:sh-engineered-results}):
 the same \texttt{balanced\_paired\_7\_clients} partition, $E = 20$
 local epochs, $R = 150$ communication rounds, FedProx proximal
 coefficient $\mu = 0.01$, SGD with learning rate $0.01$ and
-momentum $0.9$, batch size $32$, and the same ten paired seeds.
-The Flower simulation runtime is used. Within each paired seed,
-the per-round client-sampling realisation is identical for the
-FedAvg and FedProx arms, so within-pair $\Delta$ values reflect
-only the algorithmic gating of the proximal term and not random
-sampling differences.
+momentum $0.9$, batch size $32$, and the same ten random seeds.
+The Flower simulation runtime is used.
+
+\paragraph{A note on the per-round sampling realisation.}
+The two algorithm arms share the same starting random seed, and
+on $5$ of the $10$ seeds the per-round sampled client set is
+identical across the FedAvg and FedProx arms for all $150$
+rounds. On the remaining $5$ seeds the sampling streams desync
+from a small number of rounds onward, due to FedProx's code path
+consuming one additional random number per round. We therefore
+do not rely on a strict paired-comparison interpretation of the
+two arms in this section. Outcome-level (test macro-F1) results
+are reported as two-arm summaries (mean $\pm$ standard deviation
+across the ten seeds, per algorithm), and the load-bearing
+mechanism claim of this section rests on the per-client
+update-norm comparison
+(Section~\ref{sec:sh-partial-update-norms}), which is a within-
+arm scalar and is robust to differences in which specific
+clients participated in any given round.
 
 \subsection{Results}
 \label{sec:sh-partial-results}
@@ -2153,48 +2266,55 @@ per-round validation macro-F1 trajectories.
 \begin{table}[!htbp]
 \centering
 \caption{Partial-participation result on the engineered partition
-($n = 10$ paired seeds, Flower runtime). The first row reproduces
-the full-participation baseline from
+($n = 10$ seeds per arm, Flower runtime). The first row
+reproduces the full-participation baseline from
 Section~\ref{sec:sh-engineered-results}; the second row reports
-the partial-participation result. The winning algorithm per row
-is shown in bold. The $\Delta$ column is the mean within-pair
-difference (FedProx $-$ FedAvg).}
+the partial-participation result. Test macro-F1 is reported as
+mean $\pm$ standard deviation across seeds per arm. The
+$\Delta$ column is the difference of arm means, reported
+descriptively (see the setup note for why a paired-comparison
+interpretation is not claimed here). The higher arm mean per
+row is shown in bold.}
 \label{tab:sh-partial}
 \small
-\begin{tabular}{lccccc}
+\begin{tabular}{lccc}
 \toprule
-Setting & FedAvg & FedProx & $\Delta$ & Wins \\
+Setting & FedAvg & FedProx & $\Delta$ (mean) \\
 \midrule
-$C = 1.0$ (full participation)         & $0.4964 \pm 0.0150$ & $\mathbf{0.5033 \pm 0.0206}$ & $+0.007$ & $7/10$ \\
-$C = 0.5$ (partial, 4/7 per round)     & $0.4780 \pm 0.0234$ & $\mathbf{0.4944 \pm 0.0185}$ & $+0.016$ & $9/10$ \\
+$C = 1.0$ (full participation)         & $0.4964 \pm 0.0150$ & $\mathbf{0.5033 \pm 0.0206}$ & $+0.007$ \\
+$C = 0.5$ (partial, 4/7 per round)     & $0.4780 \pm 0.0234$ & $\mathbf{0.4944 \pm 0.0185}$ & $+0.016$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The within-pair $\Delta$ approximately doubles from $+0.007$
-under full participation to $+0.016$ under partial participation,
-and FedProx wins on $9$ of $10$ paired seeds at $C = 0.5$
-(up from $7/10$ at $C = 1.0$). The direction is consistent with
-the mechanism prediction: with the per-round aggregation pool
-reduced from seven clients to four, the proximal anchor's
-drift-control role becomes more useful and the within-pair
-$\Delta$ enlarges correspondingly. Per-seed differences range
-from $-0.032$ (the single seed on which FedAvg wins, seed~$123$)
-to $+0.054$ (the largest single-seed FedProx win, seed~$271828$).
+Mean test macro-F1 is higher for FedProx than FedAvg under both
+participation regimes, with the arm gap approximately doubling
+from $+0.007$ at $C = 1.0$ to $+0.016$ at $C = 0.5$. The direction
+is consistent with the mechanism prediction: with the per-round
+aggregation pool reduced from seven clients to four, the proximal
+anchor's drift-control role becomes more useful at the
+parameter-level (see Section~\ref{sec:sh-partial-update-norms})
+and the outcome-level arm gap enlarges in parallel. The
+across-seed standard deviations on both arms ($0.02$--$0.03$
+macro-F1) are of the same order as the arm-gap magnitudes,
+so the macro-F1 numbers are reported here as supporting
+descriptive evidence; the load-bearing mechanism claim is the
+update-norm result reported in
+Section~\ref{sec:sh-partial-update-norms}.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{F_partial_participation.pdf}
 \caption{Validation macro-F1 over $150$ communication rounds on
 the engineered partition under full and partial client
-participation (Flower runtime, $n = 10$ paired seeds, mean $\pm$
-SEM band). \textbf{Left ($C = 1.0$):} all seven clients
+participation (Flower runtime, $n = 10$ seeds per arm, mean
+$\pm$ SEM band). \textbf{Left ($C = 1.0$):} all seven clients
 participate every round; FedProx maintains a modest separation
 from FedAvg. \textbf{Right ($C = 0.5$):} four of seven clients
-are sampled uniformly at random per round; the FedProx-vs-FedAvg
-gap is visibly wider than under full participation, with FedProx
-($0.494$ test macro-F1) clearly above FedAvg ($0.478$) throughout
-late training.}
+are sampled uniformly at random per round; the gap between the
+two arm means is visibly wider than under full participation,
+with FedProx's arm mean ($0.494$ test macro-F1) above FedAvg's
+($0.478$) throughout late training.}
 \label{fig:sh-partial-convergence}
 \end{figure}
 
@@ -2214,57 +2334,57 @@ fraction shrinks.
 \label{sec:sh-partial-per-class}
 
 Table~\ref{tab:sh-partial-per-class} decomposes the
-partial-participation $\Delta$ by class. The pattern matches the
-per-class structure observed under both the engineered C0
-baseline and the C2 random-straggler condition: the melanoma
-class is the dominant contributor, and the universal class
-melanocytic nevi is mechanistically inert.
+partial-participation arm comparison by class. The per-class
+pattern matches the structure observed under both the engineered
+C0 baseline and the C2 random-straggler condition: melanoma is
+the dominant contributor to the macro-F1 arm gap, and the
+universal class melanocytic nevi is mechanistically inert.
 
 \begin{table}[!htbp]
 \centering
 \caption{Per-class test F1 under partial participation $C = 0.5$
-on the engineered partition (Flower runtime, $n = 10$ paired
-seeds, mean $\pm$ standard deviation across seeds). The winning
-algorithm per row is shown in bold; the $\Delta$ column is the
-mean within-pair difference (FedProx $-$ FedAvg).}
+on the engineered partition (Flower runtime, $n = 10$ seeds per
+arm, mean $\pm$ standard deviation across seeds per arm). The
+higher arm mean per row is shown in bold; $\Delta$ is the
+difference of arm means (FedProx $-$ FedAvg) reported
+descriptively.}
 \label{tab:sh-partial-per-class}
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{lccc}
 \toprule
-Class (prevalence) & FedAvg & FedProx & $\Delta$ & Wins \\
+Class (prevalence) & FedAvg & FedProx & $\Delta$ (mean) \\
 \midrule
-Actinic keratoses (3.27\%)        & $0.453 \pm 0.040$ & $\mathbf{0.462 \pm 0.044}$ & $+0.008$ & $6/10$ \\
-Basal cell carcinoma (5.13\%)     & $0.454 \pm 0.045$ & $\mathbf{0.472 \pm 0.040}$ & $+0.018$ & $6/10$ \\
-Benign keratosis (10.97\%)        & $0.403 \pm 0.069$ & $\mathbf{0.410 \pm 0.052}$ & $+0.006$ & $6/10$ \\
-Dermatofibroma (1.15\%)           & $0.238 \pm 0.093$ & $\mathbf{0.277 \pm 0.077}$ & $+0.039$ & $7/10$ \\
-Melanoma (11.11\%)                & $0.199 \pm 0.063$ & $\mathbf{0.282 \pm 0.033}$ & $\mathbf{+0.084}$ & $\mathbf{9/10}$ \\
-Melanocytic nevi (67.05\%)        & $\mathbf{0.881 \pm 0.007}$ & $0.882 \pm 0.004$ & $+0.002$ & $3/10$ \\
-Vascular lesions (1.41\%)         & $\mathbf{0.718 \pm 0.036}$ & $0.675 \pm 0.052$ & $-0.043$ & $1/10$ \\
+Actinic keratoses (3.27\%)        & $0.453 \pm 0.040$ & $\mathbf{0.462 \pm 0.044}$ & $+0.008$ \\
+Basal cell carcinoma (5.13\%)     & $0.454 \pm 0.045$ & $\mathbf{0.472 \pm 0.040}$ & $+0.018$ \\
+Benign keratosis (10.97\%)        & $0.403 \pm 0.069$ & $\mathbf{0.410 \pm 0.052}$ & $+0.006$ \\
+Dermatofibroma (1.15\%)           & $0.238 \pm 0.093$ & $\mathbf{0.277 \pm 0.077}$ & $+0.039$ \\
+Melanoma (11.11\%)                & $0.199 \pm 0.063$ & $\mathbf{0.282 \pm 0.033}$ & $\mathbf{+0.084}$ \\
+Melanocytic nevi (67.05\%)        & $\mathbf{0.881 \pm 0.007}$ & $0.882 \pm 0.004$ & $+0.002$ \\
+Vascular lesions (1.41\%)         & $\mathbf{0.718 \pm 0.036}$ & $0.675 \pm 0.052$ & $-0.043$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The melanoma per-class result under partial participation
-($\Delta = +0.084$, FedProx wins $9/10$ paired seeds) is almost
-identical to that observed under the C2 random-straggler
-condition ($\Delta = +0.085$, $10/10$; cf.\
-Section~\ref{sec:sh-c2-per-class}) and larger than that observed
-under the C0 full-participation baseline
-($\Delta = +0.068$, $7/10$; cf.\ Section~\ref{sec:engineered-per-class}).
-The melanocytic-nevi $\Delta$ remains effectively zero
-($+0.002$, both algorithms within $\pm 0.007$ across seeds),
-preserving the mechanism-null pattern observed in every previous
-condition. The clinical localisation of the FedProx advantage on
-the melanoma class therefore generalises across both axes of
-system heterogeneity (variable local epochs and variable client
+The melanoma per-class arm gap under partial participation
+($\Delta = +0.084$) is almost identical to that observed under
+the C2 random-straggler condition
+($\Delta = +0.085$; Section~\ref{sec:sh-c2-per-class}) and larger
+than the C0 full-participation baseline
+($\Delta = +0.068$; Section~\ref{sec:engineered-per-class}). The
+melanocytic-nevi $\Delta$ remains effectively zero
+($+0.002$, both arms within $\pm 0.007$ across seeds), preserving
+the mechanism-null pattern observed in every previous condition.
+The clinical localisation of the FedProx advantage on the
+melanoma class therefore generalises across both axes of system
+heterogeneity (variable local epochs and variable client
 participation).
 
-The single class that consistently regresses under partial
-participation is \emph{vascular lesions}
-($\Delta = -0.043$, FedProx wins $1/10$). Vascular lesions are
-held by clients C4 and C5 in the engineered partition (the
-melanoma/vascular specialty pair). Under $C = 0.5$, both C4 and
-C5 are sampled out of any given round with joint probability
+The single class on which FedProx's arm mean is lower than
+FedAvg's under partial participation is \emph{vascular lesions}
+($\Delta = -0.043$). Vascular lesions are held by clients C4 and
+C5 in the engineered partition (the melanoma/vascular specialty
+pair). Under $C = 0.5$, both C4 and C5 are sampled out of any
+given round with joint probability
 $\binom{5}{4} / \binom{7}{4} \approx 14\%$, so vascular receives
 no training signal in roughly one in every seven rounds. The
 small absolute count of vascular training samples
@@ -2280,7 +2400,12 @@ classes even where the macro-F1 aggregate improves.
 
 The parameter-level mechanism evidence introduced in
 Section~\ref{sec:update-norms} can also be measured under
-partial participation. Table~\ref{tab:sh-partial-norms} reports
+partial participation. This is the primary inferential result
+of this section: the update-norm comparison is a within-arm
+scalar (mean drift size per algorithm) and does not depend on
+which specific clients participated in any individual round, so
+it is unaffected by the per-round sampling realisation
+described in the setup. Table~\ref{tab:sh-partial-norms} reports
 the mean per-client update norm $\lVert w_i^{t+1} - w^t \rVert_2$
 under each participation regime.
 
@@ -2328,23 +2453,27 @@ running the experiment.
 \label{sec:sh-partial-summary}
 
 Under partial client participation at $C = 0.5$ on the
-engineered partition, the within-pair FedProx-vs-FedAvg $\Delta$
-approximately doubles relative to the full-participation
-baseline ($+0.016$ vs $+0.007$ macro-F1) and FedProx wins on
-$9$ of $10$ paired seeds (up from $7/10$). The per-class
-structure is preserved: melanoma is the dominant contributor
-($\Delta = +0.084$, $9/10$ wins) and the universal class
-melanocytic nevi remains mechanism-inert ($\Delta = +0.002$).
-The parameter-level mechanism evidence strengthens in parallel:
-the FedAvg-to-FedProx update-norm ratio enlarges from
-$1.48\times$ to $1.55\times$. Both the outcome-level and the
-parameter-level measurements move in the direction predicted
-before the experiment was run, with magnitudes at the upper end
-of what across-seed variability at $n = 10$ would make
-detectable. The single per-class regression (vascular lesions,
-$\Delta = -0.043$) is mechanism-coherent with the engineered
-partition's concentration of vascular samples on the
-specialty pair (C4, C5) and is reported as a
+engineered partition, the parameter-level mechanism evidence
+strengthens relative to the full-participation baseline: the
+FedAvg-to-FedProx mean update-norm ratio enlarges from
+$1.48\times$ to $1.55\times$ --- the predicted direction, given
+that a smaller per-round aggregation pool leaves more client
+drift for the proximal anchor to constrain. This is the primary
+finding of the section and is robust to the per-round sampling
+realisation, since the update-norm ratio compares within-arm
+average drift sizes rather than within-pair outcome differences.
+The outcome-level (test macro-F1) results move in parallel: the
+mean arm gap approximately doubles ($+0.007 \to +0.016$
+macro-F1), with FedProx's arm mean higher than FedAvg's under
+both regimes. The per-class structure is preserved across
+regimes: melanoma is the dominant contributor to the arm gap
+($\Delta = +0.084$ at $C = 0.5$, comparable to $+0.085$ under
+C2 random stragglers and larger than $+0.068$ at $C = 1.0$),
+and the universal class melanocytic nevi remains mechanism-inert
+($\Delta = +0.002$). The single per-class regression
+(vascular lesions, $\Delta = -0.043$) is mechanism-coherent with
+the engineered partition's concentration of vascular samples on
+the specialty pair (C4, C5) and is reported as a
 deployment-relevant caveat rather than a contradiction.
 
 % ==============================================================================
