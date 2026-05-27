@@ -1,15 +1,15 @@
 % T03 -- Cross-runtime comparison (field-standard, auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{Cross-runtime replication on the engineered \texttt{balanced\_paired\_7\_clients} partition. Both runtimes use the same ten paired seeds and identical hyperparameters; the only difference is the implementation (pure-PyTorch sequential reference loop vs Flower simulation with Ray actors). Values are mean $\pm$ SD across seeds; the winning algorithm per row is shown in bold.}
+\caption{Cross-runtime replication on the engineered \texttt{balanced\_paired\_7\_clients} partition. Both runtimes use the same ten paired seeds and identical hyperparameters; the only difference is the implementation (pure-PyTorch sequential reference loop vs Flower simulation with Ray actors). Values are mean $\pm$ SD across seeds. $p$ is the within-runtime two-sided paired Wilcoxon $p$-value. \textbf{Bold} marks within-runtime contrasts significant at $\alpha = 0.05$; the Flower-runtime contrast is descriptively positive but not significant.}
 \label{tab:cross-runtime}
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{lccccc}
 \toprule
-Runtime & FedAvg & FedProx & $\Delta$ & Wins \\
+Runtime & FedAvg & FedProx & $\Delta$ & $p$ (Wilcoxon) & Wins \\
 \midrule
-Pure-PyTorch (reference) & $0.4814 \pm 0.0254$ & \textbf{$0.5081 \pm 0.0140$} & $+0.0267$ & 9/10 \\
-Flower simulation & $0.4964 \pm 0.0150$ & \textbf{$0.5033 \pm 0.0206$} & $+0.0069$ & 7/10 \\
+Pure-PyTorch (reference) & $0.4814 \pm 0.0254$ & \textbf{$0.5081 \pm 0.0140$} & \textbf{$+0.0267$} & \textbf{$0.020$} & 9/10 \\
+Flower simulation & $0.4964 \pm 0.0150$ & $0.5033 \pm 0.0206$ & $+0.0069$ & $0.432$ & 7/10 \\
 \bottomrule
 \end{tabular}
 \end{table}

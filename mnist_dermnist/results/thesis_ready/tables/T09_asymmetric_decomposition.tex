@@ -1,15 +1,15 @@
 % T09 -- Li 2020 §5.2 asymmetric protocol replication (auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{Replication of the asymmetric straggler protocol of \citet{li2020fedprox} §5.2, in which FedAvg drops straggler updates (its canonical behaviour) while FedProx includes them as $\gamma$-inexact partial work. Values are mean $\pm$ standard deviation of test macro-F1 across $n = 10$ paired seeds on the engineered partition with random stragglers (4 of 7 clients per round).}
+\caption{Replication of the asymmetric straggler protocol of \citet{li2020fedprox} §5.2, in which FedAvg drops straggler updates (its canonical behaviour) while FedProx includes them as $\gamma$-inexact partial work. Values are mean $\pm$ standard deviation of test macro-F1 across $n = 10$ paired seeds on the engineered partition with random stragglers (4 of 7 clients per round). $\Delta_{\mathrm{total}}$ is the within-pair FedProx-include minus FedAvg-drop difference; $p$ is the two-sided paired Wilcoxon $p$-value. \textbf{Bold} marks contrasts significant at $\alpha = 0.05$.}
 \label{tab:asymmetric-replication}
 \small
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \toprule
-Algorithm (aggregation policy) & Test macro-F1 & $\Delta$ & Wins \\
+Algorithm (aggregation policy) & Test macro-F1 & $\Delta_{\mathrm{total}}$ & $p$ (Wilcoxon) & Wins \\
 \midrule
-FedAvg (drops stragglers) & $0.4423 \pm 0.0192$ & --- & --- \\
-FedProx (includes stragglers) & \textbf{$0.5102 \pm 0.0168$} & $+0.0679 \pm 0.0175$ & 10/10 \\
+FedAvg (drops stragglers) & $0.4423 \pm 0.0192$ & --- & --- & --- \\
+FedProx (includes stragglers) & \textbf{$0.5102 \pm 0.0168$} & \textbf{$+0.0679 \pm 0.0175$} & \textbf{$0.002$} & 10/10 \\
 \bottomrule
 \end{tabular}
 \end{table}

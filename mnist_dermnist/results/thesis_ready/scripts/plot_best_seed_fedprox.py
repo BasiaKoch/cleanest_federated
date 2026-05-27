@@ -92,10 +92,7 @@ def main():
                linestyle="--", linewidth=0.8, alpha=0.6)
     ax.axvline(fp_test["selected_round"], color=COL_FEDPROX,
                linestyle="--", linewidth=0.8, alpha=0.6)
-    delta = fp_test["macro_f1"] - fa_test["macro_f1"]
-    ax.set_title(f"Global macro-F1\n"
-                 f"FA={fa_test['macro_f1']:.3f}, FP={fp_test['macro_f1']:.3f}, "
-                 f"$\\Delta_{{\\mathrm{{test}}}}={delta:+.3f}$",
+    ax.set_title("Global macro-F1 (validation)",
                  loc="left", fontweight="bold", pad=6, fontsize=10)
     ax.set_xlabel("Communication round")
     ax.set_ylabel("Validation macro-F1")
@@ -112,11 +109,7 @@ def main():
                 linewidth=1.4, label="FedAvg")
         ax.plot(fp_hist["round"], fp_hist[ycol], color=COL_FEDPROX,
                 linewidth=1.4, label="FedProx")
-        fa_c = fa_test["per_class_f1"][c]
-        fp_c = fp_test["per_class_f1"][c]
-        d_c = fp_c - fa_c
-        title = (f"{CLASS_DISPLAY[c]} ({CLASS_PREVALENCE[c] * 100:.1f}\\%)\n"
-                 f"FA={fa_c:.3f}, FP={fp_c:.3f}, $\\Delta={d_c:+.3f}$")
+        title = f"{CLASS_DISPLAY[c]} ({CLASS_PREVALENCE[c] * 100:.1f}\\%)"
         ax.set_title(title, loc="left", fontweight="bold", pad=6, fontsize=9)
         ax.set_xlabel("Communication round")
         ax.set_ylabel("Validation F1")

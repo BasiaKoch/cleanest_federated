@@ -1,16 +1,16 @@
 % T12 -- System-het on IID partition (auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{System-heterogeneity results on the IID partition (\texttt{iid\_7\_clients}) under the Flower runtime with $n = 10$ paired seeds. Values are test macro-F1 mean $\pm$ standard deviation across seeds; the winning algorithm per row is shown in bold. The IID partition serves as a mechanism-null control: with no inter-client class skew, the proximal anchor is theoretically inert.}
+\caption{System-heterogeneity results on the IID partition (\texttt{iid\_7\_clients}) under the Flower runtime with $n = 10$ paired seeds. Values are test macro-F1 mean $\pm$ standard deviation across seeds. The IID partition serves as a mechanism-null control: with no inter-client class skew, the proximal anchor is theoretically inert. \textbf{No row is bolded:} all three within-condition contrasts are descriptive and within seed-noise (mixed signs across conditions, no contrast reaches $\alpha = 0.05$); the table is included to demonstrate that the FedProx advantage observed on the engineered partition does not transfer to the IID null condition, consistent with the proximal-anchor mechanism prediction.}
 \label{tab:system-het-iid}
 \small
 \begin{tabular}{lcccc}
 \toprule
 Condition & FedAvg & FedProx & $\Delta$ & Wins \\
 \midrule
-C0 (no system het) & \textbf{$0.5846 \pm 0.0197$} & $0.5786 \pm 0.0190$ & $-0.0061$ & 5/10 \\
-C1 (fixed stragglers) & $0.5741 \pm 0.0188$ & \textbf{$0.5843 \pm 0.0140$} & $+0.0102$ & 6/10 \\
-C2 (random stragglers) & \textbf{$0.5879 \pm 0.0112$} & $0.5747 \pm 0.0149$ & $-0.0131$ & 3/10 \\
+S0 (no system het) & $0.5846 \pm 0.0197$ & $0.5786 \pm 0.0190$ & $-0.0061$ & 5/10 \\
+S1 (fixed stragglers) & $0.5741 \pm 0.0188$ & $0.5843 \pm 0.0140$ & $+0.0102$ & 6/10 \\
+S2 (random stragglers) & $0.5879 \pm 0.0112$ & $0.5747 \pm 0.0149$ & $-0.0131$ & 3/10 \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -1,14 +1,14 @@
 % T05 -- Federation tax (field-standard, auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{Federation tax: comparison of centralised training (pooled non-federated, upper-bound reference) against the four federated configurations on the engineered \texttt{balanced\_paired\_7\_clients} partition. The recovery column expresses each FL configuration's mean as a fraction of the centralised mean.}
+\caption{Federation tax: comparison of centralised training (pooled non-federated, upper-bound reference) against the four federated configurations on the engineered \texttt{balanced\_paired\_7\_clients} partition. The recovery column expresses each FL configuration's mean as a fraction of the centralised mean. \textbf{No row is bolded:} centralised is a reference rather than a paired-test comparator, and the centralised-vs-federated gap is not subjected to a within-pair Wilcoxon test here (the centralised and federated runs index different random-state sources).}
 \label{tab:federation-tax}
 \small
 \begin{tabular}{lcc}
 \toprule
 Configuration & Test macro-F1 (mean $\pm$ SD) & Recovery vs centralised \\
 \midrule
-Centralised (no FL) & \textbf{$0.5600 \pm 0.0240$} & --- \\
+Centralised (no FL) & $0.5600 \pm 0.0240$ & --- \\
 FedAvg (pure-PyTorch) & $0.4814 \pm 0.0254$ & 86.0\% \\
 FedProx (pure-PyTorch) & $0.5081 \pm 0.0140$ & 90.7\% \\
 FedAvg (Flower) & $0.4964 \pm 0.0150$ & 88.6\% \\

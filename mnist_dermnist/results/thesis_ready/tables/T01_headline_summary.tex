@@ -1,7 +1,7 @@
 % T01 -- Headline summary (field-standard format, auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{Headline test macro-F1 on the engineered \texttt{balanced\_paired\_7\_clients} partition under the pure-PyTorch reference loop, reported as mean $\pm$ standard deviation across $n=10$ paired seeds. Best result in each row is shown in bold.}
+\caption{Headline test macro-F1 on the engineered \texttt{balanced\_paired\_7\_clients} partition under the pure-PyTorch reference loop, reported as mean $\pm$ standard deviation across $n=10$ paired seeds. \textbf{Bolding convention used throughout the thesis tables:} a cell is bolded only when the corresponding paired Wilcoxon contrast is significant at $\alpha = 0.05$ (per-class tables: Holm-corrected over the family of seven classes). Non-bold rows are within seed-noise.}
 \label{tab:headline-summary}
 \small
 \begin{tabular}{lcc}
@@ -9,7 +9,7 @@
 & FedAvg & FedProx \\
 \midrule
 Test macro-F1                 & $0.4814 \pm 0.0254$ & \textbf{$0.5081 \pm 0.0140$} \\
-Mean within-pair $\Delta$     & \multicolumn{2}{c}{$+0.0267 \pm 0.0349$} \\
+Mean within-pair $\Delta$     & \multicolumn{2}{c}{$+0.0267 \pm 0.0349$ \quad (paired Wilcoxon $p = 0.020$, Walsh 95\% CI $[+0.002,\,+0.053]$)} \\
 FedProx wins                  & \multicolumn{2}{c}{9/10 paired seeds} \\
 \bottomrule
 \end{tabular}

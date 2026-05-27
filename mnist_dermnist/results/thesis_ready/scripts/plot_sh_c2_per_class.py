@@ -7,9 +7,12 @@ engineered partition.
 
 Each panel:
   - Class name + prevalence as title
-  - Test-set Δ (FedProx − FedAvg) as a small subtitle inside the panel
-  - FedAvg vs FedProx mean ± SEM bands across 10 paired seeds
+  - FedAvg vs FedProx validation-F1 mean ± SEM bands across 10 paired seeds
   - Shared y-axis [0, 1]
+
+This figure characterises learning dynamics on the validation set only.
+Test-set per-class deltas and Holm-corrected p-values for condition C2
+are reported in Table T07 (per-class system-het breakdown).
 
 Output:
   results/thesis_ready/figures/F_sh_c2_per_class.{pdf,png}
@@ -18,7 +21,6 @@ Style: matches F_engineered_per_class.
 """
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
@@ -71,16 +73,6 @@ def load_history(algo: str, mu: str) -> dict[int, pd.DataFrame]:
     return out
 
 
-def load_test_delta() -> list[float]:
-    fa, fp = {}, {}
-    for f in SWEEP.glob("test_at_best_fedavg_*.json"):
-        d = json.load(open(f)); fa[d["seed"]] = d["per_class_f1"]
-    for f in SWEEP.glob("test_at_best_fedprox_*.json"):
-        d = json.load(open(f)); fp[d["seed"]] = d["per_class_f1"]
-    seeds = sorted(set(fa) & set(fp))
-    return [float(np.mean([fp[s][c] - fa[s][c] for s in seeds])) for c in range(7)]
-
-
 def stack(curves: dict[int, pd.DataFrame], ycol: str):
     rounds = np.arange(1, NUM_ROUNDS + 1)
     mat = np.full((len(curves), NUM_ROUNDS), np.nan)
@@ -97,11 +89,8 @@ def stack(curves: dict[int, pd.DataFrame], ycol: str):
 def main():
     fa = load_history("fedavg",  "0.0")
     fp = load_history("fedprox", "0.01")
-    deltas = load_test_delta()
     print(f"FedAvg seeds:  {len(fa)}")
     print(f"FedProx seeds: {len(fp)}")
-    for c in range(7):
-        print(f"  Class {c} ({CLASS_NAMES[c]:<22}): Δ_test = {deltas[c]:+.4f}")
 
     fig, axes = plt.subplots(2, 4, figsize=(15, 7.5),
                              sharex=True, sharey=True,
@@ -122,11 +111,6 @@ def main():
 
         ax.set_title(f"{CLASS_NAMES[c]} ({CLASS_PREV[c]:.2f}%)",
                      loc="left", pad=4, fontsize=10, fontweight="bold")
-        ax.text(0.97, 0.06, f"$\\Delta = {deltas[c]:+.3f}$",
-                transform=ax.transAxes, ha="right", va="bottom",
-                fontsize=10,
-                bbox=dict(facecolor="white", edgecolor="lightgrey",
-                          boxstyle="round,pad=0.25"))
         ax.set_xlim(1, NUM_ROUNDS)
         ax.set_ylim(0, 1.0)
         ax.grid(True, alpha=0.25, linestyle="--", linewidth=0.5)

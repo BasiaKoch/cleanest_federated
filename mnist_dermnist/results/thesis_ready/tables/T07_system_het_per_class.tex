@@ -1,20 +1,20 @@
-% T07 -- Per-class system-het breakdown, engineered C2 (auto-generated)
+% T07 -- Per-class system-het breakdown, engineered S2 (auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{Per-class test F1 under C2 (random stragglers) on the engineered partition, reported as mean $\pm$ standard deviation across $n = 10$ paired seeds. Class prevalence in the training set is shown in parentheses. The winning algorithm per row is shown in bold; $\Delta$ is the mean within-pair difference (FedProx $-$ FedAvg).}
+\caption{Per-class test F1 under S2 (random stragglers) on the engineered partition, reported as mean $\pm$ standard deviation across $n = 10$ paired seeds. Class prevalence in the training set is shown in parentheses. $\Delta$ is the mean within-pair difference (FedProx $-$ FedAvg); $p_{\mathrm{raw}}$ is the per-class paired Wilcoxon two-sided $p$-value; $p_{\mathrm{Holm}}$ is the same $p$-value after Holm--Bonferroni correction over the family of seven classes. \textbf{Bold} marks cells whose contrast is Holm-significant at $\alpha = 0.05$; only melanoma survives correction.}
 \label{tab:system-het-per-class}
 \small
-\begin{tabular}{lccc}
+\begin{tabular}{lccccc}
 \toprule
-Class (prevalence) & FedAvg & FedProx & $\Delta$ \\
+Class (prevalence) & FedAvg & FedProx & $\Delta$ & $p_{\mathrm{raw}}$ & $p_{\mathrm{Holm}}$ \\
 \midrule
-Actinic keratoses (3.27\%) & $0.454 \pm 0.060$ & \textbf{$0.481 \pm 0.038$} & $+0.026$ \\
-Basal cell carcinoma (5.13\%) & $0.491 \pm 0.057$ & \textbf{$0.497 \pm 0.023$} & $+0.005$ \\
-Benign keratosis (10.97\%) & $0.428 \pm 0.066$ & \textbf{$0.432 \pm 0.045$} & $+0.003$ \\
-Dermatofibroma (1.15\%) & $0.255 \pm 0.065$ & \textbf{$0.288 \pm 0.103$} & $+0.034$ \\
-Melanoma (11.11\%) & $0.233 \pm 0.065$ & \textbf{$0.318 \pm 0.058$} & $+0.085$ \\
-Melanocytic nevi (67.05\%) & $0.884 \pm 0.005$ & \textbf{$0.886 \pm 0.004$} & $+0.001$ \\
-Vascular lesions (1.41\%) & \textbf{$0.703 \pm 0.066$} & $0.670 \pm 0.039$ & $-0.033$ \\
+Actinic keratoses (3.27\%) & $0.454 \pm 0.060$ & $0.481 \pm 0.038$ & $+0.026$ & $> 0.05$ & $> 0.05$ \\
+Basal cell carcinoma (5.13\%) & $0.491 \pm 0.057$ & $0.497 \pm 0.023$ & $+0.005$ & $> 0.05$ & $> 0.05$ \\
+Benign keratosis (10.97\%) & $0.428 \pm 0.066$ & $0.432 \pm 0.045$ & $+0.003$ & $> 0.05$ & $> 0.05$ \\
+Dermatofibroma (1.15\%) & $0.255 \pm 0.065$ & $0.288 \pm 0.103$ & $+0.034$ & $> 0.05$ & $> 0.05$ \\
+Melanoma (11.11\%) & $0.233 \pm 0.065$ & \textbf{$0.318 \pm 0.058$} & \textbf{$+0.085$} & $0.002$ & \textbf{$0.014$} \\
+Melanocytic nevi (67.05\%) & $0.884 \pm 0.005$ & $0.886 \pm 0.004$ & $+0.001$ & $> 0.05$ & $> 0.05$ \\
+Vascular lesions (1.41\%) & $0.703 \pm 0.066$ & $0.670 \pm 0.039$ & $-0.033$ & $0.13$ & $> 0.05$ \\
 \bottomrule
 \end{tabular}
 \end{table}

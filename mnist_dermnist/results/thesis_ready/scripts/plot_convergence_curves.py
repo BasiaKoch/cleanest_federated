@@ -292,15 +292,14 @@ def fig_per_class_convergence():
         r"paired seeds, pure-PyTorch,",
         r"engineered partition.",
         "",
-        r"Melanoma (centre row, right):",
-        r"only class with Holm-",
-        r"corrected significant $\Delta$",
-        r"($\Delta=+0.114$, $p_{\mathrm{Holm}}=0.04$).",
+        r"Validation set only;",
+        r"test-set per-class $\Delta$",
+        r"and Holm-corrected $p$-values",
+        r"are reported in Table T02.",
         "",
         r"Melanocytic nevi (majority class)",
-        r"shows essentially no FedProx",
-        r"gap — held by every client",
-        r"in the engineered partition.",
+        r"is held by every client in the",
+        r"engineered partition.",
     ]
     for i, t in enumerate(notes):
         ax.text(0.05, 0.88 - 0.06 * i, t, transform=ax.transAxes, va="top", fontsize=9)

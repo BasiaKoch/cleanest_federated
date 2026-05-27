@@ -6,12 +6,15 @@ re-run, n=10 paired seeds, engineered partition, no system het) and
 plots a 2x4 grid: one panel per class showing val_f1_class_<c> over
 rounds for FedAvg vs FedProx, mean +/- SEM across the ten seeds.
 
+This figure characterises learning dynamics on the validation set only.
+Test-set per-class deltas, p-values, and significance markers are
+reported in Table T02 (per-class Holm-corrected paired Wilcoxon).
+
 Output:
   results/thesis_ready/figures/F8_per_class_convergence_flower.{pdf,png}
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -84,35 +87,12 @@ def plot_curve(ax, rounds, mean, sem, *, color, label):
                     color=color, alpha=0.15, linewidth=0)
 
 
-def compute_per_class_deltas() -> dict[int, float]:
-    """Compute final-round mean Δ_FedProx - Δ_FedAvg per class from test_at_best."""
-    deltas = {}
-    for c in range(7):
-        fa_vals, fp_vals = [], []
-        for seed in PAIRED_SEEDS:
-            fa = SWEEP / f"test_at_best_fedavg_mu0.0_E20_s{seed}.json"
-            fp = SWEEP / f"test_at_best_fedprox_mu0.01_E20_s{seed}.json"
-            if fa.is_file() and fp.is_file():
-                d_fa = json.load(open(fa))
-                d_fp = json.load(open(fp))
-                fa_vals.append(d_fa["per_class_f1"][c])
-                fp_vals.append(d_fp["per_class_f1"][c])
-        if fa_vals:
-            deltas[c] = float(np.mean(fp_vals) - np.mean(fa_vals))
-    return deltas
-
-
 def main():
     print(f"Reading Flower headline history from {SWEEP}")
     fa_df = load_history(SWEEP, "fedavg",  "0.0")
     fp_df = load_history(SWEEP, "fedprox", "0.01")
     print(f"  FedAvg:  {fa_df['seed'].nunique()} seeds")
     print(f"  FedProx: {fp_df['seed'].nunique()} seeds")
-
-    deltas = compute_per_class_deltas()
-    print("Per-class test Δ (FedProx − FedAvg):")
-    for c in range(7):
-        print(f"  {CLASS_DISPLAY[c]:<25}: {deltas.get(c, float('nan')):+.4f}")
 
     fig, axes = plt.subplots(2, 4, figsize=(15, 7))
     axes = axes.flatten()
@@ -124,11 +104,7 @@ def main():
         r2, fp_m, fp_s = mean_sem_curve(fp_df, ycol)
         plot_curve(ax, r1, fa_m, fa_s, color=COL_FEDAVG,  label="FedAvg")
         plot_curve(ax, r2, fp_m, fp_s, color=COL_FEDPROX, label="FedProx ($\\mu=0.01$)")
-        title = CLASS_DISPLAY[c]
-        d = deltas.get(c)
-        if d is not None:
-            title += f"\n($\\Delta_{{\\mathrm{{test}}}} = {d:+.3f}$)"
-        ax.set_title(title, loc="left", fontweight="bold", pad=6, fontsize=10)
+        ax.set_title(CLASS_DISPLAY[c], loc="left", fontweight="bold", pad=6, fontsize=10)
         ax.set_xlabel("Communication round")
         ax.set_ylabel("Validation F1")
         ax.set_xlim(0, NUM_ROUNDS)
@@ -137,7 +113,8 @@ def main():
         if c == 0:
             ax.legend(loc="upper left", frameon=False, fontsize=9)
 
-    # 8th cell -> notes panel
+    # 8th cell -> notes panel (validation-curve description only;
+    # test-set deltas are reported in Table T02, not here).
     ax = axes[7]
     ax.axis("off")
     ax.text(0.05, 0.95, "Notes:", fontweight="bold",
@@ -150,13 +127,10 @@ def main():
         r"Curves: mean $\pm$ SEM of",
         r"val\_f1\_class\_$c$ over rounds.",
         "",
-        r"$\Delta_{\mathrm{test}}$ = paired mean",
-        r"FedProx $-$ FedAvg on the",
-        r"test set at best-val round.",
-        "",
-        r"Melanoma is the only class",
-        r"with $\Delta_{\mathrm{test}} > +0.08$",
-        r"on this runtime.",
+        r"Validation set only;",
+        r"test-set per-class deltas",
+        r"and Holm-corrected $p$-values",
+        r"are in Table T02.",
     ]
     for i, t in enumerate(notes):
         ax.text(0.05, 0.88 - 0.06 * i, t,

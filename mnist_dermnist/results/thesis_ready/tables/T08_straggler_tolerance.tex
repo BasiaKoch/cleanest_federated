@@ -1,16 +1,16 @@
 % T08 -- Straggler-tolerance ratios (auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{Straggler-tolerance ratios $\rho_a^c = M_a^c / M_a^{C0}$ on the engineered partition. Values close to one indicate the algorithm preserves its no-system-het performance under the straggler schedule. Values slightly above one are within the across-seed noise floor of approximately $0.005$ macro-F1.}
+\caption{Straggler-tolerance ratios $\rho_a^c = M_a^c / M_a^{S0}$ on the engineered partition. Values close to one indicate the algorithm preserves its no-system-het performance under the straggler schedule. Values slightly above one are within the across-seed noise floor of approximately $0.005$ macro-F1.}
 \label{tab:system-het-tolerance}
 \small
 \begin{tabular}{lcc}
 \toprule
 Condition & $\rho_{\text{FedAvg}}$ & $\rho_{\text{FedProx}}$ \\
 \midrule
-C0 (baseline) & $1.000$ & $1.000$ \\
-C1 (fixed stragglers) & $1.0028$ & $1.0155$ \\
-C2 (random stragglers) & $0.9928$ & $1.0138$ \\
+S0 (baseline) & $1.000$ & $1.000$ \\
+S1 (fixed stragglers) & $1.0028$ & $1.0155$ \\
+S2 (random stragglers) & $0.9928$ & $1.0138$ \\
 \bottomrule
 \end{tabular}
 \end{table}
