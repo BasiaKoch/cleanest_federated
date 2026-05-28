@@ -97,11 +97,18 @@ def build_parser() -> argparse.ArgumentParser:
                          "Default 1.0 = full participation (cross-silo). "
                          "Values < 1 enable partial-participation sensitivity.")
     ap.add_argument("--system-het-mode",
-                    choices=["uniform", "fixed_stragglers", "random_stragglers"],
+                    choices=["uniform", "fixed_stragglers",
+                             "random_stragglers", "permanent_stragglers"],
                     default="uniform")
     ap.add_argument("--straggler-epochs", type=int, default=5)
     ap.add_argument("--fixed-straggler-ids", default=None)
     ap.add_argument("--straggler-fraction", type=float, default=0.5)
+    ap.add_argument("--permanent-epoch-choices", default=None,
+                    help="For --system-het-mode permanent_stragglers: "
+                         "comma-separated discrete set of E_i values from "
+                         "which each client's permanent local-epoch budget "
+                         "is drawn once at experiment start. Default "
+                         "'2,5,10,15,20' (Wang et al. 2020 FedNova-style).")
     # Loss-side imbalance baselines (audit HV2). 'ce' = headline. Set to
     # 'class_weighted_ce' or 'focal' for the imbalance-aware comparators.
     ap.add_argument("--loss-type",
@@ -187,12 +194,16 @@ def main():
     fixed_ids = None
     if args.fixed_straggler_ids:
         fixed_ids = [int(x) for x in args.fixed_straggler_ids.split(",")]
+    permanent_choices = None
+    if args.permanent_epoch_choices:
+        permanent_choices = [int(x) for x in args.permanent_epoch_choices.split(",")]
     sh_cfg = SystemHetConfig(
         mode=args.system_het_mode,
         E_max=args.local_epochs,
         E_straggler=args.straggler_epochs,
         fixed_straggler_ids=fixed_ids,
         random_straggler_fraction=args.straggler_fraction,
+        permanent_epoch_choices=permanent_choices,
     )
     epoch_schedule = build_epoch_schedule(
         sh_cfg, num_clients=num_clients,

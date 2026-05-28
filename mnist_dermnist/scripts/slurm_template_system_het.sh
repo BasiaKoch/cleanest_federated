@@ -18,8 +18,9 @@
 #   $4 = local_epochs
 #   $5 = out_dir
 #   $6 = partition
-#   $7 = system_het_mode  (fixed_stragglers | random_stragglers)
-#   $8 = extra args passed verbatim (e.g. "--straggler-epochs 5 --fixed-straggler-ids 5,6")
+#   $7 = system_het_mode  (fixed_stragglers | random_stragglers | permanent_stragglers)
+#   $8 = extra args passed verbatim (e.g. "--straggler-epochs 5 --fixed-straggler-ids 5,6"
+#                                         or "--permanent-epoch-choices 2,5,10,15,20")
 
 set -euo pipefail
 

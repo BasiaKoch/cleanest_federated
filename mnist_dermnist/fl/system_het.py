@@ -22,6 +22,13 @@ designs:
                          uniformly from [1, E_max - 1]. The other half
                          perform E_max. This follows Li et al. (2020) §5.2
                          exactly.
+  - "permanent_stragglers": each client gets a permanent per-experiment
+                         local-epoch budget E_i, drawn once from a
+                         discrete set at experiment start and held fixed
+                         across all rounds. Mirrors Wang et al. (2020)
+                         FedNova's heterogeneous-compute setup, in which
+                         hospital-like compute capability differs
+                         between sites but is constant within a site.
 
 All schedules are deterministic given a seed, so paired FedAvg/FedProx
 runs share an identical schedule and the within-pair Δ reflects only the
@@ -42,7 +49,8 @@ class SystemHetConfig:
     Attributes
     ----------
     mode : str
-        One of "uniform", "fixed_stragglers", "random_stragglers".
+        One of "uniform", "fixed_stragglers", "random_stragglers",
+        "permanent_stragglers".
     E_max : int
         Maximum local epochs (the non-straggler budget).
     E_straggler : int
@@ -67,6 +75,10 @@ class SystemHetConfig:
     random_straggler_fraction: float = 0.5
     random_straggler_min_epochs: int = 1
     random_straggler_max_epochs: Optional[int] = None
+    permanent_epoch_choices: Optional[List[int]] = None
+    """For "permanent_stragglers": the discrete set from which each
+    client's permanent E_i is drawn at experiment start. Defaults to
+    {2, 5, 10, 15, 20}, the FedNova-style heterogeneous-compute set."""
 
     def to_dict(self) -> Dict:
         return {
@@ -77,6 +89,7 @@ class SystemHetConfig:
             "random_straggler_fraction": self.random_straggler_fraction,
             "random_straggler_min_epochs": self.random_straggler_min_epochs,
             "random_straggler_max_epochs": self.random_straggler_max_epochs,
+            "permanent_epoch_choices": self.permanent_epoch_choices,
         }
 
 
@@ -138,6 +151,23 @@ def build_epoch_schedule(
                     low=cfg.random_straggler_min_epochs,
                     high=max_e + 1,
                 ))
+        return schedule
+
+    if cfg.mode == "permanent_stragglers":
+        # Each client draws a permanent E_i once at experiment start
+        # (held fixed across all 150 rounds). Dedicated RNG with a
+        # distinct offset to avoid collisions with model/data RNGs and
+        # with the random_stragglers offset above.
+        rng = np.random.default_rng(seed=seed + 7_000_011)
+        choices = cfg.permanent_epoch_choices or [2, 5, 10, 15, 20]
+        if any(c < 1 for c in choices):
+            raise ValueError("permanent_epoch_choices must all be >= 1")
+        if any(c > cfg.E_max for c in choices):
+            raise ValueError(
+                f"permanent_epoch_choices contains values > E_max ({cfg.E_max}): {choices}"
+            )
+        per_client_e = rng.choice(choices, size=num_clients, replace=True)
+        schedule = np.tile(per_client_e.astype(int), (num_rounds, 1))
         return schedule
 
     raise ValueError(f"Unknown system-het mode: {cfg.mode!r}")

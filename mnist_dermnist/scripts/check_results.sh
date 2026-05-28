@@ -1,10 +1,11 @@
 #!/bin/bash
-# Status of headline + μ sweep + E sweep runs.
+# Status of all thesis experiment directories.
+#
+# Counts per-sweep completion of test_at_best_*.json against the documented
+# 10-paired-seed standard. Optional: SLURM queue + recent failures.
 set -euo pipefail
 
-# Resolve the repo root relative to this script's location so the script
-# works from any checkout (CSD3, laptop, CI). check_results.sh lives at
-# <REPO_ROOT>/mnist_dermnist/scripts/, so go two levels up.
+# Resolve the repo root relative to this script's location.
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 
@@ -26,30 +27,46 @@ count_history() {
   fi
 }
 
-echo "=== mnist_dermnist run status ==="
+count_centralised() {
+  local dir="$1"
+  if [ -d "$dir" ]; then
+    ls "$dir"/centralised_seed*.json 2>/dev/null | wc -l
+  else
+    echo 0
+  fi
+}
+
+echo "=== mnist_dermnist experiment status ==="
 echo ""
-# Track per-sweep progress. Tuples: <results-subdir> <expected job count>
+# Per-sweep tuples: <results-subdir>  <expected job count>  <runtime tag>
+# Expected counts assume the 10-paired-seed standard (10×2 = 20) unless noted.
 SWEEPS=(
-  "headline                       20"   # 10 seeds × {FedAvg, FedProx}
-  "mu_sweep                       18"   # 3 FedAvg + 5 μ × 3 seeds (Li 2020 grid)
-  "e_sweep                        30"   # 5 E × 2 algos × 3 seeds
-  "headline_flower_verify          4"   # 2 seeds × {FedAvg, FedProx} via Flower
-  "flower_C0_baseline             30"   # 10 seeds × {FedAvg, FedProx, FedNova}
-  "system_het_fixed               20"   # C1: 10 seeds × {FedAvg, FedProx}
-  "system_het_random              20"   # C2: 10 seeds × {FedAvg, FedProx}
-  "system_het_random_fednova      10"   # C2: 10 seeds × FedNova
-  "iid                            20"   # IID falsification
-  "dirichlet_a01                  20"   # Dirichlet-α=0.1 robustness
-  "class_weighted_baseline        10"   # FedAvg + CW-CE × 10 seeds
+  "headline                       20  pure-PyTorch  engineered, primary headline"
+  "iid                            20  pure-PyTorch  IID mechanism-null"
+  "dirichlet_a01                  20  pure-PyTorch  Dirichlet(α=0.1)"
+  "flower_C0_baseline             30  Flower        engineered, runtime replication (+FedNova=10)"
+  "flower_C0_iid_baseline         30  Flower        IID (+FedNova=10)"
+  "specialist_partition           20  Flower        specialist falsification probe"
+  "system_het_fixed               20  Flower        S1 fixed-straggler"
+  "system_het_random              20  Flower        S2 random-straggler"
+  "system_het_iid_fixed           20  Flower        IID + fixed-straggler control"
+  "system_het_iid_random          20  Flower        IID + random-straggler control"
+  "system_het_random_asymmetric   20  Flower        asymmetric-straggler protocol"
+  "system_het_random_fednova      10  Flower        FedNova comparator"
+  "system_het_partial_C0.5        20  Flower        partial participation C=0.5"
+  "mu_sensitivity_flower          50  Flower        μ ∈ {0.001,0.01,0.1,1.0} × 10 + 10 FedAvg"
+  "mu_sweep                        6  pure-PyTorch  legacy μ sweep, n=3 seeds (superseded)"
+  "arch_ablation_bn                6  Flower        ARCHIVED — BN ablation, not in thesis"
 )
 
 total_done=0
 total_expected=0
 for entry in "${SWEEPS[@]}"; do
-  # Split on whitespace
-  name=$(echo "$entry" | awk '{print $1}')
-  exp=$(echo "$entry" | awk '{print $2}')
-  # `wc -l` on macOS prints whitespace-padded counts; coerce to int via $(())
+  # Split into name / expected / runtime / description
+  name=$(echo "$entry"      | awk '{print $1}')
+  exp=$(echo "$entry"       | awk '{print $2}')
+  runtime=$(echo "$entry"   | awk '{print $3}')
+  desc=$(echo "$entry"      | cut -d' ' -f4-)
   done=$(( $(count_complete "mnist_dermnist/results/$name") ))
   hist=$(( $(count_history  "mnist_dermnist/results/$name") ))
   status=" "
@@ -57,27 +74,38 @@ for entry in "${SWEEPS[@]}"; do
   elif [ "$done" -eq 0       ]; then status=" "
   else                              status="…"
   fi
-  # Pad name to 30 chars for column alignment
-  printf "  %s  %-30s : %3d/%-3d complete   (%3d history CSVs)\n" \
-    "$status" "$name" "$done" "$exp" "$hist"
+  printf "  %s  %-32s : %3d/%-3d  (hist=%3d)  [%-12s] %s\n" \
+    "$status" "$name" "$done" "$exp" "$hist" "$runtime" "$desc"
   total_done=$((total_done + done))
   total_expected=$((total_expected + exp))
 done
+
+# Centralised reference is structured differently (no test_at_best_*.json).
+cent_done=$(( $(count_centralised "mnist_dermnist/results/centralised") ))
+printf "  %s  %-32s : %3d/10   (—)        [%-12s] %s\n" \
+  "$( [ "$cent_done" -ge 10 ] && echo ✓ || echo " " )" \
+  "centralised" "$cent_done" "centralised" \
+  "reference performance ceiling (centralised_seed*.json)"
 
 echo ""
 printf "  ── total: %d / %d test_at_best JSONs across all sweeps ──\n" \
   "$total_done" "$total_expected"
 
-echo ""
-echo "=== Queue ==="
-squeue -u "$USER" --format="%.12i %.40j %.2t %.10M" | head -25
-echo ""
-echo "=== Recent failures ==="
-sacct -u "$USER" --starttime="$(date -d 'today' +%Y-%m-%d)" \
-      --format=JobID,JobName%40,State,Elapsed,ExitCode 2>/dev/null \
-  | grep -E "FAILED|TIMEOUT" | head -10 || echo "  none"
+# SLURM-side status (no-op when not on HPC)
+if command -v squeue >/dev/null 2>&1; then
+  echo ""
+  echo "=== Queue ==="
+  squeue -u "$USER" --format="%.12i %.40j %.2t %.10M" | head -25
+  echo ""
+  echo "=== Recent failures (today) ==="
+  sacct -u "$USER" --starttime="$(date -d 'today' +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d)" \
+        --format=JobID,JobName%40,State,Elapsed,ExitCode 2>/dev/null \
+    | grep -E "FAILED|TIMEOUT" | head -10 || echo "  none"
+fi
 
 echo ""
-echo "To analyze (after all 20 headline complete):"
-echo "  PYTHONPATH=. python -m mnist_dermnist.analysis.tables --results-dir mnist_dermnist/results/headline --E 20"
-echo "  PYTHONPATH=. python -m mnist_dermnist.analysis.plots  --results-dir mnist_dermnist/results/headline --E 20"
+echo "To run thesis-ready analysis after sweeps complete:"
+echo "  bash mnist_dermnist/scripts/analyse_all.sh"
+echo ""
+echo "Per-directory provenance, partitions, and git-commit fields:"
+echo "  mnist_dermnist/results/PROVENANCE_AUDIT.md"

@@ -229,7 +229,11 @@ def plot_outcome(summary: pd.DataFrame):
     if len(fa_mean):
         ax.axhline(fa_mean[0], color="#7FBF94", linestyle="--",
                    linewidth=1.2, label=f"FedAvg ($\\mu=0$) = {fa_mean[0]:.3f}")
-        ax.legend(frameon=False, loc="lower right")
+        ax.legend(frameon=False, loc="upper left")
+    # Headroom so the upper-left legend does not overlap with the curve
+    # or the FedAvg reference line at y = fa_mean.
+    y_lo, y_hi = ax.get_ylim()
+    ax.set_ylim(y_lo, y_hi + 0.025)
     ax.set_xticks(pos)
     ax.set_xticklabels([
         f"$\\mu = {mu:g}$" + ("\n(FedAvg)" if mu == 0.0 else "")
@@ -336,6 +340,79 @@ def plot_convergence():
     plt.close(fig)
 
 
+def plot_outcome_and_convergence(summary: pd.DataFrame):
+    """Combined 2-panel figure: (a) endpoint vs mu, (b) trajectory by mu."""
+    fig, (ax_o, ax_c) = plt.subplots(
+        1, 2, figsize=(13.5, 4.8),
+        gridspec_kw={"width_ratios": [1.0, 1.15], "wspace": 0.22},
+    )
+
+    # --- (a) Endpoint vs mu ---------------------------------------------
+    pos = np.arange(len(summary))
+    ax_o.errorbar(
+        pos, summary["macro_f1_mean"],
+        yerr=[
+            summary["macro_f1_mean"] - summary["macro_f1_lo"],
+            summary["macro_f1_hi"] - summary["macro_f1_mean"],
+        ],
+        fmt="o-", color="#3D5A80", linewidth=1.6, capsize=4,
+    )
+    fa_mean = summary.loc[summary["mu"] == 0.0, "macro_f1_mean"].values
+    if len(fa_mean):
+        ax_o.axhline(fa_mean[0], color="#7FBF94", linestyle="--",
+                     linewidth=1.2,
+                     label=f"FedAvg ($\\mu=0$) = {fa_mean[0]:.3f}")
+        ax_o.legend(frameon=False, loc="upper left")
+    y_lo, y_hi = ax_o.get_ylim()
+    ax_o.set_ylim(y_lo, y_hi + 0.025)
+    ax_o.set_xticks(pos)
+    ax_o.set_xticklabels([
+        f"$\\mu = {mu:g}$" + ("\n(FedAvg)" if mu == 0.0 else "")
+        for mu in summary["mu"]
+    ])
+    ax_o.set_ylabel("Test macro-F1 (mean, 95\\% bootstrap CI)")
+    ax_o.set_xlabel("FedProx proximal coefficient")
+    ax_o.grid(True, alpha=0.25, linestyle="--", linewidth=0.5)
+    ax_o.spines["top"].set_visible(False)
+    ax_o.spines["right"].set_visible(False)
+    ax_o.set_title("(a) Final test macro-F1", loc="left", fontweight="bold")
+
+    # --- (b) Trajectory by mu -------------------------------------------
+    for mu in MU_VALUES:
+        hist = load_history_csvs(mu)
+        if not hist:
+            continue
+        mat = np.full((len(hist), NUM_ROUNDS), np.nan)
+        for i, (_, df) in enumerate(hist.items()):
+            for _, row in df.iterrows():
+                r = int(row["round"])
+                if 1 <= r <= NUM_ROUNDS:
+                    mat[i, r - 1] = float(row.get("val_macro_f1", np.nan))
+        rounds = np.arange(1, NUM_ROUNDS + 1)
+        mean = np.nanmean(mat, axis=0)
+        sem = np.nanstd(mat, axis=0, ddof=1) / np.sqrt(
+            np.sum(~np.isnan(mat), axis=0)
+        )
+        label = "FedAvg ($\\mu=0$)" if mu == 0.0 else f"$\\mu = {mu:g}$"
+        ax_c.plot(rounds, mean, color=PALETTE[mu], linewidth=1.5, label=label)
+        ax_c.fill_between(rounds, mean - sem, mean + sem,
+                          color=PALETTE[mu], alpha=0.15, linewidth=0)
+    ax_c.set_xlim(1, NUM_ROUNDS)
+    ax_c.set_xlabel("Communication round")
+    ax_c.set_ylabel("Validation macro-F1 (mean $\\pm$ SEM)")
+    ax_c.grid(True, alpha=0.25, linestyle="--", linewidth=0.5)
+    ax_c.spines["top"].set_visible(False)
+    ax_c.spines["right"].set_visible(False)
+    ax_c.legend(frameon=False, fontsize=9, loc="lower right")
+    ax_c.set_title("(b) Validation trajectory by $\\mu$",
+                   loc="left", fontweight="bold")
+
+    fig.tight_layout()
+    for ext in ("pdf", "png"):
+        fig.savefig(OUT_FIG / f"F_mu_sensitivity_outcome_and_convergence.{ext}")
+    plt.close(fig)
+
+
 def print_decoupling_table(summary: pd.DataFrame):
     print()
     print("Decoupling table (paste into thesis as Table mu-decoupling):")
@@ -381,6 +458,7 @@ def main():
     plot_paired_delta(summary)
     plot_mechanism(summary)
     plot_convergence()
+    plot_outcome_and_convergence(summary)
     print_decoupling_table(summary)
 
     print()

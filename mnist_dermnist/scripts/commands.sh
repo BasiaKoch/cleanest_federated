@@ -1,6 +1,9 @@
 #!/bin/bash
-# All commands for the mnist_dermnist FedAvg/FedProx experiment.
+# All commands for the mnist_dermnist FedAvg/FedProx thesis pipeline.
 # Run from the repository root: /Users/basiakoch/cleanest_federated
+#
+# Dispatcher usage:
+#   bash mnist_dermnist/scripts/commands.sh <step>
 #
 # All commands prepend PYTHONPATH=. because tests/scripts use absolute imports.
 set -euo pipefail
@@ -10,107 +13,115 @@ set -euo pipefail
 # ----------------------------------------------------------------------------
 sanity_test() {
   PYTHONPATH=. python -m pytest \
-    mnist_dermnist/tests/test_mu_zero_equals_fedavg.py -v
+    mnist_dermnist/tests/test_mu_zero_equals_fedavg.py \
+    mnist_dermnist/tests/test_fedprox_proximal_term.py \
+    mnist_dermnist/tests/test_framework_provenance.py \
+    -v
 }
 
 # ----------------------------------------------------------------------------
-# 2. One FedAvg run: seed=42, E=20
+# 2. One pure-PyTorch run (engineered partition, seed=42, E=20)
 # ----------------------------------------------------------------------------
-run_fedavg_one() {
+run_purepy_fedavg() {
   PYTHONPATH=. python -m mnist_dermnist.experiments.run_one \
-    --algorithm fedavg --seed 42 --local-epochs 20
+    --algorithm fedavg --seed 42 --local-epochs 20 \
+    --partition balanced_paired_7_clients \
+    --num-rounds 150
 }
 
-# ----------------------------------------------------------------------------
-# 3. One FedProx run: μ=0.1, seed=42, E=20
-# ----------------------------------------------------------------------------
-run_fedprox_one() {
+run_purepy_fedprox() {
   PYTHONPATH=. python -m mnist_dermnist.experiments.run_one \
-    --algorithm fedprox --mu 0.1 --seed 42 --local-epochs 20
+    --algorithm fedprox --mu 0.01 --seed 42 --local-epochs 20 \
+    --partition balanced_paired_7_clients \
+    --num-rounds 150
 }
 
 # ----------------------------------------------------------------------------
-# 4. Full headline sweep:
-#    10 seeds × {FedAvg, FedProx(μ=0.1)}, E=20, 150 rounds,
-#    lr=0.01, batch=32, partition=medical_skew_7_clients
+# 3. One Flower run (engineered partition, seed=42, E=20)
 # ----------------------------------------------------------------------------
-run_headline_sweep() {
-  PYTHONPATH=. python -m mnist_dermnist.experiments.run_headline_sweep \
-    --local-epochs 20 \
-    --num-rounds 150 \
-    --lr 0.01 \
-    --batch-size 32 \
-    --partition medical_skew_7_clients \
-    --out-dir mnist_dermnist/results/headline
-  # add --device cuda when on HPC
+run_flower_fedavg() {
+  PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
+    --algorithm fedavg --seed 42 --local-epochs 20 \
+    --partition balanced_paired_7_clients \
+    --num-rounds 150 --fraction-fit 1.0
+}
+
+run_flower_fedprox() {
+  PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
+    --algorithm fedprox --mu 0.01 --seed 42 --local-epochs 20 \
+    --partition balanced_paired_7_clients \
+    --num-rounds 150 --fraction-fit 1.0
 }
 
 # ----------------------------------------------------------------------------
-# 5. Optional E sweep: E ∈ {1, 5, 10, 20, 40} × {FedAvg, FedProx} × 3 seeds
+# 4. Centralised reference (single seed)
 # ----------------------------------------------------------------------------
-run_e_sweep() {
-  PYTHONPATH=. python -m mnist_dermnist.experiments.run_e_sweep \
-    --local-epochs 1 5 10 20 40 \
-    --seeds 42 123 456 \
-    --num-rounds 100 \
-    --partition medical_skew_7_clients \
-    --out-dir mnist_dermnist/results/e_sweep
+run_centralised() {
+  PYTHONPATH=. python -m mnist_dermnist.experiments.run_centralised \
+    --seed 42 --num-epochs 50
 }
 
 # ----------------------------------------------------------------------------
-# 6. Analysis from CSV logs
+# 5. Cross-runtime equivalence (pure-PyTorch ↔ Flower at μ=0)
 # ----------------------------------------------------------------------------
-generate_partition_counts() {
-  # Used by the heatmap plot — only needs to run once per (mode, seed)
-  PYTHONPATH=. python -m mnist_dermnist.data.partition \
-    --mode medical_skew_7_clients --seed 42 \
-    --out mnist_dermnist/results/partitions
+verify_equivalence() {
+  PYTHONPATH=. python -m mnist_dermnist.experiments.verify_flower_equivalence \
+    --seed 42
 }
 
-analyze_headline() {
-  PYTHONPATH=. python -m mnist_dermnist.analysis.tables \
-    --results-dir mnist_dermnist/results/headline --E 20
-  PYTHONPATH=. python -m mnist_dermnist.analysis.plots \
-    --results-dir mnist_dermnist/results/headline --E 20 \
-    --partition-counts mnist_dermnist/results/partitions/partition_medical_skew_7_clients_seed42_counts.csv
+compare_equivalence_full_scale() {
+  PYTHONPATH=. python -m mnist_dermnist.experiments.compare_equivalence_full_scale
 }
 
-analyze_e_sweep() {
-  for E in 1 5 10 20 40; do
-    PYTHONPATH=. python -m mnist_dermnist.analysis.tables \
-      --results-dir mnist_dermnist/results/e_sweep --E "$E"
-  done
+# ----------------------------------------------------------------------------
+# 6. Thesis-ready analysis pipeline
+# ----------------------------------------------------------------------------
+analyse_thesis() {
+  bash mnist_dermnist/scripts/analyse_all.sh
+}
+
+# ----------------------------------------------------------------------------
+# 7. Inspect overall run / queue status
+# ----------------------------------------------------------------------------
+check_status() {
+  bash mnist_dermnist/scripts/check_results.sh
 }
 
 # ----------------------------------------------------------------------------
 # Dispatcher
 # ----------------------------------------------------------------------------
 case "${1:-}" in
-  sanity)           sanity_test ;;
-  fedavg)           run_fedavg_one ;;
-  fedprox)          run_fedprox_one ;;
-  headline)         run_headline_sweep ;;
-  e-sweep)          run_e_sweep ;;
-  analyze)          generate_partition_counts && analyze_headline ;;
-  analyze-e-sweep)  analyze_e_sweep ;;
-  all)
-    sanity_test
-    generate_partition_counts
-    run_headline_sweep
-    analyze_headline
-    ;;
+  sanity)              sanity_test ;;
+  purepy-fedavg)       run_purepy_fedavg ;;
+  purepy-fedprox)      run_purepy_fedprox ;;
+  flower-fedavg)       run_flower_fedavg ;;
+  flower-fedprox)      run_flower_fedprox ;;
+  centralised)         run_centralised ;;
+  verify-equivalence)  verify_equivalence ;;
+  equivalence-full)    compare_equivalence_full_scale ;;
+  analyse)             analyse_thesis ;;
+  status)              check_status ;;
   *)
-    echo "Usage: bash $0 {sanity|fedavg|fedprox|headline|e-sweep|analyze|analyze-e-sweep|all}"
-    echo ""
-    echo "Steps:"
-    echo "  sanity          run μ=0 ≡ FedAvg unit tests"
-    echo "  fedavg          one FedAvg run (seed 42, E=20)"
-    echo "  fedprox         one FedProx run (μ=0.1, seed 42, E=20)"
-    echo "  headline        full sweep (10 seeds × 2 algos × E=20)"
-    echo "  e-sweep         optional E sweep (5 E values × 3 seeds × 2 algos)"
-    echo "  analyze         partition counts + headline tables + plots"
-    echo "  analyze-e-sweep tables only across E values"
-    echo "  all             sanity + partition counts + headline + analyze"
+    cat <<EOF
+Usage: bash $0 <step>
+
+Steps:
+  sanity              run μ=0 ≡ FedAvg + proximal-term + provenance unit tests
+  purepy-fedavg       one pure-PyTorch FedAvg run, seed 42, engineered partition
+  purepy-fedprox      one pure-PyTorch FedProx run (μ=0.01), seed 42, engineered partition
+  flower-fedavg       one Flower FedAvg run, seed 42, engineered partition
+  flower-fedprox      one Flower FedProx run (μ=0.01), seed 42, engineered partition
+  centralised         one centralised reference run, seed 42
+  verify-equivalence  pure-PyTorch ↔ Flower smoke test at μ=0 (single seed)
+  equivalence-full    full-scale pure-PyTorch ↔ Flower cross-runtime audit
+  analyse             run the thesis-ready analysis pipeline (tables + figures)
+  status              show per-experiment-directory completion status
+
+The actual thesis experiments were run as 10-seed sweeps on HPC; this
+script's one-seed entry points are for local smoke checks. Per-experiment
+hyperparameters, seeds, and partitions are documented in
+mnist_dermnist/results/PROVENANCE_AUDIT.md and the top-level README.md.
+EOF
     exit 1
     ;;
 esac
