@@ -10,11 +10,13 @@ from mnist_dermnist.data.partition import (
     MEDICAL_SKEW_7_CLIENTS,
     QUANTITY_SKEW_IMPROVED_SPEC,
     BALANCED_PAIRED_7_CLIENTS_SPEC,
+    TWO_CLIENT_90_10_RARE_STRESS_SPEC,
     simple_pathological_3_clients,
     medical_skew_7_clients,
     balanced_specialist_7_clients,
     balanced_paired_7_clients,
     quantity_skew_improved,
+    two_client_90_10_rare_stress,
     class_count_table,
 )
 
@@ -248,6 +250,124 @@ def test_balanced_mode_each_client_has_mel_nevi_background(labels):
         nevi_count = int(np.sum(labels[np.asarray(idxs, dtype=int)] == 5))
         assert abs(nevi_count - expected) <= 1, \
             f"client {cid}: mel_nevi count {nevi_count}, expected ~{expected}"
+
+
+def _real_dermmnist_labels() -> np.ndarray:
+    """Real DermMNIST training-set class proportions (exactly 7007 samples)."""
+    counts = [228, 359, 769, 80, 779, 4693, 99]
+    labels = []
+    for c, n in enumerate(counts):
+        labels.extend([c] * n)
+    labels = np.asarray(labels, dtype=np.int64)
+    np.random.default_rng(0).shuffle(labels)
+    return labels
+
+
+def test_two_client_stress_spec_matches_real_dermmnist_counts():
+    """Spec must sum to exact DermMNIST training-set class counts."""
+    actual_counts = {0: 228, 1: 359, 2: 769, 3: 80, 4: 779, 5: 4693, 6: 99}
+    spec_sums = {c: 0 for c in range(NUM_CLASSES)}
+    for entry in TWO_CLIENT_90_10_RARE_STRESS_SPEC:
+        for c, n in entry["per_class"].items():
+            spec_sums[c] += int(n)
+    for c in range(NUM_CLASSES):
+        assert spec_sums[c] == actual_counts[c], (
+            f"class {c}: spec sums to {spec_sums[c]}, real DermMNIST has {actual_counts[c]}"
+        )
+
+
+def test_two_client_stress_returns_exactly_two_clients():
+    clients, _ = two_client_90_10_rare_stress(_real_dermmnist_labels(), seed=42)
+    assert len(clients) == 2
+
+
+def test_two_client_stress_split_is_approximately_90_10():
+    """Client 0 ≈ 86%, Client 1 ≈ 14%. Within the 'approximately 90/10' band."""
+    labels = _real_dermmnist_labels()
+    clients, _ = two_client_90_10_rare_stress(labels, seed=42)
+    total = len(labels)
+    s0 = len(clients[0]) / total
+    s1 = len(clients[1]) / total
+    assert 0.80 <= s0 <= 0.95, f"Client 0 fraction {s0:.3f} out of [0.80, 0.95]"
+    assert 0.05 <= s1 <= 0.20, f"Client 1 fraction {s1:.3f} out of [0.05, 0.20]"
+    assert abs(s0 + s1 - 1.0) < 1e-9
+
+
+def test_two_client_stress_is_class_disjoint():
+    """The defining property: every class lives on exactly one client."""
+    labels = _real_dermmnist_labels()
+    clients, _ = two_client_90_10_rare_stress(labels, seed=42)
+    classes_per_client = [
+        set(int(labels[i]) for i in cl) for cl in clients
+    ]
+    assert classes_per_client[0] == {0, 1, 2, 5}, classes_per_client[0]
+    assert classes_per_client[1] == {3, 4, 6}, classes_per_client[1]
+    assert classes_per_client[0].isdisjoint(classes_per_client[1])
+
+
+def test_two_client_stress_client0_has_no_melanoma_dermato_vascular():
+    """Engineered stress test: Client 0 must hold ZERO critical/rare class samples."""
+    labels = _real_dermmnist_labels()
+    clients, _ = two_client_90_10_rare_stress(labels, seed=42)
+    for crit_class in (3, 4, 6):
+        n = sum(1 for i in clients[0] if int(labels[i]) == crit_class)
+        assert n == 0, f"Client 0 holds {n} class-{crit_class} samples; expected 0"
+
+
+def test_two_client_stress_client1_holds_all_melanoma():
+    """All 779 melanoma samples must land on Client 1."""
+    labels = _real_dermmnist_labels()
+    clients, _ = two_client_90_10_rare_stress(labels, seed=42)
+    n_mel = sum(1 for i in clients[1] if int(labels[i]) == 4)
+    assert n_mel == 779, f"Client 1 holds {n_mel}/779 melanoma; expected 779"
+    n_derm = sum(1 for i in clients[1] if int(labels[i]) == 3)
+    assert n_derm == 80
+    n_vasc = sum(1 for i in clients[1] if int(labels[i]) == 6)
+    assert n_vasc == 99
+
+
+def test_two_client_stress_no_duplicates_and_full_coverage():
+    labels = _real_dermmnist_labels()
+    clients, _ = two_client_90_10_rare_stress(labels, seed=42)
+    flat = [i for cl in clients for i in cl]
+    assert len(flat) == len(labels), "wrong total sample count"
+    assert len(set(flat)) == len(labels), "duplicates across clients"
+    assert set(flat) == set(range(len(labels))), "missing some sample indices"
+
+
+def test_two_client_stress_deterministic_for_same_seed():
+    labels = _real_dermmnist_labels()
+    a, _ = two_client_90_10_rare_stress(labels, seed=42)
+    b, _ = two_client_90_10_rare_stress(labels, seed=42)
+    for ca, cb in zip(a, b):
+        assert ca == cb
+
+
+def test_two_client_stress_seeds_shuffle_within_class():
+    """Different seeds → different within-class sample ORDER.
+
+    Because the partition is class-disjoint and consumes 100% of each
+    class, the SET of sample indices on each client is identical across
+    seeds — only the order within each client's index list changes.
+    This is the invariant we care about for paired-fair runs: the same
+    seed yields the same dataloader iteration order, so FedAvg and
+    FedProx see the same batches in the same order.
+    """
+    labels = _real_dermmnist_labels()
+    a, _ = two_client_90_10_rare_stress(labels, seed=42)
+    b, _ = two_client_90_10_rare_stress(labels, seed=123)
+    # Sample memberships are identical (consequence of class-disjoint + full-class consumption).
+    assert set(a[0]) == set(b[0]) and set(a[1]) == set(b[1])
+    # But order differs — seed actually affects the per-class shuffle.
+    assert a[0] != b[0] or a[1] != b[1], \
+        "seed-42 and seed-123 produced identical within-class orderings"
+
+
+def test_two_client_stress_aborts_when_dataset_class_counts_differ():
+    """If labels do not match the hardcoded spec, must abort loudly."""
+    bad_labels = np.array([0, 1, 5, 5, 5], dtype=np.int64)
+    with pytest.raises(ValueError):
+        two_client_90_10_rare_stress(bad_labels, seed=42)
 
 
 def test_simple_mode_aborts_if_definition_misses_a_class():

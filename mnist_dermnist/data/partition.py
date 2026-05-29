@@ -112,6 +112,48 @@ SPECIALIST_7_CLIENTS_SPEC: List[Dict] = [
 ]
 
 
+# Mode 7 — engineered 2-client 90/10 rare-class stress test.
+#
+# Deliberately stressful 2-client partition designed to expose FedAvg's
+# failure mode under combined quantity- AND label-skew, the scenario where
+# the FedProx proximal term has the largest theoretical room to help.
+#
+#   Client 0 (general/dominant, ~86%): holds every COMMON class in full —
+#     melanocytic_nevi (5), benign_keratosis-like (2), plus the two moderate
+#     carcinomas actinic_keratoses (0) and basal_cell_carcinoma (1). Holds
+#     ZERO melanoma, ZERO dermatofibroma, ZERO vascular_lesions.
+#
+#   Client 1 (rare/critical specialist, ~14%): holds 100% of the three
+#     clinically-critical low-count classes — melanoma (4), dermatofibroma
+#     (3), vascular_lesions (6). Holds ZERO of the four classes on Client 0.
+#
+# The partition is class-DISJOINT by design: every class lives on exactly
+# one client. This maximises the sample-count-weighted FedAvg bias toward
+# Client 0's "no-melanoma" objective: 86% of the federated gradient signal
+# comes from a hospital that has never seen a melanoma. FedProx's proximal
+# term should restrain that drift; if the supervisor's stress-test framing
+# is correct, the FedProx-minus-FedAvg per-class delta on classes {3, 4, 6}
+# should be visibly positive even when global accuracy is similar.
+#
+# Why 86/14 instead of exact 90/10: melanoma alone is 779/7007 = 11.1% of
+# the training set, so any partition that keeps 100% of melanoma on Client 1
+# already sits at ≥11%. To honour the supervisor's "Client 0 should contain
+# little or no melanoma if feasible" instruction we keep melanoma 100% on
+# Client 1, accept the 86/14 ratio (still "approximately 90/10"), and gain
+# a maximally clean class-disjoint narrative in return.
+#
+# Per-class allocations are HARDCODED and validated at runtime against the
+# actual DermMNIST training set counts (228+359+769+80+779+4693+99 = 7007).
+TWO_CLIENT_90_10_RARE_STRESS_SPEC: List[Dict] = [
+    # Client 0 — general hospital, common-class dominated, NO rare/critical.
+    {"id": 0, "name": "general_hospital_dominant",
+     "per_class": {0: 228, 1: 359, 2: 769, 5: 4693}},
+    # Client 1 — rare-specialist, holds 100% of melanoma + dermato + vascular.
+    {"id": 1, "name": "rare_specialist",
+     "per_class": {3: 80, 4: 779, 6: 99}},
+]
+
+
 # Mode 4 — quantity-skewed specialist 7 clients.
 #
 # Realistic medical referral network: 3 size-skewed hospital-style clients
@@ -518,6 +560,84 @@ def specialist_7_clients(
     return clients, df
 
 
+def two_client_90_10_rare_stress(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Mode 7 — engineered 2-client 90/10 rare-class stress test.
+
+    Hardcoded per-class allocation following ``TWO_CLIENT_90_10_RARE_STRESS_SPEC``:
+      Client 0 (~86%): all actinic (0), all basal (1), all benign_kerat (2),
+                       all nevi (5). Zero dermato/melanoma/vascular.
+      Client 1 (~14%): all dermato (3), all melanoma (4), all vascular (6).
+                       Zero of everything on Client 0.
+
+    The partition is class-disjoint: every class lives on exactly one
+    client. Designed to maximally stress FedAvg's sample-count-weighted
+    aggregation — Client 0 carries 86% of the gradient weight but has
+    never seen a melanoma sample. FedProx's proximal term should restrain
+    Client 0's drift toward a "kill the melanoma class" classifier.
+
+    Different seeds produce different sample-level shuffles within each
+    class pool, but the class-to-client structure is fixed by the spec.
+
+    Parameters
+    ----------
+    labels : Sequence[int]
+        Full training-set labels (length 7007 for DermMNIST).
+    seed : int
+        Deterministic seed for the per-class shuffle. Same seed across
+        paired FedAvg/FedProx runs ⇒ bit-identical local data per client.
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    _assert_labels_valid(labels_arr)
+
+    # 1) Verify the spec sums to dataset's actual class counts.
+    actual = {c: int((labels_arr == c).sum()) for c in range(NUM_CLASSES)}
+    spec_totals: Dict[int, int] = {c: 0 for c in range(NUM_CLASSES)}
+    for entry in TWO_CLIENT_90_10_RARE_STRESS_SPEC:
+        for c, n in entry["per_class"].items():
+            spec_totals[c] += int(n)
+    for c in range(NUM_CLASSES):
+        if spec_totals[c] != actual[c]:
+            raise ValueError(
+                f"two_client_90_10_rare_stress: spec sums to {spec_totals[c]} for class "
+                f"{c} ({CLASS_NAMES[c]}) but the training set has {actual[c]}. "
+                f"The spec is incompatible with this dataset."
+            )
+
+    # 2) Pre-shuffle each class deterministically by seed.
+    pools = _class_pools(labels_arr, seed)
+    cursors: Dict[int, int] = {c: 0 for c in range(NUM_CLASSES)}
+
+    # 3) Allocate per spec order.
+    K = len(TWO_CLIENT_90_10_RARE_STRESS_SPEC)
+    clients: List[List[int]] = [[] for _ in range(K)]
+    for entry in TWO_CLIENT_90_10_RARE_STRESS_SPEC:
+        cid = entry["id"]
+        for c, n in entry["per_class"].items():
+            start = cursors[c]
+            end = start + int(n)
+            if end > len(pools[c]):
+                raise ValueError(
+                    f"two_client_90_10_rare_stress: ran out of class {c} during client {cid} "
+                    f"allocation (requested {n}, only {len(pools[c]) - start} remain)."
+                )
+            clients[cid].extend(int(i) for i in pools[c][start:end])
+            cursors[c] = end
+
+    # 4) Sanity-check no leftovers (spec totals == dataset totals).
+    leftover_total = sum(len(pools[c]) - cursors[c] for c in range(NUM_CLASSES))
+    if leftover_total != 0:
+        raise ValueError(
+            f"two_client_90_10_rare_stress: {leftover_total} samples left unassigned."
+        )
+
+    df = _build_long_form(clients, labels_arr)
+    _validate(clients, labels_arr)
+    return clients, df
+
+
 def quantity_skew_improved(
     labels: Sequence[int],
     seed: int = 42,
@@ -771,7 +891,9 @@ def main():
                              "medical_skew_7_clients",
                              "balanced_specialist_7_clients",
                              "balanced_paired_7_clients",
-                             "quantity_skew_improved"],
+                             "specialist_7_clients",
+                             "quantity_skew_improved",
+                             "two_client_90_10_rare_stress"],
                     default="medical_skew_7_clients")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default="mnist_dermnist/results/partitions")
@@ -788,8 +910,12 @@ def main():
         clients, df = balanced_specialist_7_clients(labels, seed=args.seed)
     elif args.mode == "balanced_paired_7_clients":
         clients, df = balanced_paired_7_clients(labels, seed=args.seed)
+    elif args.mode == "specialist_7_clients":
+        clients, df = specialist_7_clients(labels, seed=args.seed)
     elif args.mode == "quantity_skew_improved":
         clients, df = quantity_skew_improved(labels, seed=args.seed)
+    elif args.mode == "two_client_90_10_rare_stress":
+        clients, df = two_client_90_10_rare_stress(labels, seed=args.seed)
     else:
         clients, df = medical_skew_7_clients(labels, seed=args.seed)
 

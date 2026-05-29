@@ -53,6 +53,7 @@ from mnist_dermnist.data.partition import (
     quantity_skew_improved,
     simple_pathological_3_clients,
     specialist_7_clients,
+    two_client_90_10_rare_stress,
 )
 from mnist_dermnist.fl.server_loop import FLConfig, run_fl, save_run_outputs
 from mnist_dermnist.models import DermMNISTCNN
@@ -76,6 +77,7 @@ PARTITIONERS = {
     "iid_7_clients": iid_7_clients,
     "dirichlet_alpha01_7_clients": _dir_a01,
     "dirichlet_alpha05_7_clients": _dir_a05,
+    "two_client_90_10_rare_stress": two_client_90_10_rare_stress,
 }
 
 
