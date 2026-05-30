@@ -43,6 +43,10 @@ from mnist_dermnist.data.partition import (
     quantity_skew_improved,
     simple_pathological_3_clients,
     specialist_7_clients,
+    two_client_50_50_label_skew_only,
+    two_client_50_50_stratified_iid,
+    two_client_70_30_rare_enriched,
+    two_client_86_14_quantity_only_stratified,
     two_client_90_10_rare_stress,
 )
 from mnist_dermnist.fl.evaluation import evaluate
@@ -72,6 +76,11 @@ PARTITIONERS = {
     "dirichlet_alpha01_7_clients": _dir_a01,
     "dirichlet_alpha05_7_clients": _dir_a05,
     "two_client_90_10_rare_stress": two_client_90_10_rare_stress,
+    # Heterogeneity-ladder partitions (Levels 0-3; Level 4 above).
+    "two_client_50_50_stratified_iid": two_client_50_50_stratified_iid,
+    "two_client_86_14_quantity_only_stratified": two_client_86_14_quantity_only_stratified,
+    "two_client_50_50_label_skew_only": two_client_50_50_label_skew_only,
+    "two_client_70_30_rare_enriched": two_client_70_30_rare_enriched,
 }
 
 

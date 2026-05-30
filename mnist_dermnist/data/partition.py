@@ -638,6 +638,298 @@ def two_client_90_10_rare_stress(
     return clients, df
 
 
+# ============================================================
+# Heterogeneity ladder — controlled 2-client partitions
+# ============================================================
+#
+# A four-level monotone ladder built on the same 2-client topology as
+# ``two_client_90_10_rare_stress`` (Level 4). Each level isolates a
+# different source of heterogeneity so the thesis's headline question
+# --- "when does FedProx help and what flavour of skew drives the
+# advantage?" --- can be answered by sweeping the ladder.
+#
+# All four levels:
+#   * use the SAME global training set (no resampling, no dropping)
+#   * are deterministic given a seed (the seed shuffles within-class
+#     pools; the per-class C0/C1 quotas are fixed)
+#   * share the same evaluation protocol (global validation/test sets,
+#     best-validation checkpoint)
+#   * are validated by ``_validate()`` for overlap-free / full-coverage.
+#
+# Level 0  two_client_50_50_stratified_iid     —  IID control
+# Level 1  two_client_86_14_quantity_only_     —  quantity skew only
+#          stratified                             (each class split 86/14)
+# Level 2  two_client_50_50_label_skew_only    —  label skew only
+#          (rare classes 100% on C1; C1 made 50% via mel-nevi filler)
+# Level 3  two_client_70_30_rare_enriched      —  intermediate severity
+# Level 4  two_client_90_10_rare_stress (above)—  combined stress test
+#
+# All four call into the same shared helper ``_two_client_from_spec`` to
+# keep the cursor arithmetic in one place; the per-level specs below
+# encode only the policy.
+
+
+def _two_client_from_spec(
+    labels_arr: np.ndarray,
+    seed: int,
+    per_class_c0: Dict[int, int],
+    partition_name: str,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Allocate samples to 2 clients given the per-class C0 quota.
+
+    Client 1 receives whatever Client 0 does not take, per class. Common
+    machinery used by Level 0/1/2/3 partitions: validates the requested
+    C0 quotas against the real class counts, shuffles each class pool
+    deterministically by ``seed``, and emits the validated
+    (clients, long-form DataFrame) tuple.
+
+    Parameters
+    ----------
+    labels_arr : np.ndarray
+        Full training-set labels.
+    seed : int
+        Deterministic per-class shuffle seed.
+    per_class_c0 : dict[int, int]
+        Mapping ``class_id -> n_samples_for_client_0``. Each entry must
+        satisfy ``0 <= n <= dataset_count_for_that_class``.
+    partition_name : str
+        Used only for error messages.
+    """
+    _assert_labels_valid(labels_arr)
+    actual = {c: int((labels_arr == c).sum()) for c in range(NUM_CLASSES)}
+
+    # Validate the spec against the real dataset.
+    for c in range(NUM_CLASSES):
+        n_c0 = int(per_class_c0.get(c, 0))
+        if n_c0 < 0 or n_c0 > actual[c]:
+            raise ValueError(
+                f"{partition_name}: per-class C0 quota for class {c} "
+                f"({CLASS_NAMES[c]}) is {n_c0}, must be in [0, {actual[c]}]."
+            )
+
+    # Deterministic per-class shuffle.
+    pools = _class_pools(labels_arr, seed)
+    clients: List[List[int]] = [[], []]
+    for c in range(NUM_CLASSES):
+        n_c0 = int(per_class_c0.get(c, 0))
+        pool = pools[c]
+        clients[0].extend(int(i) for i in pool[:n_c0])
+        clients[1].extend(int(i) for i in pool[n_c0:])
+
+    df = _build_long_form(clients, labels_arr)
+    _validate(clients, labels_arr)
+    return clients, df
+
+
+def two_client_50_50_stratified_iid(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Level 0 — 2 clients, stratified ~50/50 IID control.
+
+    Every class is split as evenly as possible between the two clients
+    (ceil/floor on odd counts). With DermMNIST training counts
+    ``[228, 359, 769, 80, 779, 4693, 99]`` this gives Client 0 = 3,506
+    and Client 1 = 3,501 samples (50.04%/49.96%). Both clients see all
+    seven classes in approximately the global proportions.
+
+    Purpose: under stratified IID we expect FedAvg ≈ FedProx; this row
+    is the floor of the heterogeneity ladder.
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    _assert_labels_valid(labels_arr)
+    actual = {c: int((labels_arr == c).sum()) for c in range(NUM_CLASSES)}
+    # ceil for C0 on odd counts so 50/50 splits remain deterministic
+    # and Client 0 is never strictly smaller than Client 1.
+    per_class_c0 = {c: (actual[c] + 1) // 2 for c in range(NUM_CLASSES)}
+    return _two_client_from_spec(
+        labels_arr, seed, per_class_c0,
+        partition_name="two_client_50_50_stratified_iid",
+    )
+
+
+# Level 1 spec — each class split deterministically 86.33%/13.67% so the
+# global quantity ratio matches Level 4 (and the existing case study)
+# while every class is present on both clients in their global
+# proportions. Hardcoded to avoid floating-point drift across machines
+# and to make the quotas auditable.
+TWO_CLIENT_86_14_QUANTITY_ONLY_SPEC: Dict[int, int] = {
+    # class_id -> Client 0 quota (Client 1 gets the rest).
+    # Each row is round(0.8633 * total_for_class).
+    0: 197,   # actinic (total 228)       → C0 86.4%, C1 31  (13.6%)
+    1: 310,   # basal (total 359)         → C0 86.4%, C1 49  (13.6%)
+    2: 664,   # benign_kerat (total 769)  → C0 86.3%, C1 105 (13.7%)
+    3:  69,   # dermato (total 80)        → C0 86.3%, C1 11  (13.8%)
+    4: 672,   # melanoma (total 779)      → C0 86.3%, C1 107 (13.7%)
+    5: 4051,  # mel_nevi (total 4693)     → C0 86.3%, C1 642 (13.7%)
+    6:  85,   # vascular (total 99)       → C0 85.9%, C1 14  (14.1%)
+}
+
+
+def two_client_86_14_quantity_only_stratified(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Level 1 — 2 clients, ~86/14 quantity split, every class stratified.
+
+    Each of the seven classes is split deterministically
+    ~86.3% / 13.7% between Client 0 and Client 1, matching the global
+    quantity ratio of Level 4 but with no label skew --- both clients
+    have all seven classes in close-to-global proportions.
+
+    With the DermMNIST training counts the per-class C0 quotas are::
+
+        actinic        228 → C0 197 / C1 31
+        basal          359 → C0 310 / C1 49
+        benign_kerat   769 → C0 664 / C1 105
+        dermato         80 → C0 69  / C1 11
+        melanoma       779 → C0 672 / C1 107
+        mel_nevi      4693 → C0 4051/ C1 642
+        vascular        99 → C0 85  / C1 14
+        ─────────────────────────────────────
+        total         7007 → C0 6048 (86.31%) / C1 959 (13.69%)
+
+    Purpose: isolate *quantity* skew. If quantity imbalance alone
+    explained the Level-4 FedProx advantage, we would see it here too.
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    return _two_client_from_spec(
+        labels_arr, seed, TWO_CLIENT_86_14_QUANTITY_ONLY_SPEC,
+        partition_name="two_client_86_14_quantity_only_stratified",
+    )
+
+
+def two_client_50_50_label_skew_only(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Level 2 — 2 clients, ~50/50 quantity, rare classes 100% on C1.
+
+    Client 0 receives every sample of the four "common" classes ---
+    actinic, basal, benign keratosis, mel-nevi --- minus the mel-nevi
+    fraction needed to bring Client 1's total up to 50%. Client 1
+    receives 100% of the three rare/critical classes
+    (dermatofibroma, melanoma, vascular) plus 2,546 mel-nevi samples
+    as a 50%-balancing filler.
+
+    Resulting class counts::
+
+        class           total   C0     C1
+        actinic           228   228     0
+        basal             359   359     0
+        benign_kerat      769   769     0
+        dermato            80     0    80
+        melanoma          779     0   779
+        mel_nevi         4693  2147  2546
+        vascular           99     0    99
+        ────────────────────────────────────
+        total            7007  3503  3504   (50.0% / 50.0%)
+
+    The mel-nevi filler is unavoidable: the three rare classes total
+    only 958 samples (13.7% of the dataset), so a strictly class-
+    disjoint 50/50 partition is mathematically impossible. mel-nevi is
+    chosen as the filler because it is the largest pool and the only
+    class on which both clients can plausibly co-train without
+    starving Client 0 of every other class.
+
+    Purpose: isolate *label* skew while removing quantity skew. If
+    FedProx improves here relative to Level 0, label skew (not
+    quantity skew) is the necessary ingredient.
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    _assert_labels_valid(labels_arr)
+    actual = {c: int((labels_arr == c).sum()) for c in range(NUM_CLASSES)}
+
+    # Hard-coded class assignments (no rare on C0; mel-nevi split to
+    # balance the 50/50 quantity target). Validated below against the
+    # dataset's actual class counts.
+    RARE_CLASSES = (3, 4, 6)
+    COMMON_CLASSES = (0, 1, 2, 5)
+    rare_total = sum(actual[c] for c in RARE_CLASSES)
+    target_c1 = (sum(actual.values()) + 1) // 2  # ceil for parity safety
+    nevi_filler = target_c1 - rare_total
+    if nevi_filler < 0:
+        raise ValueError(
+            f"two_client_50_50_label_skew_only: rare-class total "
+            f"({rare_total}) already exceeds 50% target ({target_c1}). "
+            f"This indicates the dataset's rare-class fraction has "
+            f"shifted; the partition is inapplicable as stated.")
+    if nevi_filler > actual[5]:
+        raise ValueError(
+            f"two_client_50_50_label_skew_only: requested nevi filler "
+            f"({nevi_filler}) exceeds actual nevi pool ({actual[5]}).")
+
+    per_class_c0 = {c: actual[c] for c in COMMON_CLASSES}
+    per_class_c0[5] = actual[5] - nevi_filler   # nevi to C0 = total - filler
+    for c in RARE_CLASSES:
+        per_class_c0[c] = 0
+
+    return _two_client_from_spec(
+        labels_arr, seed, per_class_c0,
+        partition_name="two_client_50_50_label_skew_only",
+    )
+
+
+def two_client_70_30_rare_enriched(
+    labels: Sequence[int],
+    seed: int = 42,
+) -> Tuple[List[List[int]], pd.DataFrame]:
+    """Level 3 — 2 clients, ~70/30 quantity, rare classes 100% on C1.
+
+    Intermediate-severity small-hospital scenario: Client 1 holds 30%
+    of the data (a moderately small specialist site, not the 14%
+    extreme of Level 4) and still receives all rare/critical-class
+    samples, with the remainder filled from mel-nevi to reach the 30%
+    target. Client 0 holds the rest of mel-nevi plus all common
+    classes 0/1/2.
+
+    Resulting class counts::
+
+        class           total   C0     C1
+        actinic           228   228     0
+        basal             359   359     0
+        benign_kerat      769   769     0
+        dermato            80     0    80
+        melanoma          779     0   779
+        mel_nevi         4693  3549  1144
+        vascular           99     0    99
+        ────────────────────────────────────
+        total            7007  4905  2102   (70.0% / 30.0%)
+
+    Purpose: a more realistic small-hospital severity, between the
+    pure label-skew control (Level 2 at 50/50) and the engineered
+    combined stress (Level 4 at 86/14).
+    """
+    labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
+    _assert_labels_valid(labels_arr)
+    actual = {c: int((labels_arr == c).sum()) for c in range(NUM_CLASSES)}
+
+    RARE_CLASSES = (3, 4, 6)
+    COMMON_CLASSES = (0, 1, 2, 5)
+    rare_total = sum(actual[c] for c in RARE_CLASSES)
+    total = sum(actual.values())
+    target_c1 = int(round(0.30 * total))   # 2102 on the canonical 7007 set
+    nevi_filler = target_c1 - rare_total
+    if nevi_filler < 0:
+        raise ValueError(
+            f"two_client_70_30_rare_enriched: rare-class total "
+            f"({rare_total}) exceeds 30% target ({target_c1}).")
+    if nevi_filler > actual[5]:
+        raise ValueError(
+            f"two_client_70_30_rare_enriched: requested nevi filler "
+            f"({nevi_filler}) exceeds actual nevi pool ({actual[5]}).")
+
+    per_class_c0 = {c: actual[c] for c in COMMON_CLASSES}
+    per_class_c0[5] = actual[5] - nevi_filler
+    for c in RARE_CLASSES:
+        per_class_c0[c] = 0
+
+    return _two_client_from_spec(
+        labels_arr, seed, per_class_c0,
+        partition_name="two_client_70_30_rare_enriched",
+    )
+
+
 def quantity_skew_improved(
     labels: Sequence[int],
     seed: int = 42,
