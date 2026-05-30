@@ -150,6 +150,17 @@ def build_parser() -> argparse.ArgumentParser:
                          "Off by default; clients always compute and return "
                          "the value in fit metrics, but the runner only "
                          "materialises the CSV when this flag is set.")
+    # Save model weights at the best-val checkpoint — needed by
+    # downstream local-adaptation / personalised-FL baselines
+    # (Yu et al. 2022, Collins et al. 2021). Off by default so the
+    # headline outputs are unchanged; turn on for the small-hospital
+    # case study's fine-tuning baselines.
+    ap.add_argument("--save-best-checkpoint", action="store_true",
+                    help="Write the global model state_dict at the "
+                         "best-validation checkpoint to a sibling .pt "
+                         "file ('best_state_<stem>.pt'). Used as the "
+                         "starting point for local-adaptation fine-tuning "
+                         "in run_finetune.py.")
     return ap
 
 
@@ -491,10 +502,21 @@ def main():
             seed=int(seed),
             algorithm=args.algorithm,
         )
+
+    # Optional best-val state_dict for downstream local-adaptation
+    # baselines (run_finetune.py).
+    checkpoint_file = None
+    if args.save_best_checkpoint:
+        checkpoint_file = f"best_state_{stem}.pt"
+        torch.save(
+            test_model.state_dict(),
+            out_dir / checkpoint_file,
+        )
     with open(out_dir / f"test_at_best_{stem}.json", "w") as f:
         json.dump({
             **test_metrics,
             "predictions_file": predictions_file,
+            "checkpoint_file": checkpoint_file,
             "seed": seed, "algorithm": args.algorithm, "mu": mu,
             "local_epochs": args.local_epochs, "num_rounds": args.num_rounds,
             "lr": args.lr, "momentum": args.momentum, "weight_decay": args.weight_decay,

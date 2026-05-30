@@ -1337,6 +1337,101 @@ interpretation that the proximal anchor's contribution is
 conditional on multiple clients sharing the class.
 
 % ==============================================================================
+\section{Case Study: A Small Site with Unique Rare Classes}
+\label{sec:small-hospital}
+% ==============================================================================
+
+The partitions reported so far hold all classes on at least one
+numerically substantial client. In real federations, a frequent
+deployment pattern is the opposite: a small specialist site holds
+rare cases that no other site has seen. To probe how FedProx behaves
+in this regime, we ran the canonical 2-client 90/10 partition
+\texttt{two\_client\_90\_10\_rare\_stress}. Client~0 (``general
+hospital'', $n = 6{,}049$, $\approx 86\%$ of the training set) holds
+all actinic keratoses, basal cell carcinoma, benign keratosis, and
+melanocytic nevi samples and zero rare-class samples. Client~1
+(``specialist site'', $n = 958$, $\approx 14\%$) holds all
+dermatofibroma, melanoma, and vascular lesion samples and nothing
+else. Hyperparameters and training protocol are identical to the
+engineered headline; the Flower runtime is used.
+
+This experiment is reported as a single-seed case study
+($\text{seed} = 42$) and is descriptive only --- the goal is to
+illustrate the mechanism direction in a deliberately stressed
+configuration, not to provide a paired-seed inferential estimate.
+
+\begin{table}[!htbp]
+\centering
+\caption{Test performance under the 2-client 90/10 rare-stress
+partition (Flower runtime, seed~$42$, single-seed case study).
+Per-class F1 is reported on the global test set at the
+best-validation checkpoint. The starred rows are the rare classes
+held only by Client~1 (the small site). $\Delta$ is FedProx
+$-$ FedAvg; the higher value per row is shown in bold.}
+\label{tab:small-hospital}
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}l c c r@{}}
+\toprule
+Metric                                       & FedAvg            & FedProx           & $\Delta$          \\
+\midrule
+Macro-F1                                     & $0.478$           & $\mathbf{0.509}$  & $\mathbf{+0.031}$ \\
+Overall accuracy                             & $0.738$           & $\mathbf{0.744}$  & $+0.006$          \\
+\midrule
+\multicolumn{4}{l}{\textit{Per-class F1 --- classes on Client 0 (large, $86\%$):}} \\
+\quad Actinic keratoses                      & $\mathbf{0.507}$  & $0.483$           & $-0.024$          \\
+\quad Basal cell carcinoma                   & $0.492$           & $\mathbf{0.517}$  & $+0.025$          \\
+\quad Benign keratosis                       & $\mathbf{0.529}$  & $0.526$           & $-0.003$          \\
+\quad Melanocytic nevi                       & $\mathbf{0.887}$  & $0.882$           & $-0.005$          \\
+\midrule
+\multicolumn{4}{l}{\textit{Per-class F1 --- rare classes on Client 1 (small, $14\%$):}} \\
+\quad Dermatofibroma~$\bigstar$              & $0.079$           & $\mathbf{0.233}$  & $\mathbf{+0.153}$ \\
+\quad Melanoma~$\bigstar$                    & $0.313$           & $\mathbf{0.324}$  & $+0.011$          \\
+\quad Vascular lesions~$\bigstar$            & $0.537$           & $\mathbf{0.596}$  & $\mathbf{+0.059}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_small_hospital_per_class.pdf}
+\caption{Per-class test F1 under the 2-client 90/10 rare-stress
+partition (Flower runtime, single seed). The starred classes are
+held only by Client~1 (the small site, $14\%$ of training data) and
+are highlighted by the shaded bands; the unshaded classes are held
+only by Client~0 (the large site, $86\%$). The largest single-class
+effect is on dermatofibroma, whose F1 nearly triples from
+$0.079$ (FedAvg) to $0.233$ (FedProx).}
+\label{fig:small-hospital}
+\end{figure}
+
+The effect is localised on the small site's classes. The two largest
+F1 differences ($+0.153$ on dermatofibroma, $+0.059$ on vascular
+lesions) both occur on classes that exist only on Client~1; the
+classes held by the dominant Client~0 move within $\pm 0.025$ of the
+FedAvg baseline. The mechanism is consistent with the size-weighted
+aggregation rule: at $n_0 / n_1 \approx 6.3$, the dominant client's
+gradient signal carries roughly $86\%$ of the aggregated update, and
+the small client's rare-class signal is correspondingly muted under
+FedAvg. The proximal regulariser restrains how far the dominant
+client can move from the broadcast global parameters within each
+round, which leaves a comparatively larger share of the aggregated
+update available to incorporate the small client's rare-class
+contribution.
+
+Because this is a single seed, the absolute magnitudes should be
+read with caution and the dermatofibroma effect in particular sits
+on a base of only $\approx 110$ test samples. The
+\emph{direction} of the effect is, however, the one predicted by the
+mechanism analysed in Sections~\ref{sec:engineered-per-class}
+and~\ref{sec:update-norms}: FedProx's proximal term acts on
+inter-client drift, and a 2-client 90/10 partition produces drift
+between exactly the kind of dominant generalist and small
+rare-class specialist that motivates federated learning in
+multi-institution medical deployments.
+
+% ==============================================================================
 \section{Parameter-Level Evidence: Per-Client Update Norms}
 \label{sec:update-norms}
 % ==============================================================================
