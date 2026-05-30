@@ -1,0 +1,67 @@
+{
+  "L0_two_client_50_50_stratified_iid": {
+    "name": "L0_two_client_50_50_stratified_iid",
+    "js_avg": 3.118299445416235e-07,
+    "entropies": [
+      1.63171635597769,
+      1.629086096046039
+    ],
+    "overlap": 1.0,
+    "sizes": [
+      3506,
+      3501
+    ]
+  },
+  "L1_two_client_86_14_quantity_only_stratified": {
+    "name": "L1_two_client_86_14_quantity_only_stratified",
+    "js_avg": 1.8116197913265044e-06,
+    "entropies": [
+      1.6301112500577402,
+      1.6322294843304102
+    ],
+    "overlap": 1.0,
+    "sizes": [
+      6048,
+      959
+    ]
+  },
+  "L2_two_client_50_50_label_skew_only": {
+    "name": "L2_two_client_50_50_label_skew_only",
+    "js_avg": 0.10367053058255468,
+    "entropies": [
+      1.5064512374027816,
+      1.086940134457912
+    ],
+    "overlap": 0.14285714285714285,
+    "sizes": [
+      3503,
+      3504
+    ]
+  },
+  "L3_two_client_70_30_rare_enriched": {
+    "name": "L3_two_client_70_30_rare_enriched",
+    "js_avg": 0.1206169329744421,
+    "entropies": [
+      1.2387593487008357,
+      1.3954813465237776
+    ],
+    "overlap": 0.14285714285714285,
+    "sizes": [
+      4905,
+      2102
+    ]
+  },
+  "L4_two_client_90_10_rare_stress": {
+    "name": "L4_two_client_90_10_rare_stress",
+    "js_avg": 0.38533157314897126,
+    "entropies": [
+      1.0824801963383668,
+      0.8801562741776663
+    ],
+    "overlap": 0.0,
+    "sizes": [
+      6049,
+      958
+    ]
+  }
+}
