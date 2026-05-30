@@ -62,6 +62,8 @@ Stronger would over-claim ("FedProx is universally better", "the mechanism is pr
 | 6 | Update-direction diagnostics (full delta logging + cosine) | ~3 GPU-h + code | ✅ | ★★★☆☆ |
 | 7 | (conditional) Client bump to ~8 for variance / worst-client | ~30 GPU-h | unlocks `n=2`-dead diagnostics | ★★★☆☆ |
 | 9 | Asymmetric per-client μ on L4 (Yao 2024 / HAPI-FedProx ablation) | ~12 GPU-h | ✅ | ★★★★☆ |
+| **10** | **Li 2020 §5.2 asymmetric protocol on L4 — "FedProx clearly wins" setting** | ~12 GPU-h | ✅ | ★★★★★ |
+| **11** | **FedProx perfect-storm on L4 — literature-canonical max-margin recipe** | ~9 GPU-h | ✅ | ★★★★★ |
 | — | SCAFFOLD targeted run | (impl-heavy) | — | ★★☆☆☆ (defer) |
 
 ---
@@ -339,6 +341,107 @@ Overlaps with Experiment 1's FedProx runs — do not double-count compute.
 - `F_asymmetric_mu_L4.pdf` — 2-panel: (a) per-condition macro-F1 dot plot with 3-seed means, (b) per-class F1 mean ± SD bars showing the vascular-class signal.
 
 **Critical framing requirement.** When writing this up, position it as *"an ablation of Yao 2024's per-client μ framework on a medical-FL class-imbalance setting"* — NOT as "we propose asymmetric per-client μ." The latter would be over-claiming given HAPI-FedProx (Springer 2024) and Yao 2024 already established the approach.
+
+---
+
+### Experiment 10 — Li 2020 §5.2 asymmetric protocol on L4 ("FedProx clearly wins" setting)
+
+**What.** Reproduce the **exact conditions Li et al. 2020 (FedProx, MLSys) identify in §5.2 "Lessons Learned" as the regime where FedProx wins by ~22%** over FedAvg. The current thesis data is FedProx-neutral because all runs use the **symmetric** protocol (both algorithms see identical client updates). Li 2020's headline result is specifically about the **asymmetric** protocol — FedAvg drops stragglers, FedProx keeps them via γ-inexact local updates.
+
+**Why this experiment exists.** Without this, the thesis cannot demonstrate a setting in which FedProx is the clearly correct algorithmic choice. The supervisor's stated request is "be able to create a setting in which FedProx clearly wins" — this experiment is the canonical, defensible, literature-grounded answer.
+
+**Design (4 conditions × 3 seeds = 12 jobs on L4):**
+
+| # | Algorithm | Stragglers | Drop? | Role |
+|---|---|---|---|---|
+| 1 | FedAvg | none (E = 20 both clients) | n/a | Baseline — current thesis hyperparameters |
+| 2 | FedAvg | Client 1 = E = 5 | **drop** | Li 2020 §5.2 FedAvg arm — discards small specialist's update every round |
+| 3 | **FedProx (μ = 0.01)** | Client 1 = E = 5 | keep (γ-inexact) | **Li 2020 §5.2 FedProx arm** — proximal anchor stabilises partial update |
+| 4 | FedProx (μ = 0.01) | Client 1 = E = 5 | **drop** | Control — isolates protocol from algorithm |
+
+**Predicted outcome.**
+- (1) baseline at L4: macro-F1 ≈ 0.52, vascular F1 ≈ 0.70 (matches existing data).
+- (2) FedAvg + drop: **macro-F1 collapses** because FedAvg literally never trains on rare-class data (Client 1 holds all dermato/melanoma/vascular). **Rare-class F1 → ~0.**
+- (3) FedProx + γ-inexact: macro-F1 close to baseline; rare-class signal preserved via proximal-anchored partial updates.
+- (4) FedProx + drop (control): between (2) and (3) — confirms the win is the **protocol** (γ-inexact handling) not the **algorithm name**.
+
+**Headline reading.** Gap (2 → 3) is the Li 2020 §5.2 result on DermaMNIST. Expected to be ≥ 0.10 macro-F1 and far above the cross-node noise floor (≈ 0.04). The (3 → 4) gap separately quantifies how much of FedProx's win comes specifically from γ-inexact handling vs. just being-FedProx.
+
+**Why — cited.**
+- **FedProx (Li, Sahu, Zaheer, Sanjabi, Talwalkar, Smith 2020, MLSys) §5.2 "Lessons Learned"** — the asymmetric-protocol claim is the paper's signature result: *"Allowing for partial information to be sent from inexact local updates can help in heterogeneous networks where some devices may not be able to compute E local epochs."* [arXiv:1812.06127](https://arxiv.org/abs/1812.06127). Their Fig. 5 sweep shows FedProx's advantage growing monotonically with `E`; their Theorem 4 bound on the FedProx improvement scales with `B²` (local-dissimilarity squared), so high-heterogeneity L4 is the right partition.
+- **NIID-Bench (Li, Diao, Chen, He 2022, ICDE) §4** — confirms the asymmetric-protocol setup is the canonical FedProx demonstration. [arXiv:2102.02079](https://arxiv.org/abs/2102.02079).
+- **Connection to Experiment 5 small-hospital narrative.** The setup is mechanically equivalent to "the small hospital cannot finish full epochs because its compute is slower / its workload is heavier" — a real cross-silo medical-FL scenario. This is the framing to use in the thesis: it's not a synthetic stress test, it's the operationally-realistic case Li 2020 designed FedProx for.
+
+**Repo state.** Zero code change — `--system-het-mode fixed_stragglers --fixed-straggler-ids 1 --straggler-epochs 5 --drop-stragglers` already implements the protocol exactly. The `StragglerDroppingFedAvg` strategy already exists in `fl_flower/strategy_straggler_dropping.py`. The submit script `submit_li2020_asymmetric_L4.sh` and analysis script `analyse_li2020_asymmetric_L4.py` are written.
+
+**Cost.** ~12 GPU-hours (12 runs × ~1 h each).
+
+**Failure modes.**
+- **The clear FedProx win might not show at single μ.** If condition 3 ≤ condition 2, try μ ∈ {0.001, 0.1} as well — but unlikely; the mechanical argument (FedAvg never sees rare classes) is robust.
+- **Reverse confound — be honest about the framing.** This experiment demonstrates FedProx + γ-inexact > FedAvg + drop **under the asymmetric protocol**. It does *not* show FedProx > FedAvg under symmetric conditions; that comparison is still within noise per the heterogeneity-ladder data. **State both findings together** — that is the methodologically honest writing.
+- **n = 2 caveat persists.** Fixed-stragglers at n = 2 means Client 1 is always the straggler; the result depends on which client is small. Document this; do not generalise without n = 8 (Experiment 7).
+
+**Outputs.**
+- `tab:li2020_asymmetric_L4` — 4 rows × {macro-F1, rare-avg-F1, vascular-F1, balanced-acc} mean ± SD, with the headline (2 → 3) gap bolded.
+- `F_li2020_asymmetric_L4.pdf` — 2-panel: (a) macro-F1 dot plot per condition with annotated headline gap, (b) per-class F1 mean ± SD bars showing the rare-class collapse under FedAvg + drop.
+
+**How to write it in the thesis.** A new subsection "FedProx under the asymmetric straggler protocol (Li 2020 §5.2)" between the current §heterogeneity-ladder section and §small-hospital. Frame as: *"Although FedProx and FedAvg are within noise under the symmetric protocol of §heterogeneity-ladder, the picture changes once the asymmetric straggler protocol of Li et al. 2020 §5.2 is applied. Under that protocol — which models the operationally-realistic case where a small or compute-constrained site cannot finish a full local epoch — FedProx beats FedAvg by [X] macro-F1 (3 seeds, p [not reported per §10 plan policy])."*
+
+---
+
+### Experiment 11 — FedProx "perfect-storm" L4 (literature-canonical max-margin recipe)
+
+**What.** Replicate the experimental conditions under which FedProx achieves its **largest published advantage** over FedAvg, as closely as the 2-client DermaMNIST setup allows. The current thesis configuration is silently FedProx-unfriendly in **five specific ways** that the literature review identified. This experiment fixes all five simultaneously to give FedProx its best chance.
+
+**The five FedProx-unfavourable defaults in the current thesis and the literature-grounded fixes:**
+
+| Hyperparameter | Current | Fix | Why |
+|---|---|---|---|
+| μ | 0.01 | **1.0** | Li 2020 §5.3.2: μ = 1 was selected as optimal on Synthetic(1,1), MNIST, FEMNIST — the most heterogeneous partitions. NIID-Bench §V.B: *"Since the best μ is always small, the regularization term in FedProx has little influence."* HeteRo-Select (2025) §V.D: bumping μ from 0.01 to 0.1 was *"transformative."* The thesis's μ=0.01 leaves the proximal term essentially inert. |
+| Batch size | 32 | **10** | FedProx Appendix C.2: *"We use a batch size of 10 for all experiments."* Small batch → noisier local SGD → more drift → more headroom for the proximal anchor to provide value. |
+| Momentum | 0.9 | **0** | Li 2020 §5.1: *"we employ SGD as a local solver for FedProx."* All FedProx-paper experiments use plain SGD. Momentum compounds with the proximal pull and is a known footgun. |
+| Stragglers | none | **random, fraction 0.9, E_straggler 5** | The 22% headline (Li 2020 §5.3.2, Fig. 7) is *specifically* at 90% straggler stress. With zero stragglers the systems-heterogeneity half of FedProx's advantage is unavailable. |
+| Protocol | symmetric | **asymmetric**: `--drop-stragglers` on FedAvg only | Li 2020 §5.2: FedAvg's native protocol drops stragglers; FedProx's native γ-inexact protocol keeps them. Forcing the symmetric protocol removes the asymmetry the 22% headline depends on. |
+
+**Design — 3 conditions × 3 seeds = 9 jobs on L4** (`two_client_90_10_rare_stress`; closest 2-client analogue to NIID-Bench Table III #C=1 regime, where FedProx's largest published transferable wins occur):
+
+| # | Algorithm | μ | bs | mom | Stragglers | Drop? | Role |
+|---|---|---|---|---|---|---|---|
+| 1 | FedAvg | — | 10 | 0 | random f=0.9, E_s=5 | **drop** | Li 2020 §5.2 FedAvg arm |
+| 2 | **FedProx** | **1.0** | 10 | 0 | random f=0.9, E_s=5 | keep (γ-inexact) | **Li 2020 §5.2 FedProx arm — predicted winner** |
+| 3 | FedProx | 0.01 | 10 | 0 | random f=0.9, E_s=5 | keep (γ-inexact) | μ ablation in this regime |
+
+**Headline reading.** Gap (1 → 2) is the Li-2020-canonical FedAvg-vs-FedProx comparison reproduced on DermaMNIST. Pair (2, 3) isolates the μ choice within the same regime. **Cross-reference** to the thesis-baseline L4 data (Experiment 2b `node_pinned_L4`, bs=32 mom=0.9 no stragglers) gives the "configuration-amplification" diagnostic: how much of the FedProx win comes from switching to the literature-canonical setup vs from the proximal-term mechanism itself.
+
+**Why — cited.**
+- **FedProx (Li, Sahu, Zaheer, Sanjabi, Talwalkar, Smith 2020, MLSys)** §5.3.2 Abstract: *"FedProx improves absolute testing accuracy relative to FedAvg by 22% on average in highly heterogeneous environments (90% stragglers)."* §5.2 "Systems Heterogeneity: Tolerating Partial Work" defines the asymmetric protocol. Appendix C.2 fixes batch size = 10 and Section 5.1 specifies plain SGD with no momentum. [arXiv:1812.06127](https://arxiv.org/abs/1812.06127).
+- **NIID-Bench (Li, Diao, Chen, He 2022, ICDE) Table III** — the largest published transferable FedProx-over-FedAvg gap is on FMNIST with one class per client: FedAvg 11.2% ± 2.0 vs FedProx 28.9% ± 3.9, **+17.7 pp**. The class-disjoint L4 partition is the closest 2-client analogue. [arXiv:2102.02079](https://arxiv.org/abs/2102.02079).
+- **HeteRo-Select (2025)** §V.D — μ = 0.1 ≫ μ = 0.01 in performance terms; supports the μ=1.0 choice for the perfect storm. [arXiv:2508.06692](https://arxiv.org/abs/2508.06692).
+- **Wall-clock cost** ("Not All FL Algorithms Are Created Equal" 2024) — FedProx is +37 to +215% slower than FedAvg per round depending on hardware; the bs=10 + μ=1 combination is the most expensive FedProx configuration but ≤ 1 GPU-h per run at this scale. [arXiv:2403.17287](https://arxiv.org/abs/2403.17287).
+
+**Repo state.** Zero code change. All five fixes are existing CLI flags (`--mu`, `--batch-size`, `--momentum`, `--system-het-mode random_stragglers --straggler-fraction 0.9 --straggler-epochs 5`, `--drop-stragglers`). Submit script `submit_fedprox_perfect_storm_L4.sh` and analysis script `analyse_fedprox_perfect_storm_L4.py` are written.
+
+**Cost.** ~9 GPU-h.
+
+**Predicted result** (from Li 2020 §5.3.2 + NIID-Bench Table III on the closest transferable partition):
+- Condition 1 (FedAvg + drop):       macro-F1 ≈ 0.25–0.35 (rare-class blind)
+- Condition 2 (FedProx μ = 1.0):       macro-F1 ≈ 0.45–0.55 (predicted winner)
+- Condition 3 (FedProx μ = 0.01):      macro-F1 between (1) and (2)
+- Headline gap (1 → 2): **0.10–0.20 macro-F1**, comparable to NIID-Bench FMNIST #C=1's +17.7 pp.
+
+**Failure modes / caveats to document in the write-up.**
+- **DermaMNIST is 28×28 RGB; the largest published gaps (rcv1 in NIID-Bench Table III) are on high-dimensional sparse data and will not transfer in absolute magnitude.** Frame the result as "consistent with the Li 2020 canonical regime" rather than "matches the 22% headline."
+- **The 22% headline is averaged across 5 datasets**; single-dataset gaps are typically 5–18 pp depending on dataset. Predicted DermaMNIST gap is at the lower end of this range due to 28×28 + n = 2.
+- **n = 2 limits variance**; published big-gap results have 10–1000 clients. The cross-node noise floor (≈ 0.04 macro-F1) still applies; report 3-seed SD prominently.
+- **Multiple confounds in the contrast.** This is NOT an algorithm-isolated comparison. Conditions 1 and 2 differ on FIVE hyperparameters simultaneously plus the drop-stragglers protocol. The contrast is "FedAvg as Li 2020 would deploy it" vs "FedProx as Li 2020 would deploy it," not "FedAvg vs FedProx with all else equal." The μ ablation (cond 3) and the cross-reference to thesis-baseline data partly disentangle these confounds, but **the methodologically honest framing acknowledges the multi-variable nature of the contrast**.
+
+**Outputs.**
+- `tab:fedprox_perfect_storm_L4` — 3 rows × {macro-F1, rare-avg-F1, vascular-F1, balanced-acc} mean ± SD.
+- `F_fedprox_perfect_storm_L4.pdf` — 2-panel: (a) macro-F1 dot plot with annotated headline gap, (b) per-class F1 mean ± SD.
+
+**How to write it in the thesis.** A subsection labelled "FedProx under the canonical Li 2020 setting" co-located with Experiment 10 (the asymmetric-protocol experiment). Frame as: *"To complement the algorithm-isolated comparison of §heterogeneity-ladder (which finds FedAvg and FedProx within seed-level noise on this task) we additionally evaluate the algorithms under the canonical experimental setting prescribed by Li et al. [2020] — μ = 1.0, batch size 10, plain-SGD (no momentum), 90% straggler stress, asymmetric drop-stragglers protocol. This is the setting in which the FedProx paper reports its 22% headline improvement, and reproducing it provides the strongest test of whether FedProx's mechanism can be made to manifest on DermaMNIST. Under this canonical setting, FedProx achieves macro-F1 [X] ± [Y] (3 seeds) versus FedAvg [W] ± [Z] — a gap of Δ = [X − W] consistent with [the FMNIST #C=1 17.7 pp result in NIID-Bench Table III / the lower end of Li 2020's single-dataset 5–18 pp range]. We note that this contrast varies five hyperparameters and the protocol simultaneously relative to the thesis's symmetric-protocol baseline; the cross-reference to §node_pinned_L4 indicates that [X]% of the gap is attributable to the configuration change and the remainder to the algorithmic difference."*
+
+This phrasing is methodologically airtight because it (1) acknowledges the multi-variable contrast openly, (2) anchors the result to the literature explicitly, (3) gives a numeric decomposition between configuration and algorithm, and (4) avoids over-claiming "FedProx is universally better."
 
 ---
 
