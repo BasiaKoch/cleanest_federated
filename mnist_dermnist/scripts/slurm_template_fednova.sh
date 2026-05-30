@@ -75,7 +75,8 @@ for attempt in $(seq 1 $RETRY_MAX); do
             --local-epochs "$LOCAL_EPOCHS" \
             --num-rounds 150 \
             --lr 0.01 \
-            --batch-size 32 \
+            --batch-size 10 \
+            --momentum 0.0 \
             --partition "$PARTITION" \
             --device cuda \
             --npz-path "$REPO_ROOT/dermamnist_64.npz" \
