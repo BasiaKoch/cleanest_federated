@@ -21,7 +21,7 @@
   "weight_decay": 0.0,
   "batch_size": 32,
   "device": "cuda",
-  "elapsed_s": 424.3031928539276,
+  "elapsed_s": 427.21109986305237,
   "loss": 9.441048319143547,
   "accuracy": 0.12917705735660848,
   "balanced_accuracy": 0.3887534131716973,
@@ -36,13 +36,13 @@
     0.52
   ],
   "n": 2005,
-  "git_commit": "e69faea300de434a196159738cd7c44379a2286c",
-  "git_dirty": null,
-  "hostname": "gpu-q-3",
+  "git_commit": "4c02118f52c34918e4c529f5a6e812283d3ad27a",
+  "git_dirty": true,
+  "hostname": "gpu-q-10",
   "python_version": "3.9.18",
   "torch_version": "2.8.0+cu128",
   "cuda_available": true,
   "device_name": "NVIDIA A100-SXM4-80GB",
-  "run_started_at": "2026-05-30T12:16:23.802056+00:00",
-  "run_finished_at": "2026-05-30T12:23:36.395158+00:00"
+  "run_started_at": "2026-05-30T14:39:51.966889+00:00",
+  "run_finished_at": "2026-05-30T14:47:03.512682+00:00"
 }
