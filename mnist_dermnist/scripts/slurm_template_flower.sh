@@ -61,6 +61,25 @@ export RAY_TMPDIR="/tmp/ray-${SLURM_JOB_ID:-$$}"
 mkdir -p "$RAY_TMPDIR"
 trap 'rm -rf "$RAY_TMPDIR"' EXIT
 
+# Verify /tmp is writable and has space (sometimes compute-node tmpfs runs
+# out before Ray's GCS server can write its bootstrap files). If this check
+# fails, the job will exit early with a diagnostic, not a confusing Ray
+# stack trace 4 minutes later.
+if ! touch "$RAY_TMPDIR/preflight.test" 2>/dev/null; then
+    echo "ERROR: cannot write to $RAY_TMPDIR — compute-node /tmp may be read-only or full." >&2
+    df -h /tmp >&2
+    exit 2
+fi
+rm -f "$RAY_TMPDIR/preflight.test"
+
+# Per-job startup jitter (1-15 seconds). When sbatch launches many
+# concurrent jobs that all land on the same compute node, their ray.init()
+# calls race to bind GCS's default ports. A small randomized delay breaks
+# that race and dramatically reduces GCS-startup failures.
+JITTER=$(( (RANDOM % 14) + 1 ))
+echo "Startup jitter: sleeping ${JITTER}s before ray.init() to avoid same-node race"
+sleep "$JITTER"
+
 python - <<'PY'
 import flwr
 import torch
