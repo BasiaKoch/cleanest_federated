@@ -276,29 +276,10 @@ def main():
     client_resources = ({"num_cpus": 1, "num_gpus": 1.0 / num_clients}
                         if device_str == "cuda" else {"num_cpus": 1, "num_gpus": 0.0})
 
-    # See run_one_flower.py for full rationale on these ray_init_args.
-    # Summary: shared HPC compute nodes have port + tmpdir collisions when
-    # multiple Flower jobs co-locate; explicit ray_init_args + the SLURM
-    # template's RAY_TMPDIR + startup jitter together prevent the
-    # "Failed to start GCS" 4-minute crash pattern.
-    import os as _os
-    ray_init_args: Dict = {
-        "include_dashboard": False,
-        "ignore_reinit_error": True,
-        "log_to_driver": False,
-    }
-    if "RAY_TMPDIR" in _os.environ:
-        ray_init_args["_temp_dir"] = _os.environ["RAY_TMPDIR"]
-    _slurm_cpus = _os.environ.get("SLURM_CPUS_PER_TASK")
-    if _slurm_cpus and _slurm_cpus.isdigit():
-        ray_init_args["num_cpus"] = int(_slurm_cpus)
-    if device_str == "cuda":
-        ray_init_args["num_gpus"] = 1
-    # NOTE: see run_one_flower.py — port= and _redis_password are not
-    # accepted by Ray 2.31's ray.init() and the diagnostic confirmed ports
-    # are free on the compute nodes, so the original port-collision
-    # hypothesis was wrong. These args have been removed.
-    print(f"  ray_init_args: {ray_init_args}")
+    # Use Flower's default ray.init() — RAY_TMPDIR from the SLURM template
+    # is sufficient for the historical working configuration (see
+    # submit_two_client_90_10_rare_stress.sh and the existing results that
+    # were generated this way).
 
     t0 = time.time()
     history_obj = fl.simulation.start_simulation(
@@ -307,7 +288,6 @@ def main():
         config=fl.server.ServerConfig(num_rounds=args.num_rounds),
         strategy=strategy,
         client_resources=client_resources,
-        ray_init_args=ray_init_args,
     )
     elapsed = time.time() - t0
 

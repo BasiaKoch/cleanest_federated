@@ -46,19 +46,6 @@ export RAY_TMPDIR="/tmp/ray-${SLURM_JOB_ID:-$$}"
 mkdir -p "$RAY_TMPDIR"
 trap 'rm -rf "$RAY_TMPDIR"' EXIT
 
-if ! touch "$RAY_TMPDIR/preflight.test" 2>/dev/null; then
-    echo "ERROR: cannot write to $RAY_TMPDIR — compute-node /tmp may be read-only or full." >&2
-    df -h /tmp >&2
-    exit 2
-fi
-rm -f "$RAY_TMPDIR/preflight.test"
-
-# Per-job startup jitter — breaks race condition on simultaneous ray.init()
-# calls when multiple Flower jobs land on the same compute node.
-JITTER=$(( (RANDOM % 14) + 1 ))
-echo "Startup jitter: sleeping ${JITTER}s before ray.init() to avoid same-node race"
-sleep "$JITTER"
-
 python - <<'PY'
 import flwr
 import torch

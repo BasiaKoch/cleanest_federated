@@ -464,59 +464,14 @@ def main():
     client_resources = ({"num_cpus": 1, "num_gpus": 1.0 / num_clients}
                         if device_str == "cuda" else {"num_cpus": 1, "num_gpus": 0.0})
 
-    # --- ray_init_args: defensive configuration for shared HPC compute nodes.
-    #
-    # On Cambridge's ampere queue (and similar SLURM clusters) multiple SLURM
-    # jobs can co-locate on the same physical compute node. Ray's default
-    # ray.init() tries to bind GCS to port 6379 (Redis-style); when a sibling
-    # job already holds that port the GCS server fails silently (gcs_server.out
-    # is empty) and the user-facing error is the unhelpful
-    #     RuntimeError: Failed to start GCS.
-    # The previous RAY_TMPDIR-isolation patch in the SLURM templates fixed
-    # session-directory collisions but not the port collision. Here we:
-    #   (a) compute a deterministic per-job GCS port in the ephemeral range
-    #       [10000, 60000) keyed off SLURM_JOB_ID — so each job gets a unique
-    #       port even on a shared node;
-    #   (b) disable the Ray dashboard — it grabs additional ports (8265 by
-    #       default) and is unused in batch-mode HPC runs anyway;
-    #   (c) pass _temp_dir through explicitly (env-var alone is not honoured
-    #       reliably across all Ray versions);
-    #   (d) match num_cpus to the SLURM allocation so Ray doesn't oversubscribe
-    #       the node detecting 64-core total when we only have 4.
-    import os as _os
-    ray_init_args: Dict = {
-        # Dashboard binds port 8265 by default; on shared compute nodes a
-        # sibling job will already hold it. Disabling it removes one of the
-        # most common GCS-startup failure modes.
-        "include_dashboard": False,
-        # Allow re-init across the SLURM template's retry loop without
-        # raising on the second attempt.
-        "ignore_reinit_error": True,
-        # Reduce SLURM log spam.
-        "log_to_driver": False,
-    }
-    # Pass _temp_dir explicitly. The RAY_TMPDIR env var IS honoured by Ray,
-    # but passing it directly is the recommended approach in Ray 2.x and
-    # eliminates ambiguity if a future Ray version changes behaviour.
-    if "RAY_TMPDIR" in _os.environ:
-        ray_init_args["_temp_dir"] = _os.environ["RAY_TMPDIR"]
-    # Match Ray's resource view to the SLURM allocation. Without this, Ray
-    # detects the FULL compute node (e.g. 64 cores) and over-subscribes
-    # against sibling jobs on the same node, which can starve GCS startup.
-    _slurm_cpus = _os.environ.get("SLURM_CPUS_PER_TASK")
-    if _slurm_cpus and _slurm_cpus.isdigit():
-        ray_init_args["num_cpus"] = int(_slurm_cpus)
-    if device_str == "cuda":
-        ray_init_args["num_gpus"] = 1
-    # NOTE: previously we set ray_init_args["port"] for a unique GCS bind
-    # point, but Ray 2.31 rejects this with
-    #     RuntimeError: Unknown keyword argument(s): port
-    # and the ray_diagnostic script (job 29902842 on gpu-q-13) confirmed
-    # all default Ray ports (6379, 6380, 6381, 8265) are FREE on the
-    # compute nodes — so port collision was never the cause of "Failed
-    # to start GCS" in the first place. _redis_password was likewise
-    # removed: it is deprecated / removed in Ray 2.x.
-    print(f"  ray_init_args: {ray_init_args}")
+    # NOTE: previously this block built an explicit ray_init_args dict and
+    # passed it to start_simulation(). On Cambridge's ampere cluster, that
+    # produced "RuntimeError: Failed to start GCS" failures across many
+    # compute nodes. Reverting to Flower's default ray.init() (no
+    # ray_init_args passed) — which is what previous successful runs (e.g.
+    # the existing engineered partition results) used. Ray reads RAY_TMPDIR
+    # from the environment exported by the SLURM template, which has been
+    # sufficient for the working historical configuration.
 
     t0 = time.time()
     history_obj = fl.simulation.start_simulation(
@@ -525,7 +480,6 @@ def main():
         config=fl.server.ServerConfig(num_rounds=args.num_rounds),
         strategy=strategy,
         client_resources=client_resources,
-        ray_init_args=ray_init_args,
     )
     elapsed = time.time() - t0
 
