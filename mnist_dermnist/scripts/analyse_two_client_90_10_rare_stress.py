@@ -327,7 +327,7 @@ def _summarise(global_metrics: pd.DataFrame,
                  "global": {},
                  "critical_classes": {}}
     paired_seeds = sorted(
-        s for s in global_metrics["seed"].unique()
+        int(s) for s in global_metrics["seed"].unique()
         if {"fedavg", "fedprox"}.issubset(
             set(global_metrics[global_metrics["seed"] == s]["algorithm"]))
     )
@@ -341,7 +341,7 @@ def _summarise(global_metrics: pd.DataFrame,
         a = sub[sub["algorithm"] == "fedavg"].iloc[0]
         p = sub[sub["algorithm"] == "fedprox"].iloc[0]
         rows.append({
-            "seed": s,
+            "seed": int(s),
             "delta_macro_f1": float(p["macro_f1"]) - float(a["macro_f1"]),
             "delta_balanced_acc": float(p["balanced_accuracy"]) - float(a["balanced_accuracy"]),
             "delta_accuracy": float(p["accuracy"]) - float(a["accuracy"]),

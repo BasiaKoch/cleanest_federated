@@ -1,0 +1,45 @@
+{
+  "n_runs": 2,
+  "paired_seeds": [
+    42
+  ],
+  "global": {
+    "mean_delta_macro_f1": 0.030965637617372144,
+    "mean_delta_balanced_acc": 0.013523918803702684,
+    "mean_delta_accuracy": 0.005985037406483706,
+    "per_seed": [
+      {
+        "seed": 42,
+        "delta_macro_f1": 0.030965637617372144,
+        "delta_balanced_acc": 0.013523918803702684,
+        "delta_accuracy": 0.005985037406483706
+      }
+    ]
+  },
+  "critical_classes": {
+    "dermatofibroma": {
+      "class": 3,
+      "class_name": "dermatofibroma",
+      "mean_delta_f1": 0.15335021874280452,
+      "n_seeds": 1,
+      "mean_delta_recall": 0.043478260869565216,
+      "mean_delta_precision": 0.19871794871794873
+    },
+    "melanoma": {
+      "class": 4,
+      "class_name": "melanoma",
+      "mean_delta_f1": 0.011382169299532563,
+      "n_seeds": 1,
+      "mean_delta_recall": 0.026905829596412578,
+      "mean_delta_precision": -0.019798868636077938
+    },
+    "vascular_lesions": {
+      "class": 6,
+      "class_name": "vascular_lesions",
+      "mean_delta_f1": 0.05917779523435451,
+      "n_seeds": 1,
+      "mean_delta_recall": -0.034482758620689724,
+      "mean_delta_precision": 0.13345864661654133
+    }
+  }
+}

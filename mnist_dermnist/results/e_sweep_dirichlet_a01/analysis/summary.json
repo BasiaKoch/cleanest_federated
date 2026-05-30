@@ -1,0 +1,22 @@
+{
+  "n_runs": 6,
+  "seeds_included": [
+    42,
+    123,
+    456
+  ],
+  "E_values": [
+    20
+  ],
+  "per_E": [
+    {
+      "E": 20,
+      "n_seeds": 3,
+      "mean_delta": 0.0031627576337502163,
+      "median_delta": 0.0005093818569321673,
+      "sem_delta": 0.012527407651534641,
+      "fedprox_wins": 2,
+      "wilcoxon_p": NaN
+    }
+  ]
+}
