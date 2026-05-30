@@ -89,6 +89,21 @@ def build_parser() -> argparse.ArgumentParser:
         description="Flower-framework FedAvg/FedProx run (paired-fair).")
     ap.add_argument("--algorithm", choices=["fedavg", "fedprox"], required=True)
     ap.add_argument("--mu", type=float, default=0.0)
+    # Per-client μ override. When set, takes precedence over --mu and
+    # establishes a client-cid → μ mapping. Format: "0:0.01,1:0.0" sets
+    # μ = 0.01 on client 0 and μ = 0 on client 1. Used to test
+    # asymmetric-proximal-regularisation hypotheses (HAPI-FedProx
+    # [Springer 2024, DOI:10.1007/978-3-032-11733-5_17]; Yao et al.
+    # 2024 NeurIPS [arXiv:2410.08934] — "Effect of Personalization in
+    # FedProx" — proves the optimal μ depends on per-client
+    # heterogeneity). Any client cid not listed in the mapping inherits
+    # the global --mu value. Recorded in the output JSON metadata.
+    ap.add_argument("--mu-per-client", type=str, default=None,
+                    help="Per-client μ override (e.g. '0:0.01,1:0.0'). "
+                         "Overrides --mu for the specified client cids. "
+                         "Outside Li 2020 Thm 4's uniform-μ regime; "
+                         "covered by Yao et al. 2024 per-client minimax "
+                         "framework (arXiv:2410.08934).")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--local-epochs", type=int, default=20)
     ap.add_argument("--num-rounds", type=int, default=150)
@@ -178,6 +193,20 @@ def main():
     args = build_parser().parse_args()
     mu = 0.0 if args.algorithm == "fedavg" else float(args.mu)
     seed = int(args.seed)
+
+    # Parse --mu-per-client into a {cid: mu} dict. Empty/None → no override.
+    mu_per_client_map: "dict[int, float] | None" = None
+    if args.mu_per_client:
+        if args.algorithm != "fedprox":
+            raise ValueError("--mu-per-client requires --algorithm fedprox "
+                             "(per-client proximal coefficients only meaningful "
+                             "when the proximal term is active).")
+        mu_per_client_map = {}
+        for spec in args.mu_per_client.split(","):
+            cid_s, mu_s = spec.split(":")
+            mu_per_client_map[int(cid_s.strip())] = float(mu_s.strip())
+        if any(v < 0 for v in mu_per_client_map.values()):
+            raise ValueError("--mu-per-client values must be non-negative.")
 
     # --- Reproducibility ---
     # NOTE: Python's `random` module is seeded explicitly here because
@@ -402,6 +431,13 @@ def main():
             cid_int = int(context_or_cid.cid)
         else:
             cid_int = int(context_or_cid)
+        # Per-client μ: lookup overrides --mu when --mu-per-client is set.
+        # Clients not listed in the map fall back to the global μ.
+        client_mu = (
+            mu_per_client_map.get(cid_int, mu)
+            if mu_per_client_map is not None
+            else mu
+        )
         return FlClient(
             cid=cid_int,
             train_dataset=train,
@@ -412,7 +448,7 @@ def main():
             momentum=args.momentum,
             weight_decay=args.weight_decay,
             batch_size=args.batch_size,
-            proximal_mu=mu,
+            proximal_mu=client_mu,
             device=device_str,
             epoch_schedule=epoch_schedule,
             criterion=build_criterion(),
@@ -492,7 +528,18 @@ def main():
     arch_tag = "" if args.model_variant == "gn" else f"_arch-{args.model_variant}"
     # Asymmetric-straggler-protocol tag — only when stragglers are dropped.
     drop_tag = "_drop" if args.drop_stragglers else ""
-    stem = f"{args.algorithm}_mu{mu}_E{args.local_epochs}{sh_tag}{c_tag}{arch_tag}{drop_tag}_s{seed}"
+    # Per-client-μ tag — only when asymmetric μ is in effect. Encodes the
+    # mapping in the filename so it cannot be silently mixed with
+    # symmetric-μ runs in downstream analysis. Format: "_muPC-c0m0.01-c1m0.0".
+    if mu_per_client_map is not None:
+        muc_tag = "_muPC-" + "-".join(
+            f"c{cid}m{mu_per_client_map[cid]}"
+            for cid in sorted(mu_per_client_map)
+        )
+    else:
+        muc_tag = ""
+    stem = (f"{args.algorithm}_mu{mu}_E{args.local_epochs}"
+            f"{sh_tag}{c_tag}{arch_tag}{drop_tag}{muc_tag}_s{seed}")
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
@@ -527,6 +574,10 @@ def main():
             "predictions_file": predictions_file,
             "checkpoint_file": checkpoint_file,
             "seed": seed, "algorithm": args.algorithm, "mu": mu,
+            "mu_per_client": (
+                {str(k): float(v) for k, v in mu_per_client_map.items()}
+                if mu_per_client_map is not None else None
+            ),
             "local_epochs": args.local_epochs, "num_rounds": args.num_rounds,
             "lr": args.lr, "momentum": args.momentum, "weight_decay": args.weight_decay,
             "batch_size": args.batch_size, "device": device_str,

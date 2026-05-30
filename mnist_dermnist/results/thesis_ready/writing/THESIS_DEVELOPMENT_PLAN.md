@@ -54,11 +54,14 @@ Stronger would over-claim ("FedProx is universally better", "the mechanism is pr
 | 0 | Re-analyse existing runs for mechanism diagnostics | ~0 (re-analysis) | ✅ | **Do first** |
 | 1 | Heterogeneity ladder, JS-indexed | ~75 GPU-h | ✅ | ★★★★★ |
 | 2 | μ × heterogeneity sweep (norm-vs-performance dissociation) | ~30 GPU-h | ✅ | ★★★★★ |
-| 3 | Mechanism decomposition: FedProx vs FedNova, equal vs unequal local work | ~20 GPU-h | ✅ | ★★★★☆ |
+| 2b | Node-pinned 3-seed variance isolation on L4 | ~6 GPU-h | ✅ | ★★★★★ **Pre-Stage-B blocker** |
+| 2c | Extended-rounds (250) 3-seed L3 — convergence-truncation fix | ~11 GPU-h | ✅ | ★★★★★ **Pre-Stage-B blocker** |
+| 3 | Mechanism decomposition: FedProx vs FedNova, equal vs unequal local work | ~12 GPU-h (Stage A) | ✅ | ★★★★☆ |
 | 4 | Federation-value + personalisation-gap matrix | ~12 GPU-h | ✅ | ★★★★☆ |
 | 5 | Small-hospital rare-class case study, **3-seed promotion** | ~12 GPU-h | ✅ (case-study) | ★★★★☆ |
 | 6 | Update-direction diagnostics (full delta logging + cosine) | ~3 GPU-h + code | ✅ | ★★★☆☆ |
 | 7 | (conditional) Client bump to ~8 for variance / worst-client | ~30 GPU-h | unlocks `n=2`-dead diagnostics | ★★★☆☆ |
+| 9 | Asymmetric per-client μ on L4 (Yao 2024 / HAPI-FedProx ablation) | ~12 GPU-h | ✅ | ★★★★☆ |
 | — | SCAFFOLD targeted run | (impl-heavy) | — | ★★☆☆☆ (defer) |
 
 ---
@@ -177,8 +180,10 @@ Overlaps with Experiment 1's FedProx runs — do not double-count compute.
 **Diagnostics.** `‖Δᵢᵗ‖`, oscillation, dissimilarity over rounds; macro-F1; rare-recall; update norm **normalised per local step** (so unequal-`E` runs are comparable).
 
 **Why — cited.**
-- **FedNova (Wang et al. 2020, NeurIPS)** — proves that when clients take unequal numbers of local steps `τᵢ`, naive size-weighted averaging *converges toward an inconsistent objective*, and corrects it by normalising each update by `τᵢ`. **This is precisely the mechanism FedProx cannot cleanly remove**, making FedProx-vs-FedNova-under-unequal-epochs your cleanest decomposition. [arXiv:2007.07481](https://arxiv.org/abs/2007.07481).
-- **FedProx (Li et al. 2020) §5.2** — explicitly tolerates variable/partial local work via γ-inexact local solvers; FedProx *includes* stragglers' partial updates where FedAvg drops them. This is the literature basis for any asymmetric-protocol variant. [arXiv:1812.06127](https://arxiv.org/abs/1812.06127).
+- **FedNova (Wang et al. 2020, NeurIPS)** §5 — the paper itself runs this equal-vs-unequal-`τᵢ` ablation. Figs. 3-4 (synthetic) compare regimes with `τᵢ = 30` uniform vs `τᵢ` heterogeneous across clients; Fig. 6 (CIFAR-10 non-IID) sweeps total local steps with `E = 2` fixed, isolating the `τᵢ` effect. The paper proves that under unequal `τᵢ`, naive size-weighted averaging converges toward an **inconsistent objective**, and corrects it by normalising each update by `τᵢ`. **In the equal-`τᵢ` regime FedNova reduces to FedAvg** — this is the canonical control. [arXiv:2007.07481](https://arxiv.org/abs/2007.07481).
+- **NIID-Bench (Li, Diao, Chen, He 2022, ICDE) §4.2** — establishes `{FedAvg, FedProx, SCAFFOLD, FedNova} × {equal-τ, unequal-τ}` as the standard four-way comparison for this mechanism decomposition. [arXiv:2102.02079](https://arxiv.org/abs/2102.02079).
+- **FedShuffle (Horváth et al. 2022)** — re-frames the equal-vs-unequal control theoretically: FedNova's gains vanish under equal local work, providing the mechanism-isolation rationale you cite. [arXiv:2204.13169](https://arxiv.org/abs/2204.13169).
+- **FedProx (Li et al. 2020) §5.2** — explicitly tolerates variable/partial local work via γ-inexact local solvers; FedProx *includes* stragglers' partial updates where FedAvg drops them. This is the literature basis for any asymmetric-protocol variant, and the reason FedProx-vs-FedNova-under-unequal-`τᵢ` is the cleanest mechanism decomposition (FedProx damps drift but cannot fix objective inconsistency). [arXiv:1812.06127](https://arxiv.org/abs/1812.06127).
 - **Recent benchmark (2024)** *"Not All FL Algorithms Are Created Equal"* reports *"FedNova is quite unstable and accuracy changes rapidly as communication rounds increase in heterogeneous settings."* — cite as a caveat on FedNova results. [arXiv:2403.17287](https://arxiv.org/abs/2403.17287).
 
 **Repo state.** You already have FedNova results in `results/system_het_random_fednova/`. Need: equal-vs-unequal-`E` comparison consolidated; FedNova on the ladder at unequal-`E` configurations.
@@ -297,6 +302,43 @@ Overlaps with Experiment 1's FedProx runs — do not double-count compute.
 **Failure modes.** **One** targeted multi-client run, **not** a 2→4→8→16 sweep. Each new client count is a partition redesign and a new sweep — resist the explosion.
 
 **Outputs.** One bar chart of per-client macro-F1 under each algorithm + variance / worst-client summary table. Fairness sub-claim becomes legitimate.
+
+---
+
+### Experiment 9 — Asymmetric per-client μ on L4 (ablation of Yao 2024 / HAPI-FedProx)
+
+**What.** Re-run L4 (`two_client_90_10_rare_stress`) with **per-client** proximal coefficients instead of a single global μ. Specifically, four conditions × 3 seeds:
+
+| Condition | μ₀ (large/dominant client) | μ₁ (small specialist client) | Hypothesis |
+|---|---|---|---|
+| FedAvg | 0 | 0 | no anchor |
+| Symmetric FedProx | 0.01 | 0.01 | baseline; suspect rare-class collapse |
+| ⭐ **Asymmetric "anchor-large"** | 0.01 | 0 | anchor dominant, free specialist — Yao 2024 prediction |
+| Asymmetric "anchor-small" (control) | 0 | 0.01 | reverse direction — should NOT help if direction matters |
+
+**Why this exists.** The L4 single-seed result shows the entire FedProx-vs-FedAvg macro-F1 deficit (Δ = −0.026) is **one class** — vascular lesions, which only Client 1 holds (0.702 FedAvg → 0.481 FedProx, Δ = −0.221). FedProx is better or equal on 6 of 7 classes. The "anchor-large" design tests whether removing the proximal anchor from the small specialist client recovers vascular signal without sacrificing common-class wins. The reverse-asymmetric arm is the critical **direction control**: without it, any rare-class recovery is confounded with "any reduction in average μ helps."
+
+**Why — cited.**
+- **Yao et al. 2024 (NeurIPS) *"Effect of Personalization in FedProx"*** — proves the **optimal μ depends on per-client statistical heterogeneity**, providing theoretical justification for per-client μ. The asymmetric design here is an ablation of their framework on a medical-FL class-imbalance setting. [arXiv:2410.08934](https://arxiv.org/abs/2410.08934).
+- **HAPI-FedProx (Springer 2024)** — adapts μ per client based on a local-vs-global heterogeneity index. **Closest direct precedent** for the design here; HAPI's per-client μ is set adaptively, while ours is set asymmetrically by fixed cid as a controlled ablation. [DOI:10.1007/978-3-032-11733-5_17](https://doi.org/10.1007/978-3-032-11733-5_17).
+- **FedPBS** — selectively applies the proximal correction to small-batch clients only (effectively μ = 0 for large clients). Structurally identical to this design but inverted in direction; cite as methodological precedent. [arXiv:2603.13909](https://arxiv.org/abs/2603.13909).
+- **FedProx (Li et al. 2020) Theorem 4** — the convergence proof assumes **uniform μ across clients**. Setting μ₁ = 0 puts the design **outside Li 2020's proved regime** but inside Yao 2024's per-client minimax framework. State this caveat explicitly in the methods. [arXiv:1812.06127](https://arxiv.org/abs/1812.06127).
+- **Distinct from personalised-FL methods.** Ditto ([arXiv:2012.04221](https://arxiv.org/abs/2012.04221)), pFedMe ([arXiv:2006.08848](https://arxiv.org/abs/2006.08848)), APFL ([arXiv:2003.13461](https://arxiv.org/abs/2003.13461)) and FedAMP ([arXiv:2007.03797](https://arxiv.org/abs/2007.03797)) all train **client-specific output models**; this design only varies the **local regularisation strength** on a single shared global model. Acknowledge the distinction in the related-work paragraph.
+
+**Repo state.** `run_one_flower.py` extended with `--mu-per-client` flag; the `FlClient` constructor already accepted `proximal_mu` as a per-instance parameter, so the change is a small client-factory plumbing routine. Output JSON records `mu_per_client` for traceability; filenames carry a `_muPC-c0m...-c1m...` tag so symmetric-μ and asymmetric-μ runs cannot be silently mixed in analysis.
+
+**Cost.** 12 runs × ~1 GPU-h = ~12 GPU-hours.
+
+**Failure modes.**
+- **Direction control may collapse.** If anchor-small (control) and anchor-large produce indistinguishable vascular F1, the directional Yao 2024 prediction is unsupported on this task — report honestly as a negative result.
+- **Convergence outside Theorem 4 regime.** μ₁ = 0 means Client 1's local updates are unconstrained; if the global model oscillates more under asymmetric μ than symmetric, document via update-norm logs.
+- **Single-class effect.** Even if the experiment "works" (vascular recovers), the finding is a single-class trade-off on a single benchmark; do not over-claim mechanism universality.
+
+**Outputs.**
+- `tab:asymmetric_mu_L4` — 4 rows × {macro-F1, vascular-F1, rare-avg-F1, balanced-acc} mean ± SD.
+- `F_asymmetric_mu_L4.pdf` — 2-panel: (a) per-condition macro-F1 dot plot with 3-seed means, (b) per-class F1 mean ± SD bars showing the vascular-class signal.
+
+**Critical framing requirement.** When writing this up, position it as *"an ablation of Yao 2024's per-client μ framework on a medical-FL class-imbalance setting"* — NOT as "we propose asymmetric per-client μ." The latter would be over-claiming given HAPI-FedProx (Springer 2024) and Yao 2024 already established the approach.
 
 ---
 
@@ -445,6 +487,10 @@ Plus one dense diagnostics table (`tab:diagnostics_summary`) showing rounds-to-t
 - **FedAWARE (Wu et al. 2024)** — [arXiv:2310.02702](https://arxiv.org/abs/2310.02702). Gradient diversity diagnostic.
 - **Stabilizing FL under Extreme Heterogeneity** (2025) — [arXiv:2508.06692](https://arxiv.org/abs/2508.06692). μ-tuning under heterogeneity is still open.
 - **Understanding FL from IID to Non-IID** (2025) — [arXiv:2502.00182](https://arxiv.org/abs/2502.00182). Recent experimental-study precedent.
+- **Yao et al. (2024) — "Effect of Personalization in FedProx"** — NeurIPS. [arXiv:2410.08934](https://arxiv.org/abs/2410.08934). Per-client minimax-optimal μ; theoretical anchor for Experiment 9 (asymmetric per-client μ).
+- **HAPI-FedProx (Springer 2024)** — [DOI:10.1007/978-3-032-11733-5_17](https://doi.org/10.1007/978-3-032-11733-5_17). Adaptive per-client μ via heterogeneity index; closest direct precedent for Experiment 9.
+- **FedPBS** — [arXiv:2603.13909](https://arxiv.org/abs/2603.13909). Selective proximal correction by client batch size (effectively per-client μ); structurally analogous to Experiment 9 with inverted direction.
+- **FedShuffle (Horváth et al. 2022)** — [arXiv:2204.13169](https://arxiv.org/abs/2204.13169). Theoretical re-framing of FedNova's equal-vs-unequal-`τᵢ` control; cite in Experiment 3.
 
 ### Optional / discussion-only
 
