@@ -53,9 +53,12 @@ for port in 6379 6380 6381 8265; do
 done
 echo ""
 echo "============================================================"
-echo "Attempt 1: Ray init with all our defensive options"
+echo "Attempt 1: Ray init with the production ray_init_args"
+echo "(matches what run_one_flower.py uses)"
 echo "============================================================"
 
+# This Python block exits with code 0 on success and 1 on failure so
+# SLURM's afterok dependency correctly gates downstream jobs.
 python <<'PY'
 import os, sys, traceback
 print(f"Python: {sys.version}")
@@ -66,36 +69,36 @@ except ImportError as e:
     print(f"FATAL: cannot import ray: {e}")
     sys.exit(1)
 
-jid_s = os.environ.get("SLURM_JOB_ID", "999")
-jid = int(jid_s) if jid_s.isdigit() else 999
-gcs_port = 30000 + (jid % 30000)
-print(f"Will try GCS port: {gcs_port}")
-print(f"_temp_dir:         {os.environ.get('RAY_TMPDIR', '/tmp/ray')}")
+# Mirror exactly what run_one_flower.py sets in ray_init_args.
+ray_init_args = {
+    "include_dashboard": False,
+    "ignore_reinit_error": True,
+    "log_to_driver": False,
+}
+if "RAY_TMPDIR" in os.environ:
+    ray_init_args["_temp_dir"] = os.environ["RAY_TMPDIR"]
+slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
+if slurm_cpus and slurm_cpus.isdigit():
+    ray_init_args["num_cpus"] = int(slurm_cpus)
+ray_init_args["num_gpus"] = 1
+
+print(f"ray_init_args: {ray_init_args}")
 print()
 
 try:
-    ray.init(
-        include_dashboard=False,
-        ignore_reinit_error=True,
-        log_to_driver=False,
-        _temp_dir=os.environ.get("RAY_TMPDIR", "/tmp/ray"),
-        num_cpus=4,
-        num_gpus=1,
-        port=gcs_port,
-        _redis_password=f"flwr_{jid}",
-    )
-    print("✅ SUCCESS: Ray started with unique port + all defensive options")
+    ray.init(**ray_init_args)
+    print("✅ SUCCESS: Ray started successfully with production ray_init_args.")
     print(f"   Resources: {ray.cluster_resources()}")
-    print(f"   Address:   {ray.get_runtime_context().get_node_id()}")
     ray.shutdown()
     print("   Clean shutdown.")
+    sys.exit(0)
 except Exception as e:
-    print(f"❌ FAILED: {type(e).__name__}: {e}")
+    print(f"❌ FAILED with production args: {type(e).__name__}: {e}")
     print()
     print("Full traceback:")
     traceback.print_exc()
     print()
-    # Look at GCS log if any exists
+    # Look at GCS log if any exists.
     import glob
     for log in sorted(glob.glob(f"{os.environ.get('RAY_TMPDIR','')}/session_*/logs/gcs_server.*")):
         print(f"   --- {log} ---")
@@ -105,36 +108,35 @@ except Exception as e:
                 if content:
                     print(content[:2000])
                 else:
-                    print("   (empty)")
+                    print("   (empty — GCS process died before writing any log)")
         except Exception as ex:
             print(f"   (cannot read: {ex})")
+    print()
+    print("Trying MINIMAL config (only include_dashboard=False)...")
+    try:
+        ray.shutdown()  # in case partial state
+    except Exception:
+        pass
+    try:
+        ray.init(include_dashboard=False)
+        print("✅ MINIMAL works: the issue is one of the extra args (_temp_dir, num_cpus).")
+        ray.shutdown()
+        sys.exit(2)  # distinguish: minimal works, prod args broken
+    except Exception as e2:
+        print(f"❌ MINIMAL also failed: {type(e2).__name__}: {e2}")
+        traceback.print_exc()
+        sys.exit(1)  # Ray fundamentally broken
 PY
 
 py_rc=$?
 echo ""
 echo "============================================================"
-echo "Exit code: $py_rc"
+echo "Diagnostic exit code: $py_rc"
+echo "  0 = ✅ production ray_init_args works — safe to submit experiments"
+echo "  1 = ❌ Ray fundamentally broken (venv issue) — do NOT submit"
+echo "  2 = ⚠ minimal Ray works but production args fail — code change needed"
 echo "============================================================"
 
-if [ $py_rc -ne 0 ]; then
-    echo ""
-    echo "Diagnostic FAILED. Attempting fallback: ray.init() with no port specified"
-    echo "(let Ray pick a free port itself)..."
-    echo ""
-    python <<'PY'
-import os, ray, traceback
-try:
-    ray.init(include_dashboard=False, log_to_driver=False,
-             _temp_dir=os.environ.get("RAY_TMPDIR", "/tmp/ray"),
-             num_cpus=4, num_gpus=1)
-    print("✅ FALLBACK WORKED: Ray's auto-port assignment succeeds where port=30000+ fails")
-    print(f"   This means the issue is NOT port collision — port=auto would work.")
-    ray.shutdown()
-except Exception as e:
-    print(f"❌ FALLBACK ALSO FAILED: {type(e).__name__}: {e}")
-    print(f"   Ray cannot start at all on this compute node — venv or library issue.")
-    traceback.print_exc()
-PY
-fi
-
-exit 0
+# Propagate the python exit code so SLURM's afterok dependency gates
+# correctly: only exit 0 (Ray confirmed working) lets dependent jobs run.
+exit $py_rc

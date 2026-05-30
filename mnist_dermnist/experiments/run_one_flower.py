@@ -508,18 +508,14 @@ def main():
         ray_init_args["num_cpus"] = int(_slurm_cpus)
     if device_str == "cuda":
         ray_init_args["num_gpus"] = 1
-    # Unique GCS port per SLURM job. Ray's default GCS port is 6379 (Redis-
-    # style); on shared HPC compute nodes this is frequently held by another
-    # user's stale Ray instance or a system service, and the GCS server dies
-    # silently (gcs_server.out is empty) when bind fails. Deriving a
-    # deterministic port in the high ephemeral range [30000, 60000) from
-    # SLURM_JOB_ID gives each job a unique GCS bind point — eliminating the
-    # collision regardless of what other processes hold lower ports.
-    _slurm_jid = _os.environ.get("SLURM_JOB_ID")
-    if _slurm_jid and _slurm_jid.isdigit():
-        ray_init_args["_redis_password"] = f"flwr_{_slurm_jid}"  # namespace lock
-        gcs_port = 30000 + (int(_slurm_jid) % 30000)
-        ray_init_args["port"] = gcs_port
+    # NOTE: previously we set ray_init_args["port"] for a unique GCS bind
+    # point, but Ray 2.31 rejects this with
+    #     RuntimeError: Unknown keyword argument(s): port
+    # and the ray_diagnostic script (job 29902842 on gpu-q-13) confirmed
+    # all default Ray ports (6379, 6380, 6381, 8265) are FREE on the
+    # compute nodes — so port collision was never the cause of "Failed
+    # to start GCS" in the first place. _redis_password was likewise
+    # removed: it is deprecated / removed in Ray 2.x.
     print(f"  ray_init_args: {ray_init_args}")
 
     t0 = time.time()

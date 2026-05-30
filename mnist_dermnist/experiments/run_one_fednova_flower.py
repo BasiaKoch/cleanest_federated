@@ -294,11 +294,10 @@ def main():
         ray_init_args["num_cpus"] = int(_slurm_cpus)
     if device_str == "cuda":
         ray_init_args["num_gpus"] = 1
-    # See run_one_flower.py — unique GCS port to escape default-6379 collision.
-    _slurm_jid = _os.environ.get("SLURM_JOB_ID")
-    if _slurm_jid and _slurm_jid.isdigit():
-        ray_init_args["_redis_password"] = f"flwr_{_slurm_jid}"
-        ray_init_args["port"] = 30000 + (int(_slurm_jid) % 30000)
+    # NOTE: see run_one_flower.py — port= and _redis_password are not
+    # accepted by Ray 2.31's ray.init() and the diagnostic confirmed ports
+    # are free on the compute nodes, so the original port-collision
+    # hypothesis was wrong. These args have been removed.
     print(f"  ray_init_args: {ray_init_args}")
 
     t0 = time.time()
