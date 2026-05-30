@@ -1,119 +1,185 @@
 #!/bin/bash
-# Small-hospital case-study baselines — local-only + fine-tuning.
+# Small-hospital case-study baselines — submits all eight jobs to SLURM
+# with proper dependency ordering. Each job is its own sbatch
+# allocation; the fine-tuning jobs (which depend on the federated
+# checkpoints) use --dependency=afterok so they only launch after the
+# corresponding checkpoint-save job has completed successfully.
 #
-# Six new jobs that complete §Case Study: A Small Site with Unique
-# Rare Classes (Section sec:small-hospital). The federated FedAvg and
-# FedProx runs on the 2-client 90/10 partition already exist
-# (results/two_client_90_10_rare_stress/, seed 42). This script adds:
+# Job graph (8 jobs total, ~5-6 GPU-hours of total compute):
 #
-#   1. Local-only Client 0  (run_local_only.py)
-#   2. Local-only Client 1  (run_local_only.py)
-#   3. FedAvg + Client 0 fine-tuning  (run_finetune.py)
-#   4. FedAvg + Client 1 fine-tuning  (run_finetune.py)
-#   5. FedProx + Client 0 fine-tuning (run_finetune.py)
-#   6. FedProx + Client 1 fine-tuning (run_finetune.py)
+#   FedAvg checkpoint  ─┐
+#   (re-runs seed 42    │
+#    with --save-best-  │
+#    checkpoint flag)   │
+#                       ├──> Fine-tune  FedAvg + Client 0
+#                       └──> Fine-tune  FedAvg + Client 1
 #
-# This implements the standard FL baselining protocol used by Sheller
-# et al. (2018, 2020), Roth et al. (2020), and Pati et al. (2022) for
-# the "value of federation" comparison, plus the local-adaptation
-# protocol of Yu et al. (2022) "Salvaging Federated Learning by Local
-# Adaptation" for the personalised-FL comparison.
+#   FedProx checkpoint ─┐
+#   (re-runs seed 42    │
+#    with --save-best-  │
+#    checkpoint flag)   │
+#                       ├──> Fine-tune  FedProx + Client 0
+#                       └──> Fine-tune  FedProx + Client 1
 #
-# Prerequisite
-# ------------
-# The fine-tuning runs (#3-6) require the federated checkpoints to be
-# saved as .pt files. Re-run the existing seed-42 federated jobs once
-# more with the new --save-best-checkpoint flag to produce them:
+#   Local-only Client 0  (no dependency)
+#   Local-only Client 1  (no dependency)
 #
-#   bash -c '
-#     for ALGO_MU in "fedavg 0.0" "fedprox 0.01"; do
-#       set -- $ALGO_MU
-#       PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_flower \
-#         --algorithm "$1" --mu "$2" --seed 42 \
-#         --local-epochs 20 --num-rounds 150 \
-#         --partition two_client_90_10_rare_stress \
-#         --save-best-checkpoint \
-#         --device cuda \
-#         --out-dir mnist_dermnist/results/two_client_90_10_rare_stress
-#     done'
+# References for the baselines this implements
+# --------------------------------------------
+#   - Sheller et al. (2018, 2020), Roth et al. (2020), Pati et al. (2022):
+#     local-only-vs-federated comparison.
+#   - Yu et al. (2022): local fine-tuning protocol (5 epochs, lr=0.001).
+#   - Collins et al. (2021) FedRep; Marfoq et al. (2021): personalised-FL
+#     framing for the per-client gap discussion.
 #
-# Once the .pt files exist, this script runs everything else.
+# Usage
+# -----
+#   bash mnist_dermnist/scripts/submit_small_hospital_baselines.sh
 #
-# No SLURM / no Ray / no Flower: every job below is a single-process
-# PyTorch training. Runs locally with --device cpu (slow) or on a
-# single A100 with --device cuda (fast).
-#
-# Compute: ~3 GPU-hours total on A100 (two long local-only runs at
-# ~1 h each; four short fine-tuning runs at ~10-15 min each).
+#   The script prints the eight resulting SLURM job ids; monitor with
+#       squeue -u $USER
+#   and once all complete, the analysis script can ingest both output
+#   directories.
 set -uo pipefail
 
-# Resolve REPO_ROOT robustly whether the script is invoked from the
-# repo root, HPC home, or anywhere else.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
 cd "$REPO_ROOT"
 
 SEED=42
 PARTITION=two_client_90_10_rare_stress
+LOCAL_EPOCHS=20    # Federation E_max; matches existing seed-42 runs.
+NUM_ROUNDS=150     # Federation R; matches existing seed-42 runs.
+MU_PROX=0.01
+
 FED_DIR=mnist_dermnist/results/two_client_90_10_rare_stress
 LOCAL_OUT=mnist_dermnist/results/small_hospital_local_only
 FT_OUT=mnist_dermnist/results/small_hospital_finetune
-DEVICE=${DEVICE:-cuda}
+mkdir -p "$LOCAL_OUT" "$FT_OUT" "$FED_DIR" mnist_dermnist/logs
 
-mkdir -p "$LOCAL_OUT" "$FT_OUT"
+FLOWER_TPL="$REPO_ROOT/mnist_dermnist/scripts/slurm_template_flower.sh"
+SP_TPL="$REPO_ROOT/mnist_dermnist/scripts/slurm_template_single_process.sh"
 
-run() {
-  echo "============================================================"
-  echo "[$(date +%H:%M:%S)] $*"
-  echo "============================================================"
-  PYTHONPATH=. "$@" || { echo "FAILED: $*" >&2; return 1; }
+FAILED=()
+JOBS=()
+
+# Submit a federated run with --save-best-checkpoint enabled. Returns
+# the SLURM job id on stdout (last token of the `Submitted batch job N`
+# line from sbatch).
+submit_federated_checkpoint() {
+    local algo="$1" mu="$2" name="$3"
+    local jid
+    if ! jid=$(sbatch --parsable \
+        --job-name="$name" \
+        "$FLOWER_TPL" \
+        "$algo" "$mu" "$SEED" "$LOCAL_EPOCHS" \
+        "$FED_DIR" "$PARTITION" \
+        "--num-rounds $NUM_ROUNDS --save-best-checkpoint --log-update-norms"); then
+        echo "  FAILED to submit federated checkpoint job: $name" >&2
+        FAILED+=("$name")
+        return 1
+    fi
+    echo "  $name -> SLURM job $jid"
+    JOBS+=("$jid:$name")
+    echo "$jid"
 }
 
-# === Local-only baselines (configs 1, 2) =============================
-# Compute budget matched to the federation: 150 rounds × 20 local epochs
-# = 3000 epochs of cumulative local SGD. Equal compute keeps the
-# federation-vs-local comparison about data availability, not training
-# time.
-run python -m mnist_dermnist.experiments.run_local_only \
-  --seed $SEED --partition $PARTITION --client-id 0 \
-  --num-epochs 3000 --eval-every 20 \
-  --device $DEVICE --out-dir $LOCAL_OUT
+# Submit a single-process job. If $deps is non-empty, adds
+# --dependency=afterok:<jid>[:<jid>...].
+submit_single_process() {
+    local name="$1" module="$2" args="$3" deps="$4"
+    local dep_arg=""
+    if [ -n "$deps" ]; then
+        dep_arg="--dependency=afterok:$deps"
+    fi
+    local jid
+    if ! jid=$(sbatch --parsable \
+        --job-name="$name" \
+        $dep_arg \
+        "$SP_TPL" \
+        "$module" "$args"); then
+        echo "  FAILED to submit single-process job: $name" >&2
+        FAILED+=("$name")
+        return 1
+    fi
+    echo "  $name -> SLURM job $jid"
+    JOBS+=("$jid:$name")
+    echo "$jid"
+}
 
-run python -m mnist_dermnist.experiments.run_local_only \
-  --seed $SEED --partition $PARTITION --client-id 1 \
-  --num-epochs 3000 --eval-every 20 \
-  --device $DEVICE --out-dir $LOCAL_OUT
+echo "============================================================"
+echo "Step 1: re-run federated jobs to capture best-val checkpoints"
+echo "============================================================"
+# These two jobs re-run seed 42 of FedAvg and FedProx on the 90/10
+# partition, this time saving the best-val state_dict to a .pt file.
+FA_JID=$(submit_federated_checkpoint fedavg  0.0       "mn_sh_ckpt_fedavg_s${SEED}")
+FP_JID=$(submit_federated_checkpoint fedprox $MU_PROX  "mn_sh_ckpt_fedprox_s${SEED}")
 
-# === Fine-tuning baselines (configs 3-6) =============================
-# Yu et al. (2022) protocol: 5 epochs of local SGD at lr=0.001 starting
-# from the federated best-val checkpoint. The personalisation gap is the
-# difference between post-FT and pre-FT macro-F1 (computed and stored
-# automatically by run_finetune.py).
-CKPT_FA="$FED_DIR/best_state_fedavg_mu0.0_E20_s${SEED}.pt"
-CKPT_FP="$FED_DIR/best_state_fedprox_mu0.01_E20_s${SEED}.pt"
+echo ""
+echo "============================================================"
+echo "Step 2a: local-only baselines (no dependency, run immediately)"
+echo "============================================================"
+LOCAL0_ARGS="--seed $SEED --partition $PARTITION --client-id 0 \
+--num-epochs 3000 --eval-every 20 --device cuda --out-dir $LOCAL_OUT"
+LOCAL1_ARGS="--seed $SEED --partition $PARTITION --client-id 1 \
+--num-epochs 3000 --eval-every 20 --device cuda --out-dir $LOCAL_OUT"
 
-for ckpt in "$CKPT_FA" "$CKPT_FP"; do
-  if [ ! -f "$ckpt" ]; then
-    echo "MISSING CHECKPOINT: $ckpt" >&2
-    echo "Re-run the federated seed-42 jobs with --save-best-checkpoint first." >&2
-    echo "(See header comment of this script for the exact command.)" >&2
-    exit 1
-  fi
-done
+submit_single_process \
+    "mn_sh_local_only_c0_s${SEED}" \
+    "mnist_dermnist.experiments.run_local_only" \
+    "$LOCAL0_ARGS" \
+    "" > /dev/null
 
-for CID in 0 1; do
-  for CKPT in "$CKPT_FA" "$CKPT_FP"; do
-    run python -m mnist_dermnist.experiments.run_finetune \
-      --checkpoint "$CKPT" \
-      --seed $SEED --partition $PARTITION --client-id $CID \
-      --num-epochs 5 --lr 0.001 \
-      --device $DEVICE --out-dir $FT_OUT
-  done
+submit_single_process \
+    "mn_sh_local_only_c1_s${SEED}" \
+    "mnist_dermnist.experiments.run_local_only" \
+    "$LOCAL1_ARGS" \
+    "" > /dev/null
+
+echo ""
+echo "============================================================"
+echo "Step 2b: fine-tuning baselines (depend on Step 1 checkpoints)"
+echo "============================================================"
+CKPT_FA="$FED_DIR/best_state_fedavg_mu0.0_E${LOCAL_EPOCHS}_s${SEED}.pt"
+CKPT_FP="$FED_DIR/best_state_fedprox_mu${MU_PROX}_E${LOCAL_EPOCHS}_s${SEED}.pt"
+
+for cid in 0 1; do
+    # FedAvg + per-client fine-tuning, depends on the FedAvg checkpoint.
+    FT_FA_ARGS="--checkpoint $CKPT_FA --seed $SEED --partition $PARTITION \
+--client-id $cid --num-epochs 5 --lr 0.001 --device cuda --out-dir $FT_OUT"
+    submit_single_process \
+        "mn_sh_ft_fedavg_c${cid}_s${SEED}" \
+        "mnist_dermnist.experiments.run_finetune" \
+        "$FT_FA_ARGS" \
+        "$FA_JID" > /dev/null
+
+    # FedProx + per-client fine-tuning, depends on the FedProx checkpoint.
+    FT_FP_ARGS="--checkpoint $CKPT_FP --seed $SEED --partition $PARTITION \
+--client-id $cid --num-epochs 5 --lr 0.001 --device cuda --out-dir $FT_OUT"
+    submit_single_process \
+        "mn_sh_ft_fedprox_c${cid}_s${SEED}" \
+        "mnist_dermnist.experiments.run_finetune" \
+        "$FT_FP_ARGS" \
+        "$FP_JID" > /dev/null
 done
 
 echo ""
 echo "============================================================"
-echo "All small-hospital baselines complete."
-echo "Local-only outputs   : $LOCAL_OUT"
-echo "Fine-tuning outputs  : $FT_OUT"
+echo "All ${#JOBS[@]} jobs submitted."
 echo "============================================================"
+for entry in "${JOBS[@]}"; do
+    echo "  ${entry%%:*}  ${entry#*:}"
+done
+echo ""
+echo "Monitor with: squeue -u \$USER"
+echo "Logs at:      $REPO_ROOT/mnist_dermnist/logs/<job-name>_<jobid>.{out,err}"
+echo ""
+echo "Outputs land in:"
+echo "  - Federated checkpoints: $FED_DIR/best_state_*.pt"
+echo "  - Local-only baselines:  $LOCAL_OUT/"
+echo "  - Fine-tuning baselines: $FT_OUT/"
+echo ""
+if [ ${#FAILED[@]} -ne 0 ]; then
+    echo "WARNING: ${#FAILED[@]} submissions failed:"
+    for f in "${FAILED[@]}"; do echo "  - $f"; done
+    exit 1
+fi
