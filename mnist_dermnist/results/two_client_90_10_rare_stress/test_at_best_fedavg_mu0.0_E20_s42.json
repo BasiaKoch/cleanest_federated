@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "loss": 1.1647774465066238,
   "accuracy": 0.7211970074812968,
   "balanced_accuracy": 0.5406779519143105,
@@ -15,6 +16,24 @@
   "n": 2005,
   "selected_round": 138,
   "best_val_macro_f1": 0.5589302322391457,
+=======
+  "loss": 1.3714772511004212,
+  "accuracy": 0.7052369077306733,
+  "balanced_accuracy": 0.5316139994442325,
+  "macro_f1": 0.49019821081982984,
+  "per_class_f1": [
+    0.4857142857142857,
+    0.49696969696969695,
+    0.47641509433962265,
+    0.26865671641791045,
+    0.326007326007326,
+    0.8654292343387471,
+    0.5121951219512195
+  ],
+  "n": 2005,
+  "selected_round": 141,
+  "best_val_macro_f1": 0.5244125418360635,
+>>>>>>> 9e8f3a0 (plan)
   "predictions_file": "test_predictions_fedavg_mu0.0_E20_s42.npz",
   "checkpoint_file": "best_state_fedavg_mu0.0_E20_s42.pt",
   "seed": 42,
@@ -26,13 +45,13 @@
   "momentum": 0.9,
   "weight_decay": 0.0,
   "batch_size": 32,
-  "device": "cuda",
+  "device": "cpu",
   "fraction_fit": 1.0,
   "partition": "two_client_90_10_rare_stress",
   "image_size": 28,
-  "npz_path": "/home/bk489/federated_clean/cleanest_federated/dermamnist_64.npz",
+  "npz_path": "/Users/basiakoch/cleanest_federated/dermamnist_64.npz",
   "framework": "flower-simulation",
-  "framework_version": "1.23.0",
+  "framework_version": "1.29.0",
   "runner_script": "run_one_flower.py",
   "loss_type": "ce",
   "focal_gamma": null,
@@ -51,6 +70,7 @@
     "random_straggler_max_epochs": null,
     "permanent_epoch_choices": null
   },
+<<<<<<< HEAD
   "elapsed_s": 2690.9830391407013,
   "wall_clock_seconds": 2690.9830391407013,
   "git_commit": "4c02118f52c34918e4c529f5a6e812283d3ad27a",
@@ -62,4 +82,17 @@
   "device_name": "NVIDIA A100-SXM4-80GB",
   "run_started_at": "2026-05-30T15:00:52.021876+00:00",
   "run_finished_at": "2026-05-30T15:45:44.728420+00:00"
+=======
+  "elapsed_s": 88265.41641902924,
+  "wall_clock_seconds": 88265.41641902924,
+  "git_commit": "60cba848e8d843e1c5f63c46d8fd7bf9e314b84b",
+  "git_dirty": true,
+  "hostname": "MacBook-Pro-592.local",
+  "python_version": "3.14.3",
+  "torch_version": "2.11.0",
+  "cuda_available": false,
+  "device_name": null,
+  "run_started_at": "2026-05-29T14:27:06.307549+00:00",
+  "run_finished_at": "2026-05-30T14:58:12.672882+00:00"
+>>>>>>> 9e8f3a0 (plan)
 }
