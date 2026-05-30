@@ -41,6 +41,11 @@ if [ ! -f "$REPO_ROOT/dermamnist_64.npz" ]; then
     exit 2
 fi
 
+# Per-job Ray session dir — see slurm_template_flower.sh for rationale.
+export RAY_TMPDIR="/tmp/ray-${SLURM_JOB_ID:-$$}"
+mkdir -p "$RAY_TMPDIR"
+trap 'rm -rf "$RAY_TMPDIR"' EXIT
+
 python - <<'PY'
 import flwr
 import torch

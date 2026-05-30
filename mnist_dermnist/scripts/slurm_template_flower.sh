@@ -49,6 +49,18 @@ if [ ! -f "$REPO_ROOT/dermamnist_64.npz" ]; then
     exit 2
 fi
 
+# Per-job Ray session directory. Flower's start_simulation() calls
+# ray.init() which by default writes to /tmp/ray/session_<ts>_<pid>/. On
+# the shared ampere compute nodes this collides when multiple Flower
+# jobs land on the same node, and the GCS server fails to bind / write
+# logs, producing "RuntimeError: Failed to start GCS" within ~3 minutes.
+# Isolating Ray's tmpdir per-SLURM-job removes that contention entirely.
+# Ray reads RAY_TMPDIR from the environment at ray.init() time, so
+# exporting it here propagates through to Flower without code changes.
+export RAY_TMPDIR="/tmp/ray-${SLURM_JOB_ID:-$$}"
+mkdir -p "$RAY_TMPDIR"
+trap 'rm -rf "$RAY_TMPDIR"' EXIT
+
 python - <<'PY'
 import flwr
 import torch
