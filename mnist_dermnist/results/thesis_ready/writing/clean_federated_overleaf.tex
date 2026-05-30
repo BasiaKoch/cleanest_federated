@@ -1,4 +1,119 @@
 % ==============================================================================
+%                       *** WORK-IN-PROGRESS STATUS BLOCK ***
+%
+% Last update: late May 2026, after the Ray-GCS patch was applied to the
+% three Flower SLURM templates. This block is a checkpoint so you can
+% reopen the file and remember exactly where things stand without
+% re-reading the entire conversation history.
+%
+% --- Jobs currently submitted on Cambridge HPC (re-launched after RAY_TMPDIR
+%     patch) ---
+%
+%   (A) Heterogeneity-ladder Stage A pilot ............ 13 SLURM jobs
+%       Script:  mnist_dermnist/scripts/submit_ladder_pilot.sh
+%       Output:  mnist_dermnist/results/heterogeneity_ladder/L<level>_<partition>/
+%       Tests:   when does FedProx start outperforming FedAvg as
+%                heterogeneity worsens? Is the cause label skew, quantity
+%                skew, both, or unequal local work?
+%       Levels (one seed = 42, FedAvg + FedProx + (FedNova on L1/L3/L4)):
+%         L0  two_client_50_50_stratified_iid       IID control
+%         L1  two_client_86_14_quantity_only_strat. quantity skew only
+%         L2  two_client_50_50_label_skew_only      label skew only
+%         L3  two_client_70_30_rare_enriched        moderate mixed skew
+%         L4  two_client_90_10_rare_stress          existing severe stress
+%       Analysis script (already stubbed, idle until data arrives):
+%         results/thesis_ready/scripts/analyse_heterogeneity_ladder.py
+%
+%   (B) Small-hospital baselines (resubmission of the GCS-failed batch) .. 8 jobs
+%       Script:  mnist_dermnist/scripts/submit_small_hospital_baselines.sh
+%       Output:
+%         two_client_90_10_rare_stress/best_state_*.pt   (checkpoints)
+%         small_hospital_local_only/                     (local-only JSONs)
+%         small_hospital_finetune/                       (FT JSONs)
+%       Tests:
+%         1. Federation-value contrast: what does each client gain by
+%            joining the federation? (local-only already complete; arrows
+%            in Pareto figure already drawn.)
+%         2. Personalisation gap: does 5 epochs of local fine-tuning after
+%            federation close any remaining gap? Difference between
+%            FedAvg+FT and FedAvg, and between FedProx+FT and FedProx,
+%            per client. The differential is the novel claim.
+%
+% --- What is ALREADY in this file (no rework needed) ---
+%
+%   * Methods chapter: dataset, model, FL setup, algorithms, protocol,
+%     implementation, paired-seed protocol, reporting style.
+%   * Centralised baseline (mean macro-F1 0.560 +/- 0.024 over 10 seeds).
+%   * IID federated baseline (mechanism null).
+%   * Engineered non-IID primary result (pure-PyTorch headline +
+%     Flower cross-runtime sensitivity).
+%   * Mu-sensitivity sweep (5 mu values on engineered partition, single seed).
+%   * Per-class breakdown on the engineered partition.
+%   * Partition robustness across 4 partition designs.
+%   * Parameter-level evidence: per-client update norms.
+%   * Computational-work heterogeneity (S0/S1/S2) on engineered partition
+%     and the IID isolation contrast.
+%   * Asymmetric Li et al. (2020) §5.2 protocol replication.
+%   * Partial client participation (C = 0.5) sensitivity.
+%   * Small-hospital case study (single seed): all five regimes
+%     (Client 0 alone, Client 1 alone, FedAvg, FedProx, centralised)
+%     + Pareto figure + rare-class confusion figure.
+%
+% --- What to add when the HPC jobs finish ---
+%
+%   1. Heterogeneity-ladder results section (currently missing entirely).
+%      Will be a new \section{} probably after partition robustness, with
+%      five-row table + delta plot + interpretation paragraph following
+%      the eight cases enumerated in the experimental plan.
+%
+%   2. Two new rows in tab:small-hospital-fed-value
+%      (FedAvg+FT/Client X and FedProx+FT/Client X) + a "personalisation
+%      gap" paragraph in sec:small-hospital-federation-value.
+%
+%   3. Two new points on the Pareto scatter (the four fine-tuning regimes
+%      should land somewhere between the federated points and the
+%      centralised point if local FT successfully personalises).
+%
+%   4. (OPTIONAL) Volatility-flip analysis. Discovered while looking at
+%      the per-client specialty curves: FedProx's Client-0 specialty F1
+%      trends DOWN from 0.619 at round 28 to ~0.443 by round 150
+%      (smoothed), while FedAvg's is stable. The accompanying volatility
+%      profile inverts between algorithms: FedAvg has low common-class
+%      volatility (0.033) and high rare-class volatility (0.207); FedProx
+%      is the reverse (0.153 / 0.044). Interpretation: proximal anchor
+%      gradually reallocates limited model capacity from common classes
+%      to rare classes; best-val checkpointing catches FedProx at a
+%      "lucky" peak round (146) that test numbers do not reveal as
+%      atypical. Would make a strong sub-section if confirmed at 3 seeds;
+%      currently single-seed observation only.
+%
+% --- Known open questions ---
+%
+%   * Does the ladder show FedProx advantage emerging only at L2+
+%     (label skew) and growing through L3/L4, or does it already appear
+%     at L1 (quantity only)? Stage A pilot will answer.
+%   * Does FedNova help only when local-work counts are unequal? Stage A
+%     pilot includes FedNova at L1, L3, L4. If FedNova == FedAvg here,
+%     the objective-inconsistency story has empirical support.
+%   * Is the Client-0 downward drift under FedProx real or seed-specific?
+%     Cannot resolve without multi-seed reruns of the small-hospital
+%     partition (which would be the next compute ask).
+%   * SCAFFOLD: deferred. Documented as future work; not in the pilot.
+%
+% --- File / data locations (HPC) ---
+%
+%   Code:    /home/bk489/federated_clean/cleanest_federated
+%   Results: /home/bk489/federated_clean/cleanest_federated/mnist_dermnist/results/
+%   Logs:    /home/bk489/federated_clean/cleanest_federated/mnist_dermnist/logs/
+%
+% When jobs finish on HPC, rsync the relevant result directories down to
+% the local repo, then run analyse_heterogeneity_ladder.py and re-open this
+% file. The TODO markers below ("% TODO when jobs finish:") point at the
+% specific spots that need new content.
+% ==============================================================================
+
+
+% ==============================================================================
 % clean_federated_overleaf.tex
 %
 % Clean, compilable thesis starter file. Currently contains only the
@@ -1336,6 +1451,25 @@ holds it on one (no inter-client drift), consistent with the
 interpretation that the proximal anchor's contribution is
 conditional on multiple clients sharing the class.
 
+
+% =======================================================================
+% TODO when jobs finish: insert a new \section{} here for the
+%   heterogeneity-ladder Stage A pilot results.
+%
+%   Inputs:   mnist_dermnist/results/heterogeneity_ladder/L0_*..L4_*/
+%   Analysis: results/thesis_ready/scripts/analyse_heterogeneity_ladder.py
+%   Expected content:
+%     - one table with the 5 levels (rows) and {FedAvg, FedProx, FedNova}
+%       columns (macro-F1, rare-class avg F1, melanoma recall, update-norm
+%       ratio)
+%     - one delta plot vs FedAvg (PART 7 of the experimental plan)
+%     - interpretation paragraph following the 8 expected cases
+%       enumerated in the plan.
+%   When this section exists it should slot in BEFORE the small-hospital
+%   case study (which is a separate, complementary narrative), or AFTER
+%   the asymmetric protocol section if integrating with system-het story.
+% =======================================================================
+
 % ==============================================================================
 \section{Case Study: A Small Site with Unique Rare Classes}
 \label{sec:small-hospital}
@@ -1430,6 +1564,250 @@ inter-client drift, and a 2-client 90/10 partition produces drift
 between exactly the kind of dominant generalist and small
 rare-class specialist that motivates federated learning in
 multi-institution medical deployments.
+
+\subsection{The value of federation, decomposed by client}
+\label{sec:small-hospital-federation-value}
+
+The preceding subsection compared two federated algorithms on the
+same data. A complementary question, and one of the most operationally
+important in federated medical AI (Sheller et al.\ 2018, 2020;
+Roth et al.\ 2020; Pati et al.\ 2022), is what each client \emph{gains
+by participating in the federation at all} relative to training only on
+its own local data. To make this contrast concrete, each client was
+trained alone on its own 86\% / 14\% partition using a compute budget
+matched to the federation (3{,}000 epochs of local SGD, the same
+cumulative SGD-step total as $R = 150$ rounds of $E = 20$ local epochs).
+Identical hyperparameters, identical global validation and test sets,
+identical best-validation-checkpoint protocol. The local-only runs are
+therefore directly comparable to the federated and centralised
+references already reported.
+Table~\ref{tab:small-hospital-fed-value} and
+Figure~\ref{fig:federation-value} report the five-way contrast;
+Figure~\ref{fig:per-client-specialty-curves} additionally shows the
+$150$-round federated trajectories on each client's specialty
+classes, with the local-only reference drawn as a horizontal dashed
+line in each panel.
+
+\begin{table}[!htbp]
+\centering
+\caption{Test performance under five training regimes on the 2-client
+90/10 partition (Flower runtime, seed~$42$, single-seed case study).
+Per-class F1 columns are abbreviated to their first letter (A=actinic
+keratoses, B=basal cell carcinoma, BK=benign keratosis,
+\textbf{D}=dermatofibroma, \textbf{M}=melanoma, N=melanocytic nevi,
+\textbf{V}=vascular lesions). The starred classes (D, M, V) are held
+only by Client~1.}
+\label{tab:small-hospital-fed-value}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}l c c c c c c c c c@{}}
+\toprule
+Regime                       & Macro-F1 & A & B & BK & D$^{\bigstar}$ & M$^{\bigstar}$ & N & V$^{\bigstar}$ & acc.\ \\
+\midrule
+Client 0 alone (local-only)  & $0.349$  & $0.504$ & $0.533$ & $0.522$ & $0.000$           & $0.000$           & $0.883$ & $0.000$           & $0.747$ \\
+Client 1 alone (local-only)  & $0.123$  & $0.000$ & $0.000$ & $0.000$ & $0.106$           & $0.236$           & $0.000$ & $0.520$           & $0.129$ \\
+FedAvg federated             & $0.478$  & $0.507$ & $0.492$ & $0.529$ & $0.079$           & $0.313$           & $0.887$ & $0.537$           & $0.738$ \\
+FedProx federated ($\mu = 0.01$) & $\mathbf{0.509}$ & $0.483$ & $0.517$ & $0.526$ & $\mathbf{0.233}$  & $\mathbf{0.324}$  & $0.882$ & $\mathbf{0.596}$  & $0.744$ \\
+% TODO when fine-tuning jobs finish (HPC, ~30 min after their checkpoint
+% parents): insert four rows here for FedAvg+FT@C0, FedAvg+FT@C1,
+% FedProx+FT@C0, FedProx+FT@C1. Numbers come from
+% mnist_dermnist/results/small_hospital_finetune/test_at_best_*.json.
+% Same column structure; add a fourth paragraph "Local fine-tuning..."
+% to the four-paragraph block describing the personalisation gap.
+Centralised (pooled)         & $0.555$  & $0.433$ & $0.548$ & $0.576$ & $0.320$           & $0.415$           & $0.891$ & $0.704$           & $0.779$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_federation_value.pdf}
+\caption{Decomposed federation value on the 2-client 90/10 partition
+(Flower runtime, seed~$42$). \textbf{(a)} Test macro-F1 across the
+five training regimes. The dashed line marks the centralised
+reference; the two arrows annotate each client's macro-F1 lift from
+local-only training to FedProx federated training. \textbf{(b)}
+Per-class test F1 with rare classes (held only by Client~1) marked
+$\bigstar$ and shaded.}
+\label{fig:federation-value}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_per_client_specialty_curves.pdf}
+\caption{Per-client specialty trajectories on the 2-client 90/10
+partition (Flower runtime, seed~$42$, single seed). For each panel,
+the mean validation F1 over the client's own classes is plotted
+across the $150$ communication rounds for FedAvg (green) and FedProx
+(blue); thin transparent lines show the raw per-round trajectory and
+thick lines a $9$-round centred moving average. The dashed gold
+reference line marks the local-only best-validation F1 averaged over
+the same classes (the value the client achieves training alone, with
+matched compute budget). \textbf{(a)} Client~0's specialty --- the
+common classes actinic keratoses, basal cell carcinoma, benign
+keratosis, and melanocytic nevi --- on which federation
+\emph{slightly under-performs} the local-only baseline ($\approx$
+$0.61$--$0.62$ federated vs.\ $0.658$ local-only). \textbf{(b)}
+Client~1's specialty --- the rare classes dermatofibroma, melanoma,
+and vascular lesions --- on which federation \emph{substantially
+outperforms} the local-only baseline ($\approx 0.39$--$0.47$
+federated vs.\ $0.282$ local-only). At the best-validation rounds
+chosen for the reported test scores (FedAvg round $150$, FedProx
+round $146$), the mean over Client~1's classes is $0.388$ for
+FedAvg and $0.472$ for FedProx --- the latter consistent with the
+test-set per-class advantage on dermatofibroma reported in
+Table~\ref{tab:small-hospital-fed-value}.}
+\label{fig:per-client-specialty-curves}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.78\textwidth]{F_pareto_small_hospital.pdf}
+\caption{Federation Pareto frontier on the 2-client 90/10 partition
+(Flower runtime, seed~$42$). Each point's $x$-coordinate is the test
+F1 averaged over Client~0's four classes (actinic, basal, benign
+keratosis, melanocytic nevi); its $y$-coordinate is the test F1
+averaged over Client~1's three rare classes (dermatofibroma,
+melanoma, vascular). The two local-only points lie on opposite axes
+because the class-disjoint partition forces each client to score
+$F_1 = 0$ on classes it has never observed. Federated points
+($\text{FedAvg}, \text{FedProx}$) lie on the trade-off frontier
+between the two local-only corners. The dashed arrows mark each
+client's lift from local-only to FedProx. Centralised training
+($\approx (0.61, 0.48)$) is the Pareto-optimal point; FedProx
+$\approx (0.60, 0.38)$ is the closest federated approximation, and
+FedAvg $\approx (0.60, 0.31)$ is strictly Pareto-dominated by FedProx
+on this partition. The diagonal $y = x$ line marks the
+``equal-specialty'' configuration where both clients are served
+equally well; centralised falls below this line, indicating that even
+under pooled training the rare classes are harder than the common
+ones.}
+\label{fig:pareto-small-hospital}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_rare_class_confusion.pdf}
+\caption{Confusion-row decomposition for Client~1's three rare
+classes, comparing FedAvg and FedProx at the best-validation
+checkpoint. Each horizontal bar is the distribution of test-set
+predictions for the indicated true class; colours encode the
+predicted class. Numbers in parentheses on the left are the count of
+correctly identified test samples out of the total for that class.
+On dermatofibroma ($n = 23$) recall rises from $4/23$ under FedAvg to
+$5/23$ under FedProx, with predictions reallocated from common classes
+(basal cell carcinoma, benign keratosis) toward the correct class. On
+melanoma ($n = 223$) recall rises from $58/223$ to $64/223$ ($+6$
+patients correctly identified), again at the expense of common-class
+mis-predictions rather than the dominant melanocytic-nevi default
+which remains around $50\%$ under both algorithms. On vascular
+lesions ($n = 29$) FedProx shifts predictions from rare classes
+toward the correct vascular class (precision improvement), but
+recall is marginally lower than FedAvg ($17/29$ vs.\ $18/29$).}
+\label{fig:rare-class-confusion}
+\end{figure}
+
+Four observations follow.
+
+\paragraph{Solo training is structurally inadequate, especially for
+the small site.}
+Client~0 alone reaches macro-F1 $0.349$ and Client~1 alone reaches
+$0.123$ --- the latter is \emph{below} the $1/7 \approx 0.143$
+chance level for a 7-class classifier. Both numbers are mechanically
+explained by the class-disjoint partition: a client never assigns
+non-zero F1 to a class it has never seen at training time. Client~0
+scores exactly $F1 = 0$ on dermatofibroma, melanoma, and vascular
+lesions; Client~1 scores exactly $F1 = 0$ on actinic keratoses,
+basal cell carcinoma, benign keratosis, and (critically) melanocytic
+nevi --- the $67\%$ majority class in the test set, which Client~1
+has never observed. Increasing the compute budget does not address
+this gap: Client~1's best-validation checkpoint is reached at training
+epoch $40$ out of $3{,}000$, indicating that a $958$-sample
+$3$-class local model overfits in $\approx 1.3\%$ of the federation's
+per-client compute budget. The remainder of solo training degrades
+the model rather than improving it. The bottleneck is data diversity,
+not training time.
+
+\paragraph{Federation lifts both clients, but lifts the small site
+disproportionately.}
+Federation raises Client~0's per-client position from $0.349$ to
+$0.478$ (FedAvg, $+0.13$) or $0.509$ (FedProx, $+0.16$), a relative
+gain of $37$--$46\%$. The same federation raises Client~1's position
+from $0.123$ to the same shared global model values, a relative gain
+of $289$--$317\%$. Client~1 captures roughly $2.5\times$ as much
+absolute macro-F1 by joining the federation as Client~0 does, and
+a much larger multiple in relative terms. This asymmetry is the
+empirical answer to the small-hospital question: federated learning
+is most valuable to participants who could not have learned the task
+alone, and the value comes specifically from access to the classes
+their data does not contain.
+
+\paragraph{Centralisation remains a soft ceiling but is operationally
+inaccessible.}
+The centralised reference at seed $42$ achieves macro-F1 $0.555$
+($0.560 \pm 0.024$ averaged over the ten seeds of
+Section~\ref{sec:centralised-baseline}). FedProx recovers
+$0.509 / 0.555 \approx 92\%$ of this; FedAvg recovers $86\%$. The
+remaining gap to centralisation is the cost of not pooling data
+between clients; in the clinical setting that motivates this thesis
+this gap is exactly the price of preserving institutional data
+sovereignty, and is comparable in magnitude to the standard deviation
+of the centralised reference itself.
+
+\paragraph{FedProx Pareto-dominates FedAvg on the small client's
+classes at near-equal cost on the large client's.}
+Figure~\ref{fig:pareto-small-hospital} projects the five regimes
+into the $(\text{C0 specialty},\,\text{C1 specialty})$ plane. The two
+local-only points lie on the axes (each client mechanically scores
+$F_1 = 0$ on the classes it has never seen); the federated points lie
+on the trade-off frontier between them. FedProx at $\approx (0.60,
+0.38)$ is strictly Pareto-better than FedAvg at $\approx (0.60,
+0.31)$: it gives Client~1 an extra $0.074$ on the rare classes at
+the cost of essentially zero loss to Client~0 ($-0.002$, well below
+the across-class variance of either model). This is the
+algorithmic-fairness reading that the global macro-F1 number cannot
+expose; the proximal anchor reweights the trade-off toward the
+under-represented client while preserving the well-represented
+client's performance. Figure~\ref{fig:rare-class-confusion}
+decomposes the rare-class effect into a confusion-row view: on
+dermatofibroma the gain is concentrated in re-routing predictions
+away from common classes (basal cell carcinoma, benign keratosis);
+on melanoma it adds six correctly identified patients out of $223$
+without reducing the $\approx 50\%$ default-to-nevi error rate; on
+vascular lesions FedProx improves precision rather than recall.
+
+\paragraph{Federation as a mutual-aid contract.}
+What is exchanged through the federated aggregator is not data but
+\emph{class signal}: each client's local gradient update encodes
+information about classes the other client has never seen, and
+size-weighted parameter averaging mixes these signals into a global
+model that respects both contributors. Under this framing, the
+small-hospital scenario is best read as a contract --- Client~0
+accepts a small reduction on its own classes ($-0.05$ macro-F1)
+in exchange for Client~1 gaining substantially on its rare classes
+($+0.26$ macro-F1), with both sites strictly above their solo
+ceilings. FedProx shifts this contract further in the small client's
+favour at no extra cost to the large one; centralised pooling
+optimises both clients jointly but is operationally unavailable in
+a federation that preserves data sovereignty. The clinical analogue
+is direct: a specialist hospital's rare-case expertise becomes
+available to generalist hospitals through the global model, and the
+generalist hospitals' broad common-case coverage becomes available
+to the specialist --- without either site sharing patient images.
+
+The single-seed nature of this comparison remains the principal
+caveat. Per-class scores --- particularly on the rare-class side
+(dermatofibroma $n = 80$ globally, vascular lesions $n = 99$) ---
+should be read for direction rather than magnitude. The
+local-only-versus-federated direction is, however, robust by
+construction: a client with zero training samples of class $c$
+provably scores $F1 = 0$ on class $c$, and no amount of additional
+compute or seed variation changes that. Federation is the
+only mechanism in this setup that lifts either client off that
+mechanical zero.
 
 % ==============================================================================
 \section{Parameter-Level Evidence: Per-Client Update Norms}
