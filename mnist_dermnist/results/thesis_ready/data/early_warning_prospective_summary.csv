@@ -1,0 +1,2 @@
+n_train,n_test,n_train_positive,n_test_positive,auc_train,auc_test,auc_test_simple_threshold
+76,12,18,1,0.8448275862068966,1.0,0.9090909090909091

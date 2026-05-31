@@ -1,0 +1,5 @@
+threshold,precision,recall,n_flagged,n_truly_collapsed,n_falsely_flagged,net_rounds_saved
+0.3,0.2,1.0,5,1,4,-390
+0.5,0.2,1.0,5,1,4,-390
+0.7,1.0,1.0,1,1,0,130
+0.85,,,0,0,0,0
