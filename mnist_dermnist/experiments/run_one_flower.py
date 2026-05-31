@@ -584,8 +584,13 @@ def main():
         )
     else:
         lrc_tag = ""
+    # Loss-type tag — only when loss differs from default 'ce'. This was
+    # missing in earlier versions and caused B2 (FedProx × weighted-CE)
+    # runs to overwrite each other within the same (algorithm, seed)
+    # pair. The tag prevents that collision.
+    loss_tag = "" if args.loss_type == "ce" else f"_loss-{args.loss_type}"
     stem = (f"{args.algorithm}_mu{mu}_E{args.local_epochs}"
-            f"{sh_tag}{c_tag}{arch_tag}{drop_tag}{muc_tag}{lrc_tag}_s{seed}")
+            f"{sh_tag}{c_tag}{arch_tag}{drop_tag}{muc_tag}{lrc_tag}{loss_tag}_s{seed}")
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)

@@ -336,7 +336,17 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     sh_tag = "" if args.system_het_mode == "uniform" else f"_sh-{args.system_het_mode}"
     c_tag = "" if abs(args.fraction_fit - 1.0) < 1e-9 else f"_C{args.fraction_fit}"
-    stem = f"fednova_mu0.0_E{args.local_epochs}{sh_tag}{c_tag}_s{seed}"
+    # Per-client-lr tag — prevents filename collision when --lr-per-client
+    # varies the LR per client. Without this tag, asymmetric-LR FedNova
+    # runs overwrite symmetric-LR runs within the same seed.
+    if lr_per_client_map is not None:
+        lrc_tag = "_lrPC-" + "-".join(
+            f"c{cid}lr{lr_per_client_map[cid]}"
+            for cid in sorted(lr_per_client_map)
+        )
+    else:
+        lrc_tag = ""
+    stem = f"fednova_mu0.0_E{args.local_epochs}{sh_tag}{c_tag}{lrc_tag}_s{seed}"
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
@@ -360,6 +370,10 @@ def main():
             **test_metrics,
             "predictions_file": predictions_file,
             "seed": seed, "algorithm": "fednova", "mu": 0.0,
+            "lr_per_client": (
+                {str(k): float(v) for k, v in lr_per_client_map.items()}
+                if lr_per_client_map is not None else None
+            ),
             "local_epochs": args.local_epochs, "num_rounds": args.num_rounds,
             "lr": args.lr, "momentum": args.momentum, "weight_decay": args.weight_decay,
             "batch_size": args.batch_size, "device": device_str,
