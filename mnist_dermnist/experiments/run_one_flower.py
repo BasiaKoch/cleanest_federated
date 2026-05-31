@@ -104,6 +104,19 @@ def build_parser() -> argparse.ArgumentParser:
                          "Outside Li 2020 Thm 4's uniform-μ regime; "
                          "covered by Yao et al. 2024 per-client minimax "
                          "framework (arXiv:2410.08934).")
+    # Per-client learning-rate override. Tests whether the FedProx
+    # advantage extends to asymmetric LR (extension of Li 2020 §5.2
+    # which only varies local epochs). Format: '0:0.01,1:0.005' sets
+    # lr=0.01 on client 0, lr=0.005 on client 1. Cited gap: Wang 2020
+    # (FedNova) proves correction only for unequal τ_i (local epochs);
+    # FedLALR (arXiv:2309.09719, 2023) introduces per-client adaptive
+    # LRs but does not isolate the FedProx-vs-FedNova mechanism
+    # distinction under LR asymmetry.
+    ap.add_argument("--lr-per-client", type=str, default=None,
+                    help="Per-client learning-rate override (e.g. "
+                         "'0:0.01,1:0.005'). Tests Li 2020 §5.2 protocol "
+                         "extension from asymmetric-E to asymmetric-LR. "
+                         "Clients not in the map fall back to --lr.")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--local-epochs", type=int, default=20)
     ap.add_argument("--num-rounds", type=int, default=150)
@@ -207,6 +220,16 @@ def main():
             mu_per_client_map[int(cid_s.strip())] = float(mu_s.strip())
         if any(v < 0 for v in mu_per_client_map.values()):
             raise ValueError("--mu-per-client values must be non-negative.")
+
+    # Parse --lr-per-client into a {cid: lr} dict (asymmetric-LR experiment).
+    lr_per_client_map: "dict[int, float] | None" = None
+    if args.lr_per_client:
+        lr_per_client_map = {}
+        for spec in args.lr_per_client.split(","):
+            cid_s, lr_s = spec.split(":")
+            lr_per_client_map[int(cid_s.strip())] = float(lr_s.strip())
+        if any(v <= 0 for v in lr_per_client_map.values()):
+            raise ValueError("--lr-per-client values must be strictly positive.")
 
     # --- Reproducibility ---
     # NOTE: Python's `random` module is seeded explicitly here because
@@ -438,13 +461,19 @@ def main():
             if mu_per_client_map is not None
             else mu
         )
+        # Per-client lr: lookup overrides --lr when --lr-per-client is set.
+        client_lr = (
+            lr_per_client_map.get(cid_int, args.lr)
+            if lr_per_client_map is not None
+            else args.lr
+        )
         return FlClient(
             cid=cid_int,
             train_dataset=train,
             indices=client_indices[cid_int],
             model_builder=lambda: get_model(model_registry_key, num_classes=7, dropout=0.2),
             seed=seed,
-            lr=args.lr,
+            lr=client_lr,
             momentum=args.momentum,
             weight_decay=args.weight_decay,
             batch_size=args.batch_size,
@@ -547,8 +576,16 @@ def main():
         )
     else:
         muc_tag = ""
+    # Per-client-lr tag — only when asymmetric LR is in effect.
+    if lr_per_client_map is not None:
+        lrc_tag = "_lrPC-" + "-".join(
+            f"c{cid}lr{lr_per_client_map[cid]}"
+            for cid in sorted(lr_per_client_map)
+        )
+    else:
+        lrc_tag = ""
     stem = (f"{args.algorithm}_mu{mu}_E{args.local_epochs}"
-            f"{sh_tag}{c_tag}{arch_tag}{drop_tag}{muc_tag}_s{seed}")
+            f"{sh_tag}{c_tag}{arch_tag}{drop_tag}{muc_tag}{lrc_tag}_s{seed}")
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
@@ -586,6 +623,10 @@ def main():
             "mu_per_client": (
                 {str(k): float(v) for k, v in mu_per_client_map.items()}
                 if mu_per_client_map is not None else None
+            ),
+            "lr_per_client": (
+                {str(k): float(v) for k, v in lr_per_client_map.items()}
+                if lr_per_client_map is not None else None
             ),
             "local_epochs": args.local_epochs, "num_rounds": args.num_rounds,
             "lr": args.lr, "momentum": args.momentum, "weight_decay": args.weight_decay,

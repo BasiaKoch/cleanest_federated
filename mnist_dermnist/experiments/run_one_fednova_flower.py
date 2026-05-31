@@ -108,6 +108,13 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--local-epochs", type=int, default=20)
     ap.add_argument("--num-rounds", type=int, default=150)
     ap.add_argument("--lr", type=float, default=0.01)
+    ap.add_argument("--lr-per-client", type=str, default=None,
+                    help="Per-client learning-rate override (e.g. "
+                         "'0:0.01,1:0.005'). Tests Li 2020 §5.2 protocol "
+                         "extension from asymmetric-E to asymmetric-LR. "
+                         "NOTE: FedNova's normaliser derivation (Wang 2020) "
+                         "assumes uniform LR — asymmetric LR is OUTSIDE the "
+                         "regime FedNova proves correction for.")
     ap.add_argument("--momentum", type=float, default=0.9,
                     help="Local SGD momentum. Passed to FedNova normaliser.")
     ap.add_argument("--weight-decay", type=float, default=0.0)
@@ -174,6 +181,16 @@ def main():
         sh_cfg, num_clients=num_clients,
         num_rounds=args.num_rounds, seed=seed,
     )
+
+    # Parse --lr-per-client into {cid: lr} dict (asymmetric-LR experiment).
+    lr_per_client_map: "dict[int, float] | None" = None
+    if args.lr_per_client:
+        lr_per_client_map = {}
+        for spec in args.lr_per_client.split(","):
+            cid_s, lr_s = spec.split(":")
+            lr_per_client_map[int(cid_s.strip())] = float(lr_s.strip())
+        if any(v <= 0 for v in lr_per_client_map.values()):
+            raise ValueError("--lr-per-client values must be strictly positive.")
 
     # --- Global model init ---
     torch.manual_seed(seed)
@@ -252,13 +269,19 @@ def main():
             cid_int = int(context_or_cid.cid)
         else:
             cid_int = int(context_or_cid)
+        # Per-client lr lookup (asymmetric-LR experiment).
+        client_lr = (
+            lr_per_client_map.get(cid_int, args.lr)
+            if lr_per_client_map is not None
+            else args.lr
+        )
         return FlClientFedNova(
             cid=cid_int,
             train_dataset=train,
             indices=client_indices[cid_int],
             model_builder=lambda: DermMNISTCNN(num_classes=7, dropout=0.2),
             seed=seed,
-            lr=args.lr,
+            lr=client_lr,
             momentum=args.momentum,
             weight_decay=args.weight_decay,
             batch_size=args.batch_size,
