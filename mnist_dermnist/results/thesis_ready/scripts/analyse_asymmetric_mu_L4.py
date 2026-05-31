@@ -77,7 +77,6 @@ for label, stem, idx in CONDITIONS:
             macro_f1=x.get("macro_f1"),
             balanced_accuracy=x.get("balanced_accuracy"),
             rare_avg_f1=float(np.mean([pc[i] for i in RARE_IDX])),
-            f1_vascular=pc[6],
             **{f"f1_{CLASS_NAMES[i]}": pc[i] for i in range(7)},
         ))
 df = pd.DataFrame(rows)

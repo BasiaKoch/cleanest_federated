@@ -67,7 +67,6 @@ for label, stem, idx in CONDITIONS:
             macro_f1=x.get("macro_f1"),
             balanced_accuracy=x.get("balanced_accuracy"),
             rare_avg_f1=float(np.mean([pc[i] for i in RARE_IDX])),
-            f1_vascular=pc[6],
             **{f"f1_{CLASS_NAMES[i]}": pc[i] for i in range(7)},
         ))
 df = pd.DataFrame(rows)
@@ -93,7 +92,7 @@ for label, _, idx in CONDITIONS:
         return m, s
     mm, ms = m_sd("macro_f1")
     rm, rs = m_sd("rare_avg_f1")
-    vm, vs = m_sd("f1_vascular")
+    vm, vs = m_sd("f1_vascular")  # f1_vascular comes from the **{} expansion above (CLASS_NAMES[6]=vascular)
     summary.append(dict(condition=label, cond_idx=idx, n=n,
                         macro_mean=mm, macro_sd=ms,
                         rare_mean=rm, rare_sd=rs,
