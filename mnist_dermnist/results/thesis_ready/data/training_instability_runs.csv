@@ -1,0 +1,89 @@
+source,partition,algorithm,mu,seed,unequal_E,drop_stragglers,file,std_last_K,mean_last_K,range_last_K,n_rounds
+symmetric L4 (node_pinned),L4,fedprox,0.01,123,False,False,history_fedprox_mu0.01_E20_s123.csv,0.0241057704716549,0.5127271428117369,0.08055992762181002,150
+symmetric L4 (node_pinned),L4,fedprox,0.01,456,False,False,history_fedprox_mu0.01_E20_s456.csv,0.01824275569989839,0.48138246553102426,0.04891448924996311,150
+symmetric L4 (node_pinned),L4,fedavg,0.0,456,False,False,history_fedavg_mu0.0_E20_s456.csv,0.019346469781363312,0.47134606589963984,0.06300874501557979,150
+symmetric L4 (node_pinned),L4,fedavg,0.0,123,False,False,history_fedavg_mu0.0_E20_s123.csv,0.037306009469611615,0.4076239105354375,0.13093294147122897,150
+symmetric L4 (node_pinned),L4,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.026901936930966958,0.44676153896722387,0.07601019032986761,150
+symmetric L4 (node_pinned),L4,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.024801921310755867,0.41556489371817734,0.0824248776506416,150
+symmetric L4 (90/10 baseline),L4,fedprox,0.01,123,False,False,history_fedprox_mu0.01_E20_s123.csv,0.0241057704716549,0.5127271428117369,0.08055992762181002,150
+symmetric L4 (90/10 baseline),L4,fedprox,0.01,456,False,False,history_fedprox_mu0.01_E20_s456.csv,0.01824275569989839,0.48138246553102426,0.04891448924996311,150
+symmetric L4 (90/10 baseline),L4,fedavg,0.0,456,False,False,history_fedavg_mu0.0_E20_s456.csv,0.019597051769105697,0.4803185252108354,0.05702015834978624,150
+symmetric L4 (90/10 baseline),L4,fedavg,0.0,123,False,False,history_fedavg_mu0.0_E20_s123.csv,0.037699658218930565,0.4273187932768908,0.12449349098002921,150
+symmetric L4 (90/10 baseline),L4,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.022040700736545744,0.4507748711249257,0.0848060681403422,150
+symmetric L4 (90/10 baseline),L4,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.04049061132351577,0.42071669009024504,0.11859271558554402,150
+extended L3 (250r),L3,fedprox,0.01,123,False,False,history_fedprox_mu0.01_E20_s123.csv,0.012741578044936093,0.5537374167206561,0.04647587469890668,250
+extended L3 (250r),L3,fedprox,0.01,456,False,False,history_fedprox_mu0.01_E20_s456.csv,0.013267725368399548,0.5747046124323351,0.031216583705784617,250
+extended L3 (250r),L3,fedavg,0.0,456,False,False,history_fedavg_mu0.0_E20_s456.csv,0.009109442887532586,0.5166492034159385,0.02749485120888362,250
+extended L3 (250r),L3,fedavg,0.0,123,False,False,history_fedavg_mu0.0_E20_s123.csv,0.015219776302726312,0.5818524206959245,0.046563699747081855,250
+extended L3 (250r),L3,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.014275282988870305,0.5153699774152474,0.041211400424762235,250
+extended L3 (250r),L3,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.022363614646894313,0.49926511420329706,0.07751993145055897,250
+L4 asymmetric μ,L4,fedprox,0.01,123,False,False,history_fedprox_mu0.01_E20_s123.csv,0.017549873532534302,0.5050224197875395,0.05854591937144338,150
+L4 asymmetric μ,L4,fedprox,0.01,456,False,False,history_fedprox_mu0.01_E20_s456.csv,0.025127350319972677,0.4801978793886728,0.07842025283184634,150
+L4 asymmetric μ,L4,fedprox,0.01,123,False,False,history_fedprox_mu0.01_E20_muPC-c0m0.0-c1m0.01_s123.csv,0.009447478359050179,0.42669650867352155,0.03543772935705847,150
+L4 asymmetric μ,L4,fedprox,0.01,456,False,False,history_fedprox_mu0.01_E20_muPC-c0m0.01-c1m0.0_s456.csv,0.02618092816598353,0.4878054466017985,0.07442673684641965,150
+L4 asymmetric μ,L4,fedavg,0.0,456,False,False,history_fedavg_mu0.0_E20_s456.csv,0.017725276407653104,0.4557411405403979,0.06054960596849701,150
+L4 asymmetric μ,L4,fedprox,0.01,123,False,False,history_fedprox_mu0.01_E20_muPC-c0m0.01-c1m0.0_s123.csv,0.018302748465312612,0.4889695258347665,0.06229981875634649,150
+L4 asymmetric μ,L4,fedavg,0.0,123,False,False,history_fedavg_mu0.0_E20_s123.csv,0.034232593986345754,0.4422727337153824,0.10531435821704643,150
+L4 asymmetric μ,L4,fedprox,0.01,456,False,False,history_fedprox_mu0.01_E20_muPC-c0m0.0-c1m0.01_s456.csv,0.014675689811137978,0.46104704394018353,0.05271542746492919,150
+L4 asymmetric μ,L4,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.027219275179743856,0.4316574403431962,0.09453345568480259,150
+L4 asymmetric μ,L4,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_muPC-c0m0.0-c1m0.01_s42.csv,0.018398305212837546,0.4133643606697926,0.0513974080079328,150
+L4 asymmetric μ,L4,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_muPC-c0m0.01-c1m0.0_s42.csv,0.02062043551691678,0.4808778131424435,0.07197485837120365,150
+L4 asymmetric μ,L4,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.023338957667469608,0.41387916719493373,0.06608929435269328,150
+FedNova × E (L3 equal & unequal),L3,fedavg,0.0,42,True,False,history_fedavg_mu0.0_E20_sh-fixed_stragglers_s42.csv,0.010692527433595878,0.4954596761262561,0.037076610379274566,150
+FedNova × E (L3 equal & unequal),L3,fedprox,0.01,42,True,False,history_fedprox_mu0.01_E20_sh-fixed_stragglers_s42.csv,0.019735039707837004,0.507171467751691,0.0695837611509425,150
+FedNova × E (L3 equal & unequal),L3,fednova,0.0,42,True,False,history_fednova_mu0.0_E20_sh-fixed_stragglers_s42.csv,0.08200607990743007,0.17246753916500698,0.22681458111252817,150
+FedNova × E (L3 equal & unequal),L3,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.016073367008394436,0.5075347315470726,0.054150190922896524,150
+FedNova × E (L3 equal & unequal),L3,fednova,0.0,42,False,False,history_fednova_mu0.0_E20_s42.csv,0.02145791536016834,0.5315612525758648,0.08188482512158662,150
+FedNova × E (L3 equal & unequal),L3,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.008163449132813444,0.5115727967221568,0.025352874822822002,150
+FedNova × E (L4 equal & unequal),L4,fedavg,0.0,42,True,False,history_fedavg_mu0.0_E20_sh-fixed_stragglers_s42.csv,0.02980380971752969,0.3980914287112429,0.08724291174305238,150
+FedNova × E (L4 equal & unequal),L4,fedprox,0.01,42,True,False,history_fedprox_mu0.01_E20_sh-fixed_stragglers_s42.csv,0.03501789084935384,0.42223240993477484,0.08434356244355917,150
+FedNova × E (L4 equal & unequal),L4,fednova,0.0,42,True,False,history_fednova_mu0.0_E20_sh-fixed_stragglers_s42.csv,0.03825615747792724,0.04651277492487839,0.1208154059967549,150
+FedNova × E (L4 equal & unequal),L4,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.017404014039207875,0.44077573105306855,0.058357531718224,150
+FedNova × E (L4 equal & unequal),L4,fednova,0.0,42,False,False,history_fednova_mu0.0_E20_s42.csv,0.08655404292380012,0.42935724271558395,0.2314809989509063,150
+FedNova × E (L4 equal & unequal),L4,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.026123655104253678,0.4522153896375335,0.08013760285406712,150
+Li 2020 §5.2 protocol,L4,fedavg,0.0,42,True,True,history_fedavg_mu0.0_E20_sh-fixed_stragglers_drop_s42.csv,0.001519503871531888,0.34467467411470265,0.004848293634840517,150
+Li 2020 §5.2 protocol,L4,fedprox,0.01,42,True,True,history_fedprox_mu0.01_E20_sh-fixed_stragglers_drop_s42.csv,0.0017199164609805375,0.36149240336915966,0.0051856169868492175,150
+Li 2020 §5.2 protocol,L4,fedprox,0.01,456,True,False,history_fedprox_mu0.01_E20_sh-fixed_stragglers_s456.csv,0.017081744169792946,0.48357244545688693,0.04992516022210142,150
+Li 2020 §5.2 protocol,L4,fedavg,0.0,456,True,True,history_fedavg_mu0.0_E20_sh-fixed_stragglers_drop_s456.csv,0.00139185106619861,0.36767488478133786,0.003710962698841469,150
+Li 2020 §5.2 protocol,L4,fedprox,0.01,42,True,False,history_fedprox_mu0.01_E20_sh-fixed_stragglers_s42.csv,0.022870229051520932,0.44607850173594965,0.07589059436203377,150
+Li 2020 §5.2 protocol,L4,fedprox,0.01,123,True,False,history_fedprox_mu0.01_E20_sh-fixed_stragglers_s123.csv,0.0388552007208502,0.46656831295014395,0.11186170335272166,150
+Li 2020 §5.2 protocol,L4,fedavg,0.0,123,True,True,history_fedavg_mu0.0_E20_sh-fixed_stragglers_drop_s123.csv,0.0011987590501133245,0.3709950713749345,0.003727912071508077,150
+Li 2020 §5.2 protocol,L4,fedprox,0.01,123,True,True,history_fedprox_mu0.01_E20_sh-fixed_stragglers_drop_s123.csv,0.0014604253485772248,0.35090096076653193,0.005213263136937485,150
+Li 2020 §5.2 protocol,L4,fedavg,0.0,456,False,False,history_fedavg_mu0.0_E20_s456.csv,0.02704142262979323,0.4529759270732939,0.07618446711088267,150
+Li 2020 §5.2 protocol,L4,fedprox,0.01,456,True,True,history_fedprox_mu0.01_E20_sh-fixed_stragglers_drop_s456.csv,0.0041968178161068395,0.3598228580571194,0.009870014113581127,150
+Li 2020 §5.2 protocol,L4,fedavg,0.0,123,False,False,history_fedavg_mu0.0_E20_s123.csv,0.04100085868585887,0.4456361477952232,0.13659981908727176,150
+Li 2020 §5.2 protocol,L4,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.022514870866605564,0.41916923230317427,0.07521492858089457,150
+perfect-storm,L4,fedprox,1.0,42,True,False,history_fedprox_mu1.0_E20_sh-random_stragglers_s42.csv,0.02578332194250193,0.3526879249939904,0.08346636825071796,150
+perfect-storm,L4,fedavg,0.0,456,True,True,history_fedavg_mu0.0_E20_sh-random_stragglers_drop_s456.csv,3.657118196434064e-18,0.030447599450170604,0.0,150
+perfect-storm,L4,fedavg,0.0,123,True,True,history_fedavg_mu0.0_E20_sh-random_stragglers_drop_s123.csv,0.0,0.1147989734816082,0.0,150
+perfect-storm,L4,fedprox,0.01,123,True,False,history_fedprox_mu0.01_E20_sh-random_stragglers_s123.csv,0.03723845509575381,0.45784960376164385,0.1340529640551374,150
+perfect-storm,L4,fedavg,0.0,42,True,True,history_fedavg_mu0.0_E20_sh-random_stragglers_drop_s42.csv,1.4628472785736255e-17,0.11438830469351109,0.0,150
+perfect-storm,L4,fedprox,0.01,456,True,False,history_fedprox_mu0.01_E20_sh-random_stragglers_s456.csv,0.03884743608188014,0.45616253123973394,0.1128663130477966,150
+perfect-storm,L4,fedprox,1.0,123,True,False,history_fedprox_mu1.0_E20_sh-random_stragglers_s123.csv,0.01337730523908599,0.3379094695931968,0.04129372592234559,150
+perfect-storm,L4,fedprox,1.0,456,True,False,history_fedprox_mu1.0_E20_sh-random_stragglers_s456.csv,0.02969084368791391,0.31991145110822716,0.0894557214589804,150
+perfect-storm,L4,fedprox,0.01,42,True,False,history_fedprox_mu0.01_E20_sh-random_stragglers_s42.csv,0.03472299287563331,0.45357040571953255,0.1012331079934159,150
+μ-sweep (L0),L0,fedprox,1.0,42,False,False,history_fedprox_mu1.0_E20_s42.csv,0.05282823418907704,0.5089468755572146,0.17805057923391293,150
+μ-sweep (L0),L0,fedprox,0.001,42,False,False,history_fedprox_mu0.001_E20_s42.csv,0.0026146708111374818,0.6594772587338796,0.006966621512144999,150
+μ-sweep (L0),L0,fedprox,0.1,42,False,False,history_fedprox_mu0.1_E20_s42.csv,0.001946857083538759,0.6083333228233924,0.0065603280776513895,150
+μ-sweep (L0),L0,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.002325689505363872,0.6060711658433509,0.007668543465798261,150
+μ-sweep (L2),L2,fedprox,1.0,42,False,False,history_fedprox_mu1.0_E20_s42.csv,0.04450724894041682,0.4566025749095524,0.1328732692876971,150
+μ-sweep (L2),L2,fedprox,0.001,42,False,False,history_fedprox_mu0.001_E20_s42.csv,0.015231644207330218,0.542844772329111,0.054207416650158935,150
+μ-sweep (L2),L2,fedprox,0.1,42,False,False,history_fedprox_mu0.1_E20_s42.csv,0.006507157574832784,0.5398184407496702,0.019304276619083516,150
+μ-sweep (L2),L2,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.0054947358080632185,0.5577353506875495,0.015949775895248153,150
+μ-sweep (L4),L4,fedprox,1.0,42,False,False,history_fedprox_mu1.0_E20_s42.csv,0.016888132569424792,0.3388442354183836,0.05931985004042739,150
+μ-sweep (L4),L4,fedprox,0.001,42,False,False,history_fedprox_mu0.001_E20_s42.csv,0.016393165465434352,0.4162571057795955,0.0507490356907252,150
+μ-sweep (L4),L4,fedprox,0.1,42,False,False,history_fedprox_mu0.1_E20_s42.csv,0.005255719944741205,0.40915422450956296,0.018688698717083507,150
+μ-sweep (L4),L4,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.018205524230380746,0.46196422445612073,0.06104020092094464,150
+heterogeneity ladder,varied,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.02028628440731153,0.4913657476472901,0.0767101956165881,150
+heterogeneity ladder,varied,fednova,0.0,42,False,False,history_fednova_mu0.0_E20_s42.csv,0.036125370884917886,0.5213574787640233,0.10202824280858802,150
+heterogeneity ladder,varied,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.03824301316270002,0.5232023181590856,0.09825379962087094,150
+heterogeneity ladder,varied,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.0029509001414256405,0.6085917530376006,0.009363096810795613,150
+heterogeneity ladder,varied,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.001993188899404219,0.5986951376446631,0.006520663534858584,150
+heterogeneity ladder,varied,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.007279217527427368,0.6260451810147196,0.02265994676626959,150
+heterogeneity ladder,varied,fednova,0.0,42,False,False,history_fednova_mu0.0_E20_s42.csv,0.005322177205348791,0.6009529426335861,0.014943677550584678,150
+heterogeneity ladder,varied,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.0016753619762188907,0.6270802307025263,0.0041494437357557645,150
+heterogeneity ladder,varied,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.09794007149378631,0.39207088331752415,0.22573317359592632,150
+heterogeneity ladder,varied,fednova,0.0,42,False,False,history_fednova_mu0.0_E20_s42.csv,0.09085519600402246,0.447695031362038,0.2209943981054277,150
+heterogeneity ladder,varied,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.03925091576676157,0.4610650452253169,0.1299168377508091,150
+heterogeneity ladder,varied,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.004208587060848427,0.5503825899189717,0.013337692130151901,150
+heterogeneity ladder,varied,fedavg,0.0,42,False,False,history_fedavg_mu0.0_E20_s42.csv,0.012168417989272134,0.5394481644563135,0.03872825844783667,150
