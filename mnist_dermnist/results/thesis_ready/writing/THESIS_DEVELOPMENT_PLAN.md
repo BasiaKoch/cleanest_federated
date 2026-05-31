@@ -369,6 +369,109 @@ UNCHANGED from earlier version. Phase 2 adds 6 new rows:
 
 ---
 
+## §10b. PHASE 3 — Publishability extensions (complementary to existing findings)
+
+After Phase 2 completed (14 findings, 75+ results, 16 figures), the four strongest findings each have a SPECIFIC publishability gap identified by 2024-2026 literature analysis. Phase 3 adds **4 complementary experiments** targeted at each gap, ranked by ROI for converting the thesis into workshop / short-paper material.
+
+### Finding 14 (FedNova absorbs LR asymmetry) — TARGET: MICCAI DeCaF full paper
+
+| Item | Status |
+|---|---|
+| Current evidence | 27 D1 runs (3 algos × 3 LR ratios × 3 seeds), L4 only |
+| Publishability gap | Single perturbation magnitude (max 5:1); no breaking point; no algebraic mechanism |
+| 2024-2026 landscape | No paper has empirically reported "FedNova is LR-asymmetry-invariant" |
+| Source gaps | FedACS (arXiv:2505.11304, 2025): "Heterogeneity can significantly distort optimization dynamics" — does not test per-client η. FedLALR (arXiv:2309.09719, 2023): proposes per-client adaptive LR but doesn't benchmark FedAvg/FedProx/FedNova reaction. |
+
+**Phase 3 Experiment P1 — FedNova LR-invariance dose-response (~22 GPU-h)**
+
+Extend the LR ratio sweep with 3 extreme values to find FedNova's breaking point:
+- LR pairs (C0:C1): {1:1, 2:1, 5:1, **10:1, 20:1, 50:1**}
+- Already have: 1:1, 2:1, 5:1 (D1) — 27 existing runs
+- NEW: 3 ratios × 3 algos × 3 seeds = **27 new runs** at 10:1, 20:1, 50:1
+
+Output: F_fednova_lr_envelope.pdf showing macro-F1 vs log(LR ratio), 3 lines for 3 algorithms. **Headline if FedNova still absorbs at 20:1**: "FedNova's `τᵢ`-normalization produces LR-invariant per-client aggregation across a 20× range." **Headline if it breaks**: "FedNova absorbs up to N× LR asymmetry, beyond which all algorithms collapse together."
+
+Cited in paper: Wang 2020 Eq. 7 algebraic argument that when η enters d_i and τ_i is normalized out, unit-norm direction stays invariant — combined with our empirical breaking point data, this completes the publishable claim.
+
+**Venue rationale**: DeCaF MICCAI workshop accepts 8-page mechanism-style empirical papers; no competing 2024-2026 result on this specific question.
+
+---
+
+### Finding 1 (γ-inexact mechanism decomposition) — TARGET: MIDL 2026 full paper / MELBA journal
+
+| Item | Status |
+|---|---|
+| Current evidence | 12 runs on L4 (4 conditions × 3 seeds); clean Condition-4 isolation |
+| Publishability gap | Single partition; no cross-partition invariance test |
+| 2024-2026 landscape | No paper repeats Li 2020 §5.2 decomposition with Condition-4 control; Frontiers 2025 survey explicitly notes FedProx/FedAvg results are "protocol-confounded" |
+
+**Phase 3 Experiment P2 — Replicate 2×2 factorial on L1 quantity-only partition (~8 GPU-h)**
+
+Replicate the Li 2020 §5.2 4-condition factorial on a SECOND partition type (L1: 86/14 quantity-only, no label skew):
+- 4 conditions × 3 seeds = **12 new runs**
+- Add bootstrap CIs (1000 resamples) to existing L4 data + new L1 data
+
+**Predicted outcome**: γ-inexact attribution survives across BOTH partition types → robust mechanism claim across heterogeneity regimes. **If it doesn't survive**: the mechanism is label-skew-specific → narrower but still publishable claim.
+
+**Venue rationale**: MIDL accepts protocol-clarification papers; MELBA has no page limit and welcomes clean ablation studies.
+
+---
+
+### Finding 11 (early-warning collapse detector) — TARGET: descriptive section, not standalone
+
+| Item | Status |
+|---|---|
+| Current evidence | Cross-validated AUC = 0.804 on 88 mixed runs |
+| Publishability gap | CV is leaky (same experiment mix used for fit + validation); single feature (macro_f1_r20) at AUC 0.825 already beats the multivariate model |
+| 2024-2026 landscape | PCA + early stopping (PMC12409104, 2025) and synthetic-validation early stopping (arXiv:2511.11208, 2025) are orthogonal — neither uses trajectory features |
+
+**Phase 3 Experiment P3 — Prospective validation on held-out experiment family (~0 GPU-h, ~50 LoC)**
+
+Free re-analysis:
+1. Hold out ALL μ-sensitivity runs from training (12 runs)
+2. Refit logistic regression on remaining ~76 runs
+3. Validate on the held-out μ-sweep runs
+4. Add compute-saved curves: for each precision threshold {0.7, 0.8, 0.9}, plot GPU-hours saved vs collapses missed
+
+**Honest framing**: Reframe as a *descriptive observation* ("round-20 macro-F1 < 0.30 predicts collapse with 80% precision") rather than as a "tool" — because the simple-threshold baseline matches the multivariate model.
+
+**Venue rationale**: As a section/subsection in the P1 (DeCaF) paper, not standalone.
+
+---
+
+### Finding 13 (FedProx inert atop weighted-CE) — TARGET: DeCaF short paper or paper section
+
+| Item | Status |
+|---|---|
+| Current evidence | 12 runs (2×2 × 3 seeds); interaction = -0.004 (additive but FedProx contributes ~0) |
+| Publishability gap | One imbalance-aware loss tested (weighted-CE only); the 2026 Confusion-Calibrated CE paper VERBALLY states this finding ("FedProx remains class-agnostic") — not yet empirically isolated |
+| 2024-2026 landscape | FedLC (arXiv:2209.00189): logit calibration. FedIIC (MICCAI 2023): class-imbalance in FL. Confusion-Calibrated CE (S095070512600239X, 2026) verbally states the finding |
+
+**Phase 3 Experiment P4 — Extend 2×2 to 2×3 with focal loss column (~6 GPU-h)**
+
+Add focal loss (γ=2) as a third loss type:
+- {CE, weighted-CE, **focal-γ2**} × {FedAvg, FedProx} × 3 seeds = **18 new runs** (6 added to existing 12)
+- Report interaction term per loss column with bootstrap CIs
+- Add `||∇_w F||₂` averaged over rounds 50-150 per condition
+
+**Predicted outcome**: FedProx interaction is ~0 for ALL loss-side correction methods. Mechanism: proximal-term gradient shrinks once class loss is balanced.
+
+**Venue rationale**: DeCaF short paper (4 pages) or section in P1.
+
+---
+
+## §10c. Phase 3 ROI ranking and total cost
+
+| Rank | Experiment | GPU-h | LoC | Output | Target venue |
+|---|---|---|---|---|---|
+| **1** | **P1 FedNova LR-envelope** | **~22** | **~80** | **F_fednova_lr_envelope.pdf** | **MICCAI DeCaF full paper** |
+| 2 | P2 Cross-partition decomposition | ~8 | ~40 | F_mechanism_l1_l4.pdf | MIDL / MELBA |
+| 3 | P4 FedProx × focal | ~6 | ~60 | F_fedprox_loss_compositionality.pdf | DeCaF short / section |
+| 4 | P3 Prospective collapse detector | 0 | ~50 | F_early_warning_prospective.pdf | section in P1 paper |
+| **Total** | | **~36** | **~230** | 4 new figures, 1 paper, ~57 jobs | |
+
+---
+
 ## §10. Agent execution checklist — Phase 2
 
 ```text
