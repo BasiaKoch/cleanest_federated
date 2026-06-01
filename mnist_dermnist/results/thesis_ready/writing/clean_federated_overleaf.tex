@@ -144,6 +144,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
+\graphicspath{{../figures/}{figures/}{./}}
 \usepackage{booktabs}
 \usepackage{amsmath, amssymb}
 \usepackage{bm}
@@ -153,6 +154,7 @@
 \usepackage{xcolor}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{setspace}
+\usepackage[round,authoryear]{natbib}
 \onehalfspacing
 
 \title{Federated Optimisation on DermaMNIST:\\
@@ -1419,6 +1421,19 @@ the two extremes. The within-pair $\Delta$ comparison in
 Table~\ref{tab:partition-robustness} is paired-seed within each
 row and therefore controls for these absolute-level differences
 across partitions.
+
+\paragraph{Outlier disclosure on the Dirichlet row.} One of the
+ten Dirichlet $\alpha = 0.1$ seeds (seed $8675309$) shows a
+catastrophic FedProx training failure: FedAvg achieves $0.486$
+macro-F1 while FedProx falls to $0.114$ (within-pair
+$\Delta = -0.372$). Excluding this single seed, the Dirichlet
+within-pair $\Delta$ becomes $+0.042$ with FedProx winning $9/10$
+seeds. The aggregate $+0.008$ reported in
+Table~\ref{tab:partition-robustness} retains all ten seeds for
+transparency and is therefore conservative with respect to a
+mean-difference effect; the variance reduction claim of
+Section~\ref{sec:engineered-headline} does not apply on this
+partition.
 
 \begin{figure}[!htbp]
 \centering
@@ -2762,6 +2777,48 @@ asymmetric setup makes two simultaneous changes to FedAvg
 relative to FedProx (dropping partial updates and lacking the
 proximal regulariser) rather than only one.
 
+\subsection{Validation-trajectory decomposition}
+\label{sec:sh-asymmetric-trajectories}
+
+Figure~\ref{fig:val-curves-extreme-gaps} resolves the four-condition
+decomposition over training time and extends it to the more extreme
+perfect-storm regime of Section~\ref{sec:perfect-storm}. The
+trajectories make the underlying mechanism legible at a glance.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_val_curves_extreme_gaps.pdf}
+\caption{Validation macro-F1 trajectories at the two experiments
+showing the largest FedAvg vs FedProx differences. Curves are mean
+over three seeds ($42, 123, 456$); shaded bands are $\pm 1$ sample
+SD. \textbf{(A)} Li 2020 §5.2 four-condition decomposition. The
+FedAvg-no-straggler and FedProx-with-$\gamma$-inexact curves both
+climb to $\sim 0.45$, while FedAvg+drop and FedProx+drop (control)
+remain stuck at $\sim 0.36$ and overlap nearly perfectly across all
+$150$ rounds --- the proximal term in isolation contributes nothing
+under matched drop-stragglers handling. \textbf{(B)} Perfect-storm
+L4 with $90\%$ random stragglers per round. FedAvg+drop flatlines at
+$0.087$ for the entire training run (no recovery); FedProx with
+$\mu = 1.0$ + $\gamma$-inexact climbs gradually to $\sim 0.33$;
+FedProx with $\mu = 0.01$ + $\gamma$-inexact climbs to $\sim 0.47$.}
+\label{fig:val-curves-extreme-gaps}
+\end{figure}
+
+Three features of the trajectories are worth emphasising. First, in
+Panel A the FedAvg-no-straggler and FedProx-$\gamma$-inexact curves
+are nearly indistinguishable: under FedProx's partial-update
+handling, an asymmetric straggler protocol is reduced to
+approximately the no-straggler baseline. Second, the FedAvg+drop
+and FedProx+drop (control) curves in Panel A overlap throughout
+training, visualising the $+0.004$ proximal-only effect of the
+four-condition decomposition: the proximal regulariser by itself
+does not recover the dropped information. Third, in Panel B the
+FedAvg curve is genuinely flat across all $150$ rounds at $\sim
+0.087$ macro-F1 --- the model never learns under $90\%$ stragglers
+with drop-handling, because in most rounds only one client
+contributes to the aggregation and the global model collapses to
+predicting only that client's local distribution.
+
 % ==============================================================================
 \section{Partial Client Participation}
 \label{sec:sh-partial-participation}
@@ -2930,26 +2987,972 @@ regime where theory said it should be most useful.
 
 
 % ==============================================================================
-% Future sections to be added below in subsequent writing iterations:
-%
-%   \section{Statistical Heterogeneity}
-%     \subsection{Experimental design and partition motivation}
-%     \subsection{IID baseline (mechanism null)}
-%     \subsection{Engineered partition (primary results)}
-%     \subsection{Per-class breakdown}
-%     \subsection{Cross-runtime sensitivity}
-%     \subsection{Robustness across partition designs}
-%     \subsection{Direct mechanism evidence: update norms}
-%     \subsection{Federation tax}
-%
-%   \section{System Heterogeneity}
-%     \subsection{Experimental design and condition motivation}
-%     \subsection{Results on the engineered partition}
-%     \subsection{Cross-partition control: IID partition}
-%     \subsection{Partial client participation}
-%     \subsection{Replication of the canonical Li et al. 5.2 protocol}
-%
-%   \section{Summary and limitations}
+% High-priority results: multi-seed promotion + cross-partition mu sweep +
+% perfect-storm L4 + cross-protocol mechanism map.
 % ==============================================================================
+
+\section{Multi-Seed Replication at L4: Node-Pinned}
+\label{sec:node-pinned-l4}
+
+The primary engineered-partition result of
+Section~\ref{sec:engineered-headline} rests on a single seed.
+To distinguish a possible algorithmic effect from cross-seed and
+cross-node CUDA non-determinism noise, we replicated the L4
+comparison with three seeds, pinning all jobs to a single physical
+compute node to remove cross-node variability as a confounder.
+
+\subsection{Setup}
+Three seeds ($42, 123, 456$) $\times$ two algorithms (FedAvg and
+FedProx with $\mu = 0.01$) on the engineered L4 partition
+(\texttt{two\_client\_90\_10\_rare\_stress}), 150 rounds, symmetric
+protocol, all SLURM jobs pinned to the same physical compute node.
+
+\subsection{Results}
+Table~\ref{tab:node-pinned-l4} reports test macro-F1.
+
+\begin{table}[!htbp]
+\centering
+\caption{Node-pinned multi-seed test macro-F1 at L4 under the
+symmetric protocol (mean $\pm$ sample SD over three seeds).}
+\label{tab:node-pinned-l4}
+\small
+\begin{tabular}{lc}
+\toprule
+Algorithm & macro-F1 \\
+\midrule
+FedAvg                  & $0.492 \pm 0.019$ \\
+FedProx ($\mu = 0.01$)  & $0.486 \pm 0.019$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The mean difference is $\Delta = 0.006$ macro-F1, approximately
+one-sixth of the pooled cross-seed standard deviation
+($\sigma = 0.019$) and well below the conservative threshold of two
+pooled standard deviations ($0.038$) we use to flag a potentially
+meaningful effect. We therefore conclude that, under the symmetric
+protocol at L4, FedAvg and FedProx are not meaningfully separated
+within the observed seed-level variation. The original single-seed
+pattern reported in Section~\ref{sec:engineered-headline}
+(FedProx approximately $0.026$ below FedAvg) is consistent with
+seed-level noise rather than a reproducible algorithmic disadvantage.
+
+\paragraph{Reporting-protocol sensitivity.} The same three seeds
+yield different FedAvg-vs-FedProx orderings depending on whether
+test macro-F1 is read at the best-validation checkpoint, at the
+final round, or as a mean over the last $K = 25$ rounds: two of the
+three seeds flip ordering across these three reporting protocols
+(reporting-protocol flip rate $= 0.67$; see
+Section~\ref{sec:robustness-checks}). This strengthens rather than
+weakens the null conclusion: when the mean difference is comparable
+to seed-level noise, the ordering between algorithms becomes
+unstable to small reporting-protocol changes, exactly as expected
+of a non-effect.
+
+% ------------------------------------------------------------------
+
+\section{Convergence-Budget Sensitivity at L3}
+\label{sec:extended-rounds-l3}
+
+The single-seed Stage A heterogeneity-ladder pilot of
+Section~\ref{sec:heterogeneity-ladder} reports a small FedProx
+deficit at L3 ($\Delta \approx -0.003$ macro-F1). The pilot also
+recorded that FedProx's best-validation round at L3 was 150 --- the
+final round of training --- suggesting the algorithm may not have
+converged within the available budget. To test this convergence-budget
+sensitivity we re-ran L3 with three seeds and an extended 250-round
+budget.
+
+\subsection{Results}
+At 250 rounds, FedAvg achieves macro-F1 of $0.522 \pm 0.006$ and
+FedProx $0.549 \pm 0.025$ (3 seeds, ddof $= 1$), a difference of
+$+0.027$ in FedProx's favour. The mean best-validation round is
+169 for FedAvg and 210 for FedProx, with FedProx's maximum reaching
+238 --- close to the 250-round cap. We interpret this as evidence
+that \textbf{neither algorithm has fully converged at 250 rounds at
+L3}: the small differences observed at intermediate heterogeneity
+are compute-budget-sensitive and should not be interpreted as a
+robust algorithmic effect. The L3 comparison does not on its own
+reverse the conclusion of Section~\ref{sec:node-pinned-l4}; we report
+it here as a methodological caveat for the heterogeneity-ladder pilot.
+
+% ------------------------------------------------------------------
+
+\section{Cross-Partition $\mu$-Sensitivity}
+\label{sec:mu-cross-partition}
+
+The $\mu$-sensitivity analysis of Section~\ref{sec:mu-sensitivity}
+is performed on the engineered partition. To assess whether the
+optimal $\mu$ shifts with heterogeneity, we ran a $\mu$-sweep on
+three ladder partitions (L0, L2, L4) at $\mu \in \{0.001, 0.01,
+0.1, 1.0\}$, single seed.
+
+\subsection{Results}
+Table~\ref{tab:mu-cross-partition} reports test macro-F1.
+
+\begin{table}[!htbp]
+\centering
+\caption{Test macro-F1 across $\mu$ and ladder partition (single-seed
+Stage A pilot). FedAvg baseline shown for reference. Best per-row
+$\mu$ in bold.}
+\label{tab:mu-cross-partition}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+Partition & JS  & FedAvg & $\mu{=}0.001$ & $\mu{=}0.01$ & $\mu{=}0.1$ & $\mu{=}1.0$ \\
+\midrule
+L0 (IID)        & $0.000$ & $0.608$ & $\mathbf{0.619}$ & $0.598$ & $0.598$ & $0.544$ \\
+L2 (label skew) & $0.104$ & $0.549$ & $\mathbf{0.570}$ & $0.566$ & $0.532$ & $0.488$ \\
+L4 (severe)     & $0.385$ & $\mathbf{0.518}$ & $0.461$ & $0.493$ & $0.427$ & $0.366$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three patterns emerge. First, the optimal $\mu$ on this benchmark is
+small at every partition: $\mu = 0.001$ at L0 and L2, and
+$\mu = 0.01$ at L4 (although at L4 FedAvg still outperforms FedProx
+at every $\mu$ tested). Second, $\mu = 1.0$ produces the worst
+FedProx result at every partition, with the deficit growing
+substantially with heterogeneity ($0.064$ below the best at L0,
+$0.082$ at L2, $0.127$ at L4). Third, the pattern does not support,
+in this benchmark, the practical prescription that larger $\mu$ be
+preferred under stronger heterogeneity. We do not claim this refutes
+the theoretical analysis of \citet{li2020fedprox}, which holds under
+its stated assumptions; we report it as a pattern observation in the
+specific regime tested.
+
+% ------------------------------------------------------------------
+
+\section{Perfect-Storm L4: Literature-Canonical Recipe}
+\label{sec:perfect-storm}
+
+The Li 2020 §5.2 four-condition decomposition of
+Section~\ref{sec:sh-asymmetric} uses the thesis-default
+hyperparameters. To check that the qualitative ordering of that
+decomposition holds under the literature-canonical recipe
+\citep{li2020fedprox}, we ran a more extreme variant: $90\%$ random
+stragglers, three seeds, three conditions on L4.
+
+\subsection{Setup}
+Three (algorithm, condition) pairs --- FedAvg with drop-stragglers,
+FedProx $\mu = 1.0$ with $\gamma$-inexact, FedProx $\mu = 0.01$ with
+$\gamma$-inexact --- three seeds, $90\%$ random straggler rate per
+round, batch size 10, no momentum (Li 2020 conventions).
+
+\subsection{Results}
+Table~\ref{tab:perfect-storm} reports test macro-F1.
+
+\begin{table}[!htbp]
+\centering
+\caption{Perfect-storm L4 macro-F1 (3 seeds; mean $\pm$ sample SD).}
+\label{tab:perfect-storm}
+\small
+\begin{tabular}{lc}
+\toprule
+Condition & macro-F1 \\
+\midrule
+FedAvg + drop-stragglers                  & $0.087 \pm 0.049$ \\
+FedProx $\mu{=}1.0$ + $\gamma$-inexact    & $0.365 \pm 0.023$ \\
+FedProx $\mu{=}0.01$ + $\gamma$-inexact   & $\mathbf{0.491 \pm 0.003}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+FedProx with $\gamma$-inexact handling exceeds FedAvg with
+drop-stragglers by $+0.278$ macro-F1 at $\mu = 1.0$ and $+0.404$ at
+$\mu = 0.01$. The qualitative ordering matches the Li 2020 §5.2
+four-condition result of Section~\ref{sec:sh-asymmetric}. Two
+observations are worth noting. First, the magnitude of the gap is
+substantially larger than the $+0.115$ reported in
+Section~\ref{sec:sh-asymmetric}, consistent with the much more
+extreme $90\%$ random-straggler regime tested here. Second,
+$\mu = 0.01$ outperforms $\mu = 1.0$ by $+0.126$ macro-F1 under this
+recipe, consistent with the cross-partition $\mu$-sensitivity
+observation of Section~\ref{sec:mu-cross-partition}: the literature
+prescription that larger $\mu$ should be preferred at greater
+heterogeneity is not supported on this benchmark even under the most
+heterogeneity-favourable hyperparameter recipe. The perfect-storm
+condition is reported here as confirmation of the qualitative
+ordering; we do not use it as the headline because the multiple
+simultaneous hyperparameter changes confound a clean four-condition
+decomposition.
+
+\subsection{Heterogeneity-escalation synthesis}
+\label{sec:perfect-storm-synthesis}
+
+Figure~\ref{fig:heterogeneity-escalation} synthesises the FedAvg vs
+FedProx comparison across five stress conditions of increasing
+severity, drawing on the results of
+Sections~\ref{sec:engineered-headline} (IID baseline),
+\ref{sec:node-pinned-l4} (L4 symmetric),
+\ref{sec:sh-asymmetric} (Li 2020 §5.2 straggler asymmetry), and the
+present section (perfect-storm at two $\mu$ values).
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_heterogeneity_escalation.pdf}
+\caption{Heterogeneity-escalation synthesis. (A) Test macro-F1 of
+FedAvg vs FedProx across five conditions of increasing system stress
+(left to right); error bars are sample SD across the available
+seeds (10 for IID, 3 for L4 conditions). $\Delta$ above each pair is
+the within-pair FedProx $-$ FedAvg macro-F1. (B) The within-pair
+$\Delta$ alone, ordered identically. The pattern is monotonic: the
+FedProx advantage is essentially zero under IID and under symmetric
+non-IID, becomes large under straggler asymmetry, and grows further
+under the literature-canonical $90\%$ random-straggler regime.
+FedProx's $\gamma$-inexact partial-update handling, not its proximal
+term in isolation, is the operative mechanism (see the Li 2020 §5.2
+four-condition decomposition in Section~\ref{sec:sh-asymmetric}).}
+\label{fig:heterogeneity-escalation}
+\end{figure}
+
+The pattern reads as a direct answer to the question
+\emph{under what conditions does the FedProx-vs-FedAvg difference
+become large?} The within-pair $\Delta$ is essentially zero under
+both the IID baseline and the L4 symmetric protocol, despite L4
+being a strongly non-IID partition (JS divergence $0.385$): on this
+benchmark, \emph{statistical heterogeneity alone is not sufficient}.
+The gap opens substantially once \emph{system asymmetry} is
+introduced through the Li 2020 §5.2 straggler protocol
+($\Delta = +0.115$), and grows by a further factor of $2.4{-}3.5$
+under the more extreme perfect-storm recipe
+($\Delta = +0.278$ at $\mu = 1.0$, $+0.404$ at $\mu = 0.01$). The
+operative mechanism, as decomposed in Section~\ref{sec:sh-asymmetric},
+is FedProx's $\gamma$-inexact handling of partial straggler updates;
+the proximal term alone contributes only $+0.004$ macro-F1 under
+matched straggler handling. Statistical heterogeneity sets the
+stage; system-level asymmetry is what makes FedProx shine.
+
+% ------------------------------------------------------------------
+
+\section{Cross-Protocol Mechanism Map at L4}
+\label{sec:cross-protocol-mechanism}
+
+The per-client update-norm evidence of Section~\ref{sec:update-norms}
+analyses a single experimental condition. To examine whether the
+update-norm pattern \emph{predicts} the per-class outcome across the
+experimental conditions of this chapter, we pooled 78 L4 runs spanning
+eight (algorithm, protocol) settings and tested the correlation
+between aggregate update-norm summary statistics and final rare-class
+F1.
+
+\subsection{Setup}
+For each (algorithm, protocol, seed) cell at L4, we computed the mean
+per-client update norm averaged over all 150 rounds, then correlated
+each summary statistic against the matched final rare-class average F1
+(78 runs total). Eight protocols are included: node-pinned symmetric,
+engineered baseline, heterogeneity-ladder L4, Li 2020 §5.2 conditions,
+perfect-storm conditions, asymmetric per-client $\mu$, asymmetric
+per-client learning rate, and weighted CE.
+
+\subsection{Results}
+The cross-protocol relationship between per-client update norms and
+rare-class F1 is not simple. Within any one protocol family (e.g.,
+the asymmetric-learning-rate experiment), Client~1's mean update
+norm relative to Client~0's correlates positively with rare-class F1
+(Spearman $r = +0.80$ for FedAvg, $r = +0.87$ for FedProx; both
+within asymmetric-LR alone). Across protocols \emph{together},
+however, this within-protocol ordering does not extrapolate: the
+Spearman correlation between the relative-influence ratio and
+rare-class F1 across all 78 runs is essentially zero ($r = -0.04$).
+
+The strongest cross-protocol predictor of rare-class F1 we observe is
+Client~0's mean update-norm magnitude. Pooling all 78 runs, the
+Spearman correlation between Client~0's average update norm and the
+final rare-class average F1 is $r = +0.63$. The dominant-client
+update-norm magnitude is therefore associated with better rare-class
+preservation across the protocols tested here. We interpret this
+cautiously and as exploratory: it is a cross-condition correlation on
+a small set of protocols, with no controlled intervention isolating
+the relationship. It is consistent with the working interpretation
+that rare-class learning on this benchmark proceeds substantially
+through shared feature representations whose evolution is paced by
+the dominant client's update activity, but we do not present it as a
+derivation.
+
+% ==============================================================================
+% FedNova under unequal-E + Robustness Checks (Priority 2 follow-up)
+% ==============================================================================
+
+\section{FedNova under Unequal Local Epochs}
+\label{sec:fednova-unequal-e}
+
+The defining design motivation for FedNova~\citep{wang2020fednova} is to
+correct the objective inconsistency that arises when participating clients
+perform different numbers of local steps before each aggregation: its
+$\tau_i$-normalisation rescales each client's update by its number of
+local steps before averaging. We tested this design intent directly by
+comparing all three algorithms under matched equal-$E$ vs unequal-$E$
+conditions at the two more difficult ladder partitions.
+
+\subsection{Setup}
+Single-seed pilot. Equal-$E$ regime: both clients perform $E = 20$ local
+epochs per round (the thesis-default configuration of
+Section~\ref{sec:methods-protocol}). Unequal-$E$ regime: Client~0 performs
+$E_0 = 20$ local epochs; Client~1 performs $E_1 = 5$ local epochs (a $4{:}1$
+asymmetry, of the same order as the Li 2020 §5.2 straggler protocol of
+Section~\ref{sec:sh-asymmetric}). Two partitions tested: L3 (mixed
+$70/30$) and L4 (severe $90/10$). Three algorithms per (partition,
+regime) cell.
+
+\subsection{Results}
+Table~\ref{tab:fednova-unequal-e} reports test macro-F1 and the
+within-algorithm drop from equal-$E$ to unequal-$E$.
+
+\begin{table}[!htbp]
+\centering
+\caption{Test macro-F1 at L3 and L4 under equal-$E$ ($E_0 = E_1 = 20$)
+versus unequal-$E$ ($E_0 = 20, E_1 = 5$); single-seed pilot.
+$\Delta_E$ is the within-algorithm drop from equal-$E$ to
+unequal-$E$.}
+\label{tab:fednova-unequal-e}
+\small
+\begin{tabular}{llccc}
+\toprule
+Partition & Algorithm & Equal-$E$ & Unequal-$E$ & $\Delta_E$ \\
+\midrule
+L3 & FedAvg                  & $0.511$ & $0.508$ & $-0.003$ \\
+L3 & FedProx ($\mu = 0.01$)  & $0.549$ & $0.557$ & $+0.007$ \\
+L3 & \textbf{FedNova}        & $\mathbf{0.535}$ & $\mathbf{0.310}$ & $\mathbf{-0.224}$ \\
+\midrule
+L4 & FedAvg                  & $0.482$ & $0.424$ & $-0.058$ \\
+L4 & FedProx ($\mu = 0.01$)  & $0.478$ & $0.452$ & $-0.026$ \\
+L4 & \textbf{FedNova}        & $\mathbf{0.522}$ & $\mathbf{0.330}$ & $\mathbf{-0.192}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two patterns emerge. First, both FedAvg and FedProx degrade only modestly
+under unequal-$E$: at L4, FedAvg drops by $0.058$ and FedProx by $0.026$
+macro-F1, comparable to seed-level variation observed elsewhere in this
+chapter. Second, \textbf{FedNova degrades much more substantially}:
+$-0.224$ macro-F1 at L3 and $-0.192$ at L4, an order of magnitude larger
+than the corresponding drops for the other two algorithms.
+
+\subsection{Interpretation}
+The observation runs counter to FedNova's stated design intent: the
+$\tau_i$-normalisation is the mechanism by which FedNova is intended to
+\emph{correct} for unequal local steps, and unequal-$E$ is the regime
+the algorithm was designed to handle. On this benchmark and at the two
+non-trivial ladder partitions tested, the empirical effect is the
+opposite: FedNova is the algorithm \emph{most} sensitive to unequal-$E$.
+
+A plausible mechanism, which we do not test directly here, is that under
+high statistical heterogeneity (L3 and L4) the rare-class-holding
+client's $\tau_i$-normalised update is multiplied by a large rescaling
+factor that amplifies the noise in its small-batch gradients, producing
+divergent rather than convergent aggregation. We report this only as a
+plausibility argument; the Wang 2020 convergence analysis assumes
+smoothness and bounded local-gradient variance that may not hold under
+the partition design of L4.
+
+\subsection{Scope}
+This is a \emph{single-seed} pilot finding. The magnitudes are large
+relative to seed-level variation in the rest of this chapter, but
+multi-seed replication is required before extending the observation to
+a general claim about FedNova. We report it here as a counter-intuitive
+empirical observation, not as a refutation of Wang 2020's theoretical
+analysis in general.
+
+% ------------------------------------------------------------------
+
+\section{Robustness and Methodological Checks}
+\label{sec:robustness-checks}
+
+This section consolidates three methodological audits that strengthen
+or qualify the interpretation of the preceding findings.
+
+\subsection{Reporting-protocol sensitivity}
+\label{sec:robustness-protocol-flip}
+
+For each multi-seed experiment in this chapter we computed the test
+macro-F1 under three reporting protocols: (i) test at the best-validation
+checkpoint round (the thesis default), (ii) test at the final round, and
+(iii) test averaged over the last $K = 25$ rounds. For each (algorithm,
+seed) pair we then checked whether the ordering between the two algorithms
+flipped sign across the three reporting protocols.
+
+Table~\ref{tab:protocol-flip} reports the flip rate per experiment.
+
+\begin{table}[!htbp]
+\centering
+\caption{Reporting-protocol flip rates per experiment. ``flip rate''
+is the fraction of seeds for which the algorithm ordering changes
+sign across the three reporting protocols (best-val, final-round,
+last-$K$ mean).}
+\label{tab:protocol-flip}
+\small
+\begin{tabular}{lcc}
+\toprule
+Experiment & Mean $|\Delta|$ (best-val) & Flip rate \\
+\midrule
+Perfect-storm L4               & $0.293$ & $0.00$ \\
+Li 2020 §5.2 asymmetric         & $0.138$ & $0.00$ \\
+Asymmetric per-client $\mu$     & $0.043$ & $0.00$ \\
+Engineered baseline (L4)        & $0.023$ & $0.33$ \\
+Extended-rounds L3              & $0.011$ & $0.33$ \\
+Node-pinned L4 symmetric        & $0.015$ & $0.67$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The pattern is consistent: the three large-effect experiments (mean
+$|\Delta| \geq 0.04$) have flip rate $0.00$, and the three small-effect
+experiments have flip rate $\geq 0.33$. Across all six experiments
+($18$ seed-level pairwise comparisons in total), $4$ comparisons flip;
+$0/9$ flip on large effects and $4/9$ flip on small effects. We use
+this pattern to inform our reporting throughout this chapter: large
+within-pair differences are reported as ordered effects, while
+small-magnitude observations (such as the L4 symmetric null of
+Section~\ref{sec:node-pinned-l4}) are reported with explicit
+reporting-protocol disclosure rather than as numerically precise effect
+sizes.
+
+\subsection{Training stability across algorithms}
+\label{sec:robustness-stability}
+
+Following the framework of~\citet{charles2024stability}, we measured the
+standard deviation of validation macro-F1 over the last $50$ rounds of
+training for every run in this chapter. The pooled means by (algorithm,
+regime) cell are reported in Table~\ref{tab:training-instability}.
+
+\begin{table}[!htbp]
+\centering
+\caption{Training instability: standard deviation of validation macro-F1
+over the last $50$ rounds, pooled across all runs in the chapter
+(mean $\pm$ across-run sample SD; $n$ = number of pooled runs).}
+\label{tab:training-instability}
+\small
+\begin{tabular}{llrl}
+\toprule
+Algorithm & Regime & $n$ & Instability \\
+\midrule
+FedAvg   & symmetric         & $22$ & $0.024 \pm 0.012$ \\
+FedAvg   & unequal-$E$        & $2$  & $0.020 \pm 0.014$ \\
+FedAvg   & drop-stragglers   & $6$  & $0.001 \pm 0.001$ \\
+FedProx  & symmetric         & $37$ & $0.019 \pm 0.017$ \\
+FedProx  & unequal-$E$        & $11$ & $0.028 \pm 0.009$ \\
+FedProx  & drop-stragglers   & $3$  & $0.002 \pm 0.002$ \\
+\textbf{FedNova} & symmetric         & $5$  & $\mathbf{0.048 \pm 0.039}$ \\
+\textbf{FedNova} & unequal-$E$        & $2$  & $\mathbf{0.060 \pm 0.031}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+FedNova is approximately $2{\times}$ more variable than FedAvg or FedProx
+in the symmetric regime ($0.048$ vs $0.019$--$0.024$) and approximately
+$3{\times}$ more variable under unequal-$E$ ($0.060$ vs $0.020$--$0.028$).
+The drop-stragglers regime shows near-zero instability for FedAvg and
+FedProx because the rare-class-holding client is excluded from
+aggregation in most rounds, producing a constant aggregation target on
+the dominant client's distribution rather than a noisy one. We caveat
+the FedNova rows on small $n$ ($5$ and $2$).
+
+\subsection{Empirical adequacy of the Li 2020 B-dissimilarity proxy}
+\label{sec:robustness-b-proxy}
+
+\citet{li2020fedprox} introduce a local-dissimilarity bound parameter
+$B$ that characterises how much the local gradient at each client
+deviates from the global gradient; theoretically, FedProx's gain over
+FedAvg should be largest where $B$ is largest. We empirically
+proxy $B$ at each ladder partition by the per-round ratio of the
+maximum to the mean per-client update norm at FedAvg, averaged over
+$150$ rounds and three seeds. Table~\ref{tab:b-proxy} reports the
+proxy alongside the FedAvg-vs-FedProx within-pair $\Delta$ at each
+partition.
+
+\begin{table}[!htbp]
+\centering
+\caption{B-dissimilarity proxy (mean ratio of max to mean per-client
+update norm at FedAvg) vs FedProx-vs-FedAvg within-pair $\Delta$.}
+\label{tab:b-proxy}
+\small
+\begin{tabular}{lcc}
+\toprule
+Partition (JS divergence)   & B-proxy & FedProx $\Delta$ macro-F1 \\
+\midrule
+L0 IID (JS $= 0.000$)        & $1.17$ & $-0.003$ \\
+L1 Quantity (JS $= 0.000$)   & $1.44$ & $+0.002$ \\
+L2 Label (JS $= 0.104$)      & $1.38$ & $-0.012$ \\
+L3 Mixed (JS $= 0.121$)      & $1.51$ & $-0.003$ \\
+L4 Severe (JS $= 0.385$)     & $1.61$ & $-0.026$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The empirical B-proxy increases monotonically with heterogeneity (Spearman
+$r = +0.90$ vs JS divergence). The FedProx within-pair $\Delta$, however,
+shows a weakly \emph{negative} correlation with the B-proxy (Spearman
+$r \approx -0.30$ across five partitions): the partitions at which the
+theoretical predictor says FedProx should help most are the partitions
+where FedProx empirically helps least on this benchmark.
+
+We do not present this as a refutation of the Li 2020 theoretical
+analysis. The Wang--Li bound holds under stated smoothness and gradient-
+heterogeneity assumptions, and our empirical proxy is a coarse
+single-seed approximation. The negative empirical correlation is offered
+as a methodological note: on this benchmark, the simple B-proxy is not a
+useful predictor of where FedProx delivers its largest gains. The same
+caveat applies to other practitioner heuristics that anchor
+intervention strength to gradient-norm asymmetry.
+
+% ==============================================================================
+% Most-interesting unreported findings:
+% A. two collapse modes (instant vs gradual)
+% B. early-warning detector at round 20
+% C. Yao 2024 directional null result
+% ==============================================================================
+
+\section{Two Modes of Rare-Class Collapse}
+\label{sec:collapse-modes}
+
+The per-class results of Section~\ref{sec:rare-class-collapse} report
+final-round rare-class F1. Inspection of per-round trajectories
+reveals that rare-class collapse, when it occurs, follows one of two
+qualitatively distinct trajectories.
+
+\subsection{Instant collapse}
+Under the drop-stragglers handling of Section~\ref{sec:sh-asymmetric}
+and under the perfect-storm condition of
+Section~\ref{sec:perfect-storm}, rare-class F1 falls to exactly zero
+within the first one or two communication rounds (Li~§5.2 FA+drop:
+mean collapse round $= 1.0$, all three seeds; perfect-storm FA+drop:
+mean collapse round $= 1.0$, all three seeds). The collapse mode is
+\emph{instantaneous}: as soon as Client~1 (the rare-class holder) is
+dropped from the aggregation, the global model has no exposure to
+rare-class gradients, and the classifier collapses to predicting only
+classes present in Client~0's distribution.
+
+\subsection{Gradual collapse}
+Under the learning-rate asymmetry of Section~\ref{sec:lr-asymmetry},
+rare-class F1 decays over tens of rounds. At D1 5:1 with FedAvg,
+mean collapse round is $45.3$ (3/3 seeds collapsed); at D1 5:1 with
+FedProx, only 1/3 seeds collapses and only at round $150$ (the final
+round). The collapse mode here is \emph{gradual}: rare-class
+gradients are still entering the aggregation but are progressively
+overwhelmed by the high-learning-rate Client~0 updates that re-bias
+the classifier toward the majority class. FedProx slows this process
+through proximal regularisation but does not eliminate it.
+
+\subsection{Interpretation}
+The two modes have different mechanism signatures and, plausibly,
+different mitigations. Instant collapse is a \emph{participation}
+problem: the rare-class holder is absent from the aggregation.
+Gradual collapse is an \emph{influence-balance} problem: the
+rare-class holder is present but its update is dominated. The
+practical implication is that the same observed final-round
+collapse can arise from causally distinct processes, and a single
+intervention is unlikely to address both. See
+Figure~\ref{fig:trajectories-d1} and
+Figure~\ref{fig:trajectories-li2020}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{F_l4_class_trajectories_d1.pdf}
+\caption{Per-class F1 trajectories at D1 5:1 learning-rate asymmetry,
+illustrating the gradual collapse mode.}
+\label{fig:trajectories-d1}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{F_l4_class_trajectories_li2020.pdf}
+\caption{Per-class F1 trajectories under the Li 2020 §5.2 protocol,
+illustrating the instant collapse mode for FedAvg+drop.}
+\label{fig:trajectories-li2020}
+\end{figure}
+
+% ------------------------------------------------------------------
+
+\section{Round-20 Early-Warning Detector for Rare-Class Collapse}
+\label{sec:early-warning}
+
+The two collapse modes of Section~\ref{sec:collapse-modes} both have
+distinguishing signatures within the first few rounds. We tested
+whether the per-class F1 distribution at round 20 alone predicts
+which runs will eventually collapse.
+
+\subsection{Setup}
+For each of 88 L4 training runs pooled across the protocols of this
+chapter, we extracted per-class F1 at round 20 plus six aggregate
+summary statistics (count of classes below $0.1$, macro-F1, min,
+max, range, mean across classes), giving 12 candidate predictors. We
+defined collapse as final-round rare-class average F1 $< 0.05$
+(positive class). The 88 runs were partitioned into a 76-run
+training pool (with 18 positive cases) used for cross-validated
+model selection, and an independent 12-run prospective held-out set
+(with 1 positive case) used only for final evaluation.
+
+\subsection{Results}
+The single strongest predictor is the count of classes whose F1 is
+below $0.1$ at round 20 (univariate AUC $= 0.83$ on the training
+pool). Macro-F1 at round 20 (AUC $= 0.82$) is nearly as good. A
+simple multivariate logistic-regression classifier on the 12
+features achieves cross-validated AUC $= 0.84$ on the training pool.
+On the prospective held-out set the classifier achieves AUC $= 1.00$,
+but this estimate is based on a single positive case and is therefore
+preliminary. A conservative operating point at threshold $0.7$
+flags $1/12$ held-out runs as at-risk and is correct (precision $= 1$,
+recall $= 1$).
+
+\subsection{Interpretation}
+Within the protocols tested, rare-class collapse is detectable from
+the first 20 communication rounds. The two-mode structure of
+Section~\ref{sec:collapse-modes} explains why: instant collapse is
+already complete by round 5, and gradual collapse already shows
+multiple classes near $F1 = 0$ by round 20. The practical
+implication, subject to external validation, is that an early-stopping
+or intervention rule based on round-20 features could save the bulk
+of the compute spent on runs that will not recover. We present this
+as a preliminary observation; with one positive case in the
+prospective held-out set, broader validation is required before
+clinical deployment.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{F_early_warning_roc.pdf}
+\caption{ROC curve for the round-20 early-warning classifier on the
+training pool (cross-validated AUC $= 0.84$). See
+Figure~\ref{fig:early-warning-prospective} for the held-out result.}
+\label{fig:early-warning-roc}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{F_early_warning_prospective.pdf}
+\caption{Prospective held-out performance of the round-20 detector.}
+\label{fig:early-warning-prospective}
+\end{figure}
+
+% ------------------------------------------------------------------
+
+\section{Asymmetric Per-Client $\mu$: Yao 2024 Directional Test}
+\label{sec:asymmetric-mu-yao}
+
+\citet{yao2024} predicts that proximal anchoring should benefit most
+when applied to the client whose local optimum is furthest from the
+global one --- in our 2-client setting, the rare-class-holding
+Client~1. We test this directional prediction explicitly.
+
+\subsection{Setup}
+Four conditions on engineered L4, three seeds each, 150 rounds:
+(i) FedAvg baseline ($\mu_0 = \mu_1 = 0$);
+(ii) FedProx symmetric ($\mu_0 = \mu_1 = 0.01$);
+(iii) Anchor-large ($\mu_0 = 0.01$, $\mu_1 = 0$): regularise only the
+dominant Client~0;
+(iv) Anchor-small CTRL ($\mu_0 = 0$, $\mu_1 = 0.01$): regularise only
+the minority Client~1, as predicted to help by Yao 2024.
+
+\subsection{Results}
+Table~\ref{tab:asymmetric-mu-yao} reports test macro-F1.
+
+\begin{table}[!htbp]
+\centering
+\caption{Test macro-F1 under asymmetric per-client $\mu$ at L4
+(3 seeds; mean $\pm$ sample SD).}
+\label{tab:asymmetric-mu-yao}
+\small
+\begin{tabular}{lc}
+\toprule
+Condition & macro-F1 \\
+\midrule
+FedAvg                                                  & $0.469 \pm 0.016$ \\
+FedProx symmetric ($\mu_0{=}\mu_1{=}0.01$)              & $0.479 \pm 0.016$ \\
+\textbf{Anchor-large} ($\mu_0{=}0.01$, $\mu_1{=}0$)     & $0.495 \pm 0.029$ \\
+Anchor-small CTRL ($\mu_0{=}0$, $\mu_1{=}0.01$)         & $0.464 \pm 0.008$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The direction effect is the contrast between Anchor-large and
+Anchor-small CTRL: $\Delta_{\text{direction}} = +0.032$ macro-F1, with
+a pooled standard deviation across the four conditions of
+approximately $0.020$. The effect is approximately $1.6\sigma$:
+within the noise envelope on this benchmark. \textbf{The directional
+prediction of Yao 2024 is not supported here}: anchoring the dominant
+client (Anchor-large) marginally outperforms anchoring the minority
+client (Anchor-small) rather than the reverse, but neither asymmetric
+configuration meaningfully separates from FedProx symmetric. We do
+not claim this refutes Yao 2024 in general --- their analysis
+assumes hyperparameter regimes we did not match --- but on this
+benchmark the directional prescription provides no reliable
+guidance. See Figure~\ref{fig:asymmetric-mu-yao}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{F_asymmetric_mu_L4.pdf}
+\caption{Macro-F1 distributions for the four asymmetric-$\mu$
+conditions. Box: median, IQR; whiskers: range across seeds.}
+\label{fig:asymmetric-mu-yao}
+\end{figure}
+
+% ==============================================================================
+% Sections added: learning-rate asymmetry (D1), per-class failure mode,
+% FedProx x weighted-CE compositionality.
+% ==============================================================================
+
+\section{Learning-Rate Asymmetry Between Clients}
+\label{sec:lr-asymmetry}
+
+A second form of system-level asymmetry, complementary to the
+straggler protocol of Section~\ref{sec:sh-asymmetric}, is
+unequal per-client learning rates: an artefact of cross-silo
+deployment in which participating sites use different effective
+step sizes. We test all three optimisers under this regime on the
+engineered L4 partition.
+
+\subsection{Setup}
+On L4 we hold $\eta_0 = 0.01$ at Client~0 and vary
+$\eta_1 \in \{0.01, 0.005, 0.002\}$ at Client~1, giving learning-rate
+ratios $1{:}1$, $2{:}1$, and $5{:}1$. All other hyperparameters
+follow Section~\ref{sec:methods-protocol}. The three algorithms
+(FedAvg, FedProx with $\mu = 0.01$, FedNova) are each evaluated at
+all three ratios with three seeds ($42, 123, 456$) per cell,
+yielding 27 runs.
+
+\subsection{Results}
+Table~\ref{tab:lr-asymmetry-macro} reports the test macro-F1 at the
+endpoints of the ratio range; Figure~\ref{fig:lr-asymmetry} reports
+all three ratios.
+
+\begin{table}[!htbp]
+\centering
+\caption{Test macro-F1 under per-client learning-rate asymmetry on
+L4 (3 seeds; mean $\pm$ sample SD, $\textnormal{ddof}=1$).
+$\Delta$ is the macro-F1 change from the same algorithm's $1{:}1$
+baseline.}
+\label{tab:lr-asymmetry-macro}
+\small
+\begin{tabular}{lccc}
+\toprule
+Algorithm & $1{:}1$ symmetric & $5{:}1$ asymmetric & $\Delta$ \\
+\midrule
+FedAvg                 & $0.457 \pm 0.026$ & $0.375 \pm 0.016$ & $-0.083$ \\
+FedProx ($\mu = 0.01$) & $0.491 \pm 0.016$ & $0.392 \pm 0.017$ & $-0.099$ \\
+\textbf{FedNova}       & $\mathbf{0.509 \pm 0.016}$ & $\mathbf{0.504 \pm 0.007}$ & $\mathbf{-0.006}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_asymmetric_lr_L4.pdf}
+\caption{Macro-F1 and rare-class average F1 under three per-client
+learning-rate ratios at L4. Three seeds per cell; error bars are
+sample standard deviations across seeds. FedNova is essentially
+flat across ratios; FedAvg and FedProx degrade.}
+\label{fig:lr-asymmetry}
+\end{figure}
+
+Under the $5{:}1$ ratio, FedAvg degrades by $\Delta = -0.083$
+macro-F1, FedProx by $\Delta = -0.099$, and FedNova by only
+$\Delta = -0.006$, within the observed seed-level variation of its
+symmetric baseline. The rare-class average F1 (mean over
+dermatofibroma, melanoma, vascular) at $5{:}1$ exhibits the same
+ordering at greater magnitude: FedAvg $0.036$, FedProx $0.069$,
+FedNova $0.359$. Relative to each algorithm's $1{:}1$ baseline of
+$0.230$, $0.315$, $0.359$ respectively, this corresponds to losses
+of approximately $84\%$, $78\%$, and no detectable change for
+FedNova (whose mean rare-class F1 is essentially identical at the
+$1{:}1$ and $5{:}1$ ratios).
+
+Two features warrant comment. First, the algorithm ranking is
+\emph{reversed} relative to the straggler-asymmetry result of
+Section~\ref{sec:sh-asymmetric}: under learning-rate asymmetry
+on this benchmark, FedNova preserves macro-F1 substantially better
+than either FedAvg or FedProx. Second, FedProx degrades slightly
+more than FedAvg ($\Delta = -0.099$ vs $-0.083$); we report this as
+a small effect ($\approx 0.016$ macro-F1, within an order of
+magnitude of seed-level noise) that suggests the proximal
+regularisation term does not protect against learning-rate
+asymmetry in this regime and may slightly worsen the degradation.
+
+\subsection{Mechanism note}
+The per-client update-norm logs (Section~\ref{sec:update-norms})
+provide a partial explanation. Under the $5{:}1$ ratio, the ratio of
+Client~1's mean update norm at $5{:}1$ to its $1{:}1$ baseline is
+$0.47$ for FedAvg and $0.50$ for FedProx (approximately proportional
+to Client~1's learning-rate reduction), but $0.91$ for FedNova: the
+smaller client's effective contribution is approximately preserved
+under FedNova while it is attenuated by the learning-rate scaling
+under FedAvg and FedProx. We treat this as exploratory evidence
+consistent with the macro-F1 ordering rather than as a derivation
+from the FedNova convergence analysis of~\citet{wang2020fednova},
+which is developed for unequal local-step asymmetry rather than
+learning-rate asymmetry.
+
+\subsection{Scope of the claim}
+We characterise this result as evidence that \textbf{FedNova is
+empirically more robust to learning-rate asymmetry than FedAvg or
+FedProx on this benchmark and within the tested asymmetry range}.
+The result rests on a single dataset, a single partition (L4), and
+a single learning-rate-asymmetry range ($1{:}1$ to $5{:}1$); we do
+not extend it to wider asymmetry magnitudes, to other partitions, or
+to other datasets.
+
+
+\section{Per-Class Failure Mode: Rare-Class Collapse Under Asymmetric Protocols}
+\label{sec:rare-class-collapse}
+
+The macro-F1 differences in Sections~\ref{sec:sh-asymmetric}
+and~\ref{sec:lr-asymmetry} understate the per-class consequences
+of optimiser failure on this benchmark. When a federated optimiser
+fails under the protocols of this chapter, the failure mode is not
+random misclassification but a specific directional pattern:
+rare-class inputs are predicted as the dominant majority class
+(melanocytic nevi, $1341 / 2005 = 66.9\%$ of the test set).
+
+\subsection{Setup}
+We compute row-normalised confusion matrices on the held-out test
+set ($n = 2005$) from saved test-time predictions across 91 runs
+at L4 spanning eight experimental conditions. For each (algorithm,
+condition) pair the confusion matrix is averaged across the
+available seeds.
+
+\subsection{Per-class accuracy across L4 protocols}
+Figure~\ref{fig:per-class-heatmap} reports the diagonal of the
+row-normalised confusion matrix (per-class test accuracy) across
+fourteen protocol configurations.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_l4_diagonal_heatmap.pdf}
+\caption{Per-class test accuracy across fourteen L4 protocol
+configurations. Yellow lines bracket the lower-support and
+clinically critical minority classes. Cells with accuracy $< 0.1$
+indicate near-total failure on that class. Rows: protocols
+ordered from heterogeneity-ladder baseline (top) through D1
+$5{:}1$ FedNova (bottom).}
+\label{fig:per-class-heatmap}
+\end{figure}
+
+Two patterns summarise the failure mode:
+
+\textbf{Misrouting to melanocytic nevi.}\quad The fraction of true
+rare-class test inputs (dermatofibroma, melanoma, vascular)
+predicted as mel-nevi, averaged across the three rare-class rows of
+the row-normalised confusion matrix, ranges from $24\%$ on the
+heterogeneity-ladder protocol to $67\%$ under the perfect-storm
+FedAvg+drop protocol.\footnote{Computed by
+\texttt{analyse\_l4\_confusion\_matrices.py}: for each (algorithm,
+protocol) condition we average the row-normalised confusion matrix
+across the available seeds, then take the mean of the mel-nevi
+column over rows 3, 4 and 6 (dermatofibroma, melanoma, vascular).}
+Protocols at which this misrouting exceeds $50\%$ are those at which
+the corresponding algorithm's rare-class F1 is at or near zero:
+FedAvg+drop under the Li et al.\ asymmetric protocol ($56\%$),
+FedAvg+drop under the perfect-storm recipe ($67\%$), FedProx with
+$\mu = 1.0$ + $\gamma$-inexact under the perfect-storm recipe
+($54\%$), and FedAvg under $5{:}1$ learning-rate asymmetry ($51\%$).
+FedProx under $5{:}1$ learning-rate asymmetry sits just below this
+threshold ($48\%$).
+
+\textbf{Melanoma detection under learning-rate asymmetry.}\quad At
+the $5{:}1$ ratio, the diagonal melanoma accuracy is approximately
+$1.2\%$ under FedAvg, $6.1\%$ under FedProx, and $46.3\%$ under
+FedNova. Melanoma is the most clinically critical minority class
+on this benchmark, and is also the most precisely estimated of the
+three rare classes (test support $n = 223$, against $n = 23$ for
+dermatofibroma and $n = 29$ for vascular).
+
+\subsection{Confusion patterns at D1 $5{:}1$}
+Figure~\ref{fig:confusion-d1-51} reports the row-normalised
+confusion matrices for the three algorithms at $1{:}1$ and at
+$5{:}1$ learning-rate asymmetry. Under FedAvg and FedProx at $5{:}1$,
+approximately half of melanoma test inputs are predicted as
+mel-nevi; under FedNova at $5{:}1$, the modal prediction for
+melanoma test inputs remains melanoma itself. The qualitative
+pattern is similar for vascular lesions; dermatofibroma ($n = 23$)
+has insufficient support for confident per-class statements.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{F_l4_confusion_d1_5_1.pdf}
+\caption{Row-normalised confusion matrices for FedAvg, FedProx
+($\mu = 0.01$), and FedNova at L4, contrasting the $1{:}1$ symmetric
+baseline (top row) with the $5{:}1$ learning-rate-asymmetric
+condition (bottom row). Yellow rectangles mark the rare-class rows.
+Each cell is the per-(true class, predicted class) probability,
+averaged across three seeds.}
+\label{fig:confusion-d1-51}
+\end{figure}
+
+\subsection{Interpretation}
+The clinical interpretation is that under unfavourable
+algorithm--protocol combinations on this benchmark, a deployed
+model does not refuse to predict on rare-class inputs; it
+confidently predicts them as the benign majority class. We do not
+extend this to a clinical-deployment claim. The DermaMNIST
+$28 \times 28$ benchmark is not a screening tool, and the
+algorithmic ordering observed here may not transfer to higher-resolution
+images, larger client cohorts, or real-world cross-institutional
+federations. The observation we make is the narrower one: \textbf{on
+this benchmark, the choice of federated optimiser under deployment
+asymmetry determines whether the trained model retains useful
+sensitivity to the clinically critical minority class}.
+
+
+\section{Compositionality of FedProx and Class-Weighted Cross-Entropy}
+\label{sec:fedprox-wce}
+
+A standard loss-side response to class imbalance is inverse-frequency
+class-weighted cross-entropy. We test whether this loss-side
+intervention and the FedProx proximal regularisation compose
+additively, sub-additively, or super-additively on the engineered
+L4 partition under the symmetric protocol.
+
+\subsection{Setup}
+A $2 \times 2$ factorial design: $\{\text{FedAvg}, \text{FedProx}~(\mu = 0.01)\}
+\times \{\text{standard CE}, \text{inverse-frequency weighted CE}\}$,
+three seeds per cell, on the L4 partition.
+
+\subsection{Results}
+Table~\ref{tab:wce-2x2} reports the four cell means. Letting $a$
+denote (FedAvg, CE), $b$ denote (FedAvg, weighted-CE), $c$ denote
+(FedProx, CE), and $d$ denote (FedProx, weighted-CE):
+\[
+\text{loss\,effect} = b - a = +0.029, \quad
+\text{algorithm\,effect} = c - a \approx 0,
+\]
+\[
+\text{combined\,effect} = d - a = +0.027, \quad
+\text{interaction} = (d-a) - (b-a) - (c-a) \approx -0.004.
+\]
+
+\begin{table}[!htbp]
+\centering
+\caption{Test macro-F1 in the $2 \times 2$ FedProx $\times$
+weighted-CE ablation on L4 (3 seeds; mean $\pm$ sample SD).}
+\label{tab:wce-2x2}
+\small
+\begin{tabular}{lcc}
+\toprule
+                       & Standard CE     & Weighted CE     \\
+\midrule
+FedAvg                 & $0.477 \pm 0.002$ & $0.505 \pm 0.023$ \\
+FedProx ($\mu = 0.01$) & $0.478 \pm 0.016$ & $0.503 \pm 0.014$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The interaction term is essentially zero ($\approx -0.004$, within
+seed-level noise), supporting an additive decomposition of the two
+interventions. The algorithm-only effect is itself essentially zero
+($\approx 0$, within seed-level variation): \textbf{on this benchmark
+and under the symmetric protocol, FedProx adds no meaningful
+improvement on top of weighted cross-entropy.} The $+0.029$ benefit
+of weighted-CE is preserved under FedProx, but the proximal term
+contributes no additional gain.
+
+We do not extend this to a general claim across all loss families.
+The result applies to the specific inverse-frequency weighting
+tested here on this benchmark, and is offered as evidence that, in
+the symmetric regime, loss-side rebalancing is the active
+ingredient and that the proximal regularisation does not provide
+an additional layer of benefit.
+
+
+\bibliographystyle{plainnat}
+\bibliography{references}
 
 \end{document}

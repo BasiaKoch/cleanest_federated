@@ -1,0 +1,26 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/basiakoch/cleanest_federated/mnist_dermnist/analysis/tables.py", line 266, in <module>
+    main()
+    ~~~~^^
+  File "/Users/basiakoch/cleanest_federated/mnist_dermnist/analysis/tables.py", line 250, in main
+    s = paired_compare(df, E=args.E)
+  File "/Users/basiakoch/cleanest_federated/mnist_dermnist/analysis/tables.py", line 122, in paired_compare
+    diff = fp_val - fa_val
+           ~~~~~~~^~~~~~~~
+ValueError: operands could not be broadcast together with shapes (40,) (10,) 
+
+Wrote mnist_dermnist/results/mu_sensitivity_flower/analysis/final_test_table.csv
+algorithm    fedavg   fedprox      diff
+seed                                   
+42         0.485522  0.464368 -0.021154
+123        0.477106  0.505448  0.028341
+456        0.505987  0.472470 -0.033517
+789        0.528481  0.519880 -0.008600
+999        0.469396  0.511964  0.042568
+2024       0.464324  0.513355  0.049031
+31337      0.514742  0.502505 -0.012237
+161803     0.489883  0.496160  0.006277
+271828     0.500592  0.529041  0.028449
+8675309    0.495342  0.522063  0.026722

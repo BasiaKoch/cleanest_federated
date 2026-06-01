@@ -1,0 +1,20 @@
+/Users/basiakoch/cleanest_federated/mnist_dermnist/analysis/tables.py:115: UserWarning: Only 0 paired seed(s) available. Statistical tests are unreliable.
+  warnings.warn(f"Only {len(paired)} paired seed(s) available. Statistical tests are unreliable.")
+
+Wrote mnist_dermnist/results/system_het_random_fednova/analysis/final_test_table.csv
+algorithm   fednova
+seed               
+42         0.245470
+123        0.346046
+456        0.245386
+789        0.278646
+999        0.249927
+2024       0.295771
+31337      0.114508
+161803     0.114508
+271828     0.114508
+8675309    0.364282
+
+ERROR: no paired seeds
+
+Wrote mnist_dermnist/results/system_het_random_fednova/analysis/paired_stats.json

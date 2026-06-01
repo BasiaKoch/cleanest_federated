@@ -1,0 +1,11 @@
+==============================================================================
+FULL-SCALE EQUIVALENCE CHECK (E=20, R=150) — Flower vs pure-PyTorch
+==============================================================================
+algo            seed    pure_PT     Flower     |diff|    pass?
+------------------------------------------------------------------------------
+fedavg            42  MISSING Flower result (run submit_equivalence_check.sh)
+fedprox           42  MISSING Flower result (run submit_equivalence_check.sh)
+fedavg       8675309  MISSING Flower result (run submit_equivalence_check.sh)
+fedprox      8675309  MISSING Flower result (run submit_equivalence_check.sh)
+------------------------------------------------------------------------------
+Tolerance: 0.02   Overall: FAIL

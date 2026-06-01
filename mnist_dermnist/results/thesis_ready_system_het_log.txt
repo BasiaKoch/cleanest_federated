@@ -1,0 +1,102 @@
+========================================================================
+SYSTEM HETEROGENEITY ANALYSIS
+========================================================================
+
+Loading baseline (no system het, Flower runtime)...
+  Loaded 10 FedAvg, 10 FedProx, 10 FedNova from /Users/basiakoch/cleanest_federated/mnist_dermnist/results/flower_C0_baseline
+
+Loading C1 (fixed stragglers)...
+  Loaded 10 FedAvg, 10 FedProx, 0 FedNova from /Users/basiakoch/cleanest_federated/mnist_dermnist/results/system_het_fixed
+
+Loading C2 (random stragglers)...
+  Loaded 10 FedAvg, 10 FedProx from /Users/basiakoch/cleanest_federated/mnist_dermnist/results/system_het_random
+  Loaded 10 FedNova from /Users/basiakoch/cleanest_federated/mnist_dermnist/results/system_het_random_fednova
+
+========================================================================
+STRAGGLER-SCHEDULE SANITY CHECKS
+========================================================================
+
+  ── Straggler-schedule sanity check for C1 (fixed_stragglers) ──
+  mode='fixed_stragglers'  E_max=20  num_clients=7  num_rounds=150
+  seeds verified: [42, 123, 456, 789, 999, 2024, 31337, 161803, 271828, 8675309]
+  Unique clients that appeared as stragglers (across all seeds): [5, 6]  (count 2)
+  E_i on straggler cells: mean=5.00  min=5  max=5  n_cells=3000
+  Per-client straggler frequency (rounds-as-straggler / 1500 aggregated cells):
+    C0:     0 / 1500 = 0.000
+    C1:     0 / 1500 = 0.000
+    C2:     0 / 1500 = 0.000
+    C3:     0 / 1500 = 0.000
+    C4:     0 / 1500 = 0.000
+    C5:  1500 / 1500 = 1.000
+    C6:  1500 / 1500 = 1.000
+  Update-norm comparison (from 20 CSVs):
+    straggler rounds:    mean=0.9574  sd=0.6719  n=6000
+    non-straggler rounds: mean=1.4234  sd=0.8908  n=15000
+    straggler / non-straggler norm ratio: 0.673
+
+
+  ── Straggler-schedule sanity check for C2 (random_stragglers) ──
+  mode='random_stragglers'  E_max=20  num_clients=7  num_rounds=150
+  seeds verified: [42, 123, 456, 789, 999, 2024, 31337, 161803, 271828, 8675309]
+  Unique clients that appeared as stragglers (across all seeds): [0, 1, 2, 3, 4, 5, 6]  (count 7)
+  E_i on straggler cells: mean=10.02  min=1  max=19  n_cells=6000
+  Per-client straggler frequency (rounds-as-straggler / 1500 aggregated cells):
+    C0:   883 / 1500 = 0.589
+    C1:   851 / 1500 = 0.567
+    C2:   828 / 1500 = 0.552
+    C3:   888 / 1500 = 0.592
+    C4:   835 / 1500 = 0.557
+    C5:   843 / 1500 = 0.562
+    C6:   872 / 1500 = 0.581
+  Update-norm comparison (from 20 CSVs):
+    straggler rounds:    mean=1.3246  sd=0.7625  n=12000
+    non-straggler rounds: mean=1.3126  sd=0.9402  n=9000
+    straggler / non-straggler norm ratio: 1.009
+
+
+  ── Straggler-schedule sanity check for C2 FedNova (random_stragglers) ──
+  mode='random_stragglers'  E_max=20  num_clients=7  num_rounds=150
+  seeds verified: [42, 123, 456, 789, 999, 2024, 31337, 161803, 271828, 8675309]
+  Unique clients that appeared as stragglers (across all seeds): [0, 1, 2, 3, 4, 5, 6]  (count 7)
+  E_i on straggler cells: mean=10.02  min=1  max=19  n_cells=6000
+  Per-client straggler frequency (rounds-as-straggler / 1500 aggregated cells):
+    C0:   883 / 1500 = 0.589
+    C1:   851 / 1500 = 0.567
+    C2:   828 / 1500 = 0.552
+    C3:   888 / 1500 = 0.592
+    C4:   835 / 1500 = 0.557
+    C5:   843 / 1500 = 0.562
+    C6:   872 / 1500 = 0.581
+  Update-norm comparison (from 10 CSVs):
+    straggler rounds:    mean=2.5701  sd=1.1079  n=6000
+    non-straggler rounds: mean=3.4073  sd=1.0245  n=4500
+    straggler / non-straggler norm ratio: 0.754
+
+
+==============================================================================================================
+HEADLINE RESULTS TABLE
+==============================================================================================================
+condition                         FedAvg        FedProx          Δ   p (H1)  p (H2 raw)  p (H2 Bonf)     r_rb
+--------------------------------------------------------------------------------------------------------------
+C0 (baseline)              0.4964±0.015  0.5033±0.021    +0.0069   0.4316         nan          nan   +0.309
+C1 (fixed_stragglers)      0.4978±0.016  0.5111±0.020    +0.0133   0.1602      0.6953       1.0000   +0.527
+C2 (random_stragglers)     0.4928±0.028  0.5102±0.017    +0.0174   0.2324      0.8457       1.0000   +0.455
+
+Bonferroni correction applied across n_h2_tests = 2 condition(s) with H2 data.
+
+STRAGGLER-TOLERANCE RATIOS (vs C0 baseline)
+------------------------------------------------------------
+condition                     ρ_FedAvg    ρ_FedProx
+C1 (fixed_stragglers)           1.0028       1.0155
+C2 (random_stragglers)          0.9928       1.0138
+
+====================================================================================================
+FEDNOVA ARM (per condition; triple-paired Δ vs FedAvg / vs FedProx where available)
+====================================================================================================
+condition                        FedNova    n    Δ vs FedAvg        p   Δ vs FedProx        p
+----------------------------------------------------------------------------------------------------
+C0 (baseline)              0.4852±0.022   10        -0.0112   0.1602        -0.0181   0.0098
+C2 (random_stragglers)     0.2369±0.093   10        -0.2559   0.0020        -0.2733   0.0020
+
+Wrote /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready_system_het/data/summary_statistics.json
+Wrote /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready_system_het/data/per_seed_results.csv

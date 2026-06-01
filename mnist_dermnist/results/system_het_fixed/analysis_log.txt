@@ -1,0 +1,42 @@
+
+Wrote mnist_dermnist/results/system_het_fixed/analysis/final_test_table.csv
+algorithm    fedavg   fedprox      diff
+seed                                   
+42         0.526817  0.490238 -0.036579
+123        0.498432  0.480296 -0.018136
+456        0.488319  0.497163  0.008845
+789        0.514619  0.525561  0.010942
+999        0.475466  0.526256  0.050790
+2024       0.485850  0.504018  0.018168
+31337      0.513112  0.547982  0.034870
+161803     0.489397  0.509836  0.020439
+271828     0.502467  0.516416  0.013949
+8675309    0.483077  0.513001  0.029924
+
+======================================================================
+Paired FedAvg vs FedProx — E=20, n_pairs=10
+Paired seeds: [42, 123, 456, 789, 999, 2024, 31337, 161803, 271828, 8675309]
+======================================================================
+
+  FedAvg  test macro-F1 : 0.4978 ± 0.0163
+  FedProx test macro-F1 : 0.5111 ± 0.0196
+  Mean paired diff      : +0.0133 ± 0.0252
+  Per-seed diffs        : ['-0.0366', '-0.0181', '+0.0088', '+0.0109', '+0.0508', '+0.0182', '+0.0349', '+0.0204', '+0.0139', '+0.0299']
+
+  Wilcoxon two-sided p  : 0.1602  [ns]
+  Wilcoxon greater  p   : 0.0801  (H1: FedProx > FedAvg)
+  Rank-biserial effect  : +0.527
+
+VERDICT: no statistically significant difference at α=0.05.
+
+Wrote mnist_dermnist/results/system_het_fixed/analysis/paired_stats.json
+
+Per-class F1 differences (FedProx − FedAvg):
+ class_id                    class_name  fedavg_mean  fedprox_mean  mean_diff  n_pairs  wilcoxon_p
+        0             actinic_keratoses     0.453082      0.474279   0.021197       10    0.496094
+        1          basal_cell_carcinoma     0.489926      0.471700  -0.018226       10    0.275391
+        2 benign_keratosis_like_lesions     0.437362      0.449878   0.012516       10    0.845703
+        3                dermatofibroma     0.316493      0.349019   0.032526       10    0.068359
+        4                      melanoma     0.205102      0.263718   0.058616       10    0.037109
+        5              melanocytic_nevi     0.884095      0.883529  -0.000566       10    0.695312
+        6              vascular_lesions     0.698229      0.685413  -0.012816       10    0.734375

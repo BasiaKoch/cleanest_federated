@@ -1,17 +1,16 @@
-% T04 -- Partition robustness (field-standard, auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{Robustness across four DermaMNIST partition designs, all on the Flower simulation runtime with the same ten paired seeds. The IID partition is the theoretical-null condition; the specialist row is the pre-registered specialist counterfactual described in \S\ref{sec:hyp-specialist} (same client sample counts $n_i$ as the engineered partition, every minority class assigned to exactly one client rather than two; included to probe whether the pairing structure --- not just label skew --- drives the FedProx effect); Dirichlet and balanced-paired are descriptive robustness rows. Values are mean $\pm$ SD across seeds; $\Delta$ is the within-pair FedProx $-$ FedAvg difference; $p$ is the two-sided paired Wilcoxon $p$-value. \textbf{No row is bolded} because none of the four per-partition contrasts reaches $\alpha = 0.05$ at $n = 10$ paired seeds. The IID row's slightly negative descriptive $\Delta$ matches the theoretical-null prediction; the specialist row's magnitude relative to balanced-paired is inferentially indeterminate at this sample size (\S\ref{sec:partition-robustness}).}
-\label{tab:partition-robustness}
 \small
-\begin{tabular}{lccccc}
+\caption{Statistical-heterogeneity partition robustness on the Flower runtime. \textbf{All comparisons except the headline are exploratory; $p$-values are reported descriptively and are not corrected for multiplicity.} The pure-PyTorch primary analysis (engineered partition, separate row) is the only inferential test.}
+\label{tab:partition-dose-response}
+\begin{tabular}{l c c c c c}
 \toprule
-Partition & FedAvg & FedProx & $\Delta$ & $p$ (Wilcoxon) & Wins \\
+Partition & FedAvg mean & FedProx mean & Mean $\Delta$ & $p$ & FedProx wins \\
 \midrule
-IID (uniform random) & $0.5853 \pm 0.0205$ & $0.5785 \pm 0.0204$ & $-0.0068$ & $> 0.05$ & 4/10 \\
-Dirichlet $\alpha = 0.1$ & $0.4796 \pm 0.0355$ & $0.4875 \pm 0.0341$ & $+0.0079$ & $> 0.05$ & 6/10 \\
-Specialist (1-of-7) & $0.4365 \pm 0.0236$ & $0.4446 \pm 0.0172$ & $+0.0081$ & $> 0.05$ & 7/10 \\
-Balanced paired (engineered) & $0.4964 \pm 0.0150$ & $0.5033 \pm 0.0206$ & $+0.0069$ & $0.432$ & 7/10 \\
+  IID (falsification)                 & $0.5853$ & $0.5785$ & $-0.0068$ & $0.375$ & 4/10 \\
+  Dirichlet $\alpha=0.1$              & $0.4796$ & $0.4875$ & $+0.0079$ & $0.322$ & 6/10 \\
+  Specialist (1-of-7)                 & $0.4365$ & $0.4446$ & $+0.0081$ & $0.492$ & 7/10 \\
+  Balanced paired (engineered)        & $0.4964$ & $0.5033$ & $+0.0069$ & $0.432$ & 7/10 \\
 \bottomrule
 \end{tabular}
 \end{table}

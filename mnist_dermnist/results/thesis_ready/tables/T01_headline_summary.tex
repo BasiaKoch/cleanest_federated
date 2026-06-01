@@ -1,16 +1,23 @@
-% T01 -- Headline summary (field-standard format, auto-generated)
 \begin{table}[!htbp]
 \centering
-\caption{Headline test macro-F1 on the engineered \texttt{balanced\_paired\_7\_clients} partition under the pure-PyTorch reference loop, reported as mean $\pm$ standard deviation across $n=10$ paired seeds. \textbf{Bolding convention used throughout the thesis tables:} a cell is bolded only when the corresponding paired Wilcoxon contrast is significant at $\alpha = 0.05$ (per-class tables: Holm-corrected over the family of seven classes). Non-bold rows are within seed-noise.}
-\label{tab:headline-summary}
 \small
-\begin{tabular}{lcc}
+\caption{Headline paired comparison: FedProx vs FedAvg on pure-PyTorch headline (engineered \texttt{balanced\_paired\_7\_clients} partition, $n = 10$ paired seeds).}
+\label{tab:headline-summary}
+\begin{tabular}{l c c c}
 \toprule
-& FedAvg & FedProx \\
+Statistic & FedAvg & FedProx & $\Delta$ (FedProx $-$ FedAvg) \\
 \midrule
-Test macro-F1                 & $0.4814 \pm 0.0254$ & \textbf{$0.5081 \pm 0.0140$} \\
-Mean within-pair $\Delta$     & \multicolumn{2}{c}{$+0.0267 \pm 0.0349$ \quad (paired Wilcoxon $p = 0.020$, Walsh 95\% CI $[+0.002,\,+0.053]$)} \\
-FedProx wins                  & \multicolumn{2}{c}{9/10 paired seeds} \\
+Test macro-F1 mean $\pm$ SD & $0.4814 \pm 0.0254$ & $0.5081 \pm 0.0140$ & $\mathbf{+0.0267 \pm 0.0349}$ \\
+Median test macro-F1            & $0.4798$ & $0.5057$ & $+0.0200$ \\
+Min / Max test macro-F1         & $0.4406$ / $0.5223$ & $0.4897$ / $0.5360$ & --- \\
+Hodges--Lehmann robust estimate & --- & --- & $+0.0221$ \\
+Exact Walsh 95\% CI ($n=10$)    & --- & --- & $[+0.0021, +0.0528]$ \\
+Bootstrap 95\% CI on mean       & --- & --- & $[+0.0073, +0.0484]$ \\
+FedProx win rate                & --- & --- & $\mathbf{9/10}$ \\
+Paired Wilcoxon $p$ (two-sided) & --- & --- & $\mathbf{0.020}$ \\
+Sign test $p$ (two-sided)       & --- & --- & $0.021$ \\
+Rank-biserial $r$               & --- & --- & $+0.8182$ \\
+LOSO subsamples sig.\ at $\alpha = 0.05$ & --- & --- & $\mathbf{10/10}$ \\
 \bottomrule
 \end{tabular}
 \end{table}

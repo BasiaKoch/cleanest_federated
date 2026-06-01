@@ -15,12 +15,12 @@
   ],
   "missing_fedavg_seeds": [],
   "missing_fedprox_seeds": [],
-  "fedavg_mean": 0.5406636466362202,
-  "fedavg_std": 0.150995305782845,
-  "fedprox_mean": 0.5329859326863275,
-  "fedprox_std": 0.14851797178300458,
-  "mean_diff": -0.007677713949892672,
-  "std_diff": 0.021087139328117045,
+  "fedavg_mean": 0.5853202395856187,
+  "fedavg_std": 0.020520842142504835,
+  "fedprox_mean": 0.5784794345720083,
+  "fedprox_std": 0.020411911485288214,
+  "mean_diff": -0.006840805013610318,
+  "std_diff": 0.021585889024430125,
   "diffs_per_seed": [
     -0.03843317612779984,
     0.0029586805610858358,
@@ -31,11 +31,11 @@
     -0.03003130438424595,
     -0.017761134715602145,
     -0.013986252887127293,
-    0.0
+    0.008369089362823545
   ],
-  "wilcoxon_stat": 13.0,
-  "wilcoxon_p_two_sided": 0.26039294361048326,
-  "wilcoxon_p_greater": 0.8698035281947584,
+  "wilcoxon_stat": 18.0,
+  "wilcoxon_p_two_sided": 0.375,
+  "wilcoxon_p_greater": 0.8388671875,
   "wilcoxon_significance": "ns",
-  "rank_biserial": -0.4222222222222222
+  "rank_biserial": -0.34545454545454546
 }

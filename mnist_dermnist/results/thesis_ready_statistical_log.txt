@@ -1,0 +1,104 @@
+========================================================================================
+ STATISTICAL HETEROGENEITY ANALYSIS
+========================================================================================
+
+Loaded sweeps:
+  headline                        FedAvg: 10  FedProx: 10  FedNova:  0
+  flower_C0_baseline              FedAvg: 10  FedProx: 10  FedNova: 10
+  iid                             FedAvg: 10  FedProx: 10  FedNova:  0
+  dirichlet_a01                   FedAvg: 10  FedProx: 10  FedNova:  0
+  specialist_partition            FedAvg: 10  FedProx: 10  FedNova:  0
+  centralised                   n=10
+
+========================================================================================
+ PRIMARY (pre-registered): FedProx vs FedAvg, pure-PyTorch headline
+========================================================================================
+
+n paired seeds:       10
+  FedAvg  : mean 0.4814  SD 0.0254
+  FedProx : mean 0.5081  SD 0.0140
+  Mean Δ = +0.0267, Median +0.0200, SD 0.0349
+  Hodges-Lehmann = +0.0221
+  Walsh 95% CI = [+0.0021, +0.0528]
+  Bootstrap 95% CI on mean = [+0.0073, +0.0484]
+  Paired Wilcoxon p = 0.0195
+  Sign test p = 0.0215  (9/10 positive)
+  Rank-biserial r = +0.8182
+  FedProx wins = 9/10
+  LOSO: 10/10 subsamples remain significant at α=0.05
+
+Wrote: /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready/tables/T01_headline_summary.tex
+
+========================================================================================
+ SECONDARY (within primary, Holm-corrected): per-class F1 contrasts
+========================================================================================
+
+Class                       Prev    FA F1    FP F1         Δ     p_raw    p_Holm
+------------------------------------------------------------------------------------------
+Actinic keratoses          3.27%   0.4039   0.4713   +0.0674    0.0195    0.1172
+Basal cell carcinoma       5.13%   0.4747   0.4733   -0.0014    0.8457    1.0000
+Benign keratosis          10.97%   0.4401   0.4438   +0.0036    0.6953    1.0000
+Dermatofibroma             1.15%   0.2832   0.2964   +0.0131    0.9219    1.0000
+Melanoma                  11.11%   0.1866   0.3007   +0.1141    0.0059    0.0410  *
+Melanocytic nevi          67.05%   0.8837   0.8856   +0.0019    0.3750    1.0000
+Vascular lesions           1.41%   0.6976   0.6857   -0.0118    0.6953    1.0000
+
+Wrote: /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready/tables/T02_per_class_holm.tex
+
+========================================================================================
+ EXPLORATORY (descriptive only): cross-runtime comparison
+========================================================================================
+
+Pure-PyTorch (primary):  Δ = +0.0267, p = 0.0195, wins = 9/10
+Flower (replication):    Δ = +0.0069, p = 0.4316, wins = 7/10
+Per-seed gap (PT − Flower): mean = +0.0198, p = 0.3223
+  → The cross-runtime gap is NOT consistent across seeds
+
+Wrote: /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready/tables/T03_cross_runtime.tex
+
+========================================================================================
+ EXPLORATORY (descriptive only): 4-partition Flower-runtime comparison
+========================================================================================
+
+Partition                                  n   FA mean   FP mean    mean Δ       p   wins
+----------------------------------------------------------------------------------------
+IID (falsification)                       10    0.5853    0.5785   -0.0068  0.3750  4/10 
+Dirichlet $\alpha=0.1$                    10    0.4796    0.4875   +0.0079  0.3223  6/10 
+Specialist (1-of-7)                       10    0.4365    0.4446   +0.0081  0.4922  7/10 
+Balanced paired (engineered)              10    0.4964    0.5033   +0.0069  0.4316  7/10 
+
+Note: All four results are descriptive. Only the pure-PyTorch headline (separate table) is the inferential primary.
+
+Wrote: /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready/tables/T04_partition_dose_response.tex
+
+========================================================================================
+ EXPLORATORY (descriptive only): federation tax
+========================================================================================
+  Centralised (pure-PyTorch, no FL)             mean=0.5600±0.0240  100.0%
+  FedAvg, pure-PyTorch, engineered partition    mean=0.4814±0.0254   86.0%
+  FedProx, pure-PyTorch, engineered partition   mean=0.5081±0.0140   90.7%
+  FedAvg, Flower replication                    mean=0.4964±0.0150   88.6%
+  FedProx, Flower replication                   mean=0.5033±0.0206   89.9%
+
+Wrote: /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready/tables/T05_federation_tax.tex
+
+Wrote full JSON dump: /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready/data/statistical_heterogeneity_results.json
+
+========================================================================================
+ SUMMARY
+========================================================================================
+
+PRIMARY (pure-PyTorch headline): Δ = +0.0267, p = 0.0195, CI [+0.0021, +0.0528]
+   → SIGNIFICANT at α=0.05
+
+SECONDARY (per-class, Holm-corrected):
+   Melanoma: Δ=+0.1141, p_Holm=0.0410
+
+EXPLORATORY (descriptive):
+   IID (falsification)                           Δ = -0.0068 (p = 0.3750, descriptive)
+   Dirichlet $\alpha=0.1$                        Δ = +0.0079 (p = 0.3223, descriptive)
+   Specialist (1-of-7)                           Δ = +0.0081 (p = 0.4922, descriptive)
+   Balanced paired (engineered)                  Δ = +0.0069 (p = 0.4316, descriptive)
+
+   Cross-runtime gap (PT−Flower): +0.0198 (p = 0.3223)
+   → NOT consistent across seeds — runtime effect is high-variance, not systematic.

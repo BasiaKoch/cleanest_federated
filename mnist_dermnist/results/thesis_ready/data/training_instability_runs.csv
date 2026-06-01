@@ -1,6 +1,6 @@
 source,partition,algorithm,mu,seed,unequal_E,drop_stragglers,file,std_last_K,mean_last_K,range_last_K,n_rounds
-symmetric L4 (node_pinned),L4,fedprox,0.01,123,False,False,history_fedprox_mu0.01_E20_s123.csv,0.0241057704716549,0.5127271428117369,0.08055992762181002,150
-symmetric L4 (node_pinned),L4,fedprox,0.01,456,False,False,history_fedprox_mu0.01_E20_s456.csv,0.01824275569989839,0.48138246553102426,0.04891448924996311,150
+symmetric L4 (node_pinned),L4,fedprox,0.01,123,False,False,history_fedprox_mu0.01_E20_s123.csv,0.008822529613430464,0.5108815586681813,0.029825550307040483,150
+symmetric L4 (node_pinned),L4,fedprox,0.01,456,False,False,history_fedprox_mu0.01_E20_s456.csv,0.016991382752186777,0.45995843239315326,0.048777733033958826,150
 symmetric L4 (node_pinned),L4,fedavg,0.0,456,False,False,history_fedavg_mu0.0_E20_s456.csv,0.019346469781363312,0.47134606589963984,0.06300874501557979,150
 symmetric L4 (node_pinned),L4,fedavg,0.0,123,False,False,history_fedavg_mu0.0_E20_s123.csv,0.037306009469611615,0.4076239105354375,0.13093294147122897,150
 symmetric L4 (node_pinned),L4,fedprox,0.01,42,False,False,history_fedprox_mu0.01_E20_s42.csv,0.026901936930966958,0.44676153896722387,0.07601019032986761,150
