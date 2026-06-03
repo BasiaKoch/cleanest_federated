@@ -1,40 +1,37 @@
 %% =============================================================================
-%% RESULTS CHAPTER -- standalone, Overleaf-ready single file
+%% FULL_THESIS.tex -- Full thesis scaffold
 %% =============================================================================
-%% Paste this file into a new Overleaf project (or compile locally with
-%% pdflatex). All section text and table data are
-%% contained inline. Upload the 10 figure PDFs (see list below) to the
-%% Overleaf project root or to a figures/ subfolder.
+%% This file is a complete LaTeX document that wraps the finished Results
+%% chapter (Chapter 5) in a standard thesis structure. The other chapters
+%% are scaffolds: section/subsection headings are in place with TODO markers
+%% for the prose. Fill those in incrementally without disturbing Chapter 5.
 %%
-%% Standalone preview numbers as Chapter 5 / sections 5.1-5.9 because the
-%% preamble sets \setcounter{chapter}{4} before \chapter{Results}. To merge
-%% into a host thesis where Results is already a chapter, delete everything
-%% from line 1 down through \chapter{Results}\label{ch:results} and the
-%% matching \end{document} at the bottom; paste the remaining body where the
-%% Results chapter belongs in the host file.
+%% Structure:
+%%   Front matter: title page, abstract, acknowledgements, TOC, LoF, LoT
+%%   Chapter 1: Introduction
+%%   Chapter 2: Background and Related Work
+%%   Chapter 3: Problem formulation
+%%   Chapter 4: Methods                       (use METHODS_BUILD_GUIDE.md)
+%%   Chapter 5: Results                        (complete; do not modify body)
+%%   Chapter 6: Discussion
+%%   Chapter 7: Conclusion
+%%   Bibliography
+%%   Appendices A--E                           (per THESIS_BUILD_GUIDE sec 7)
 %%
-%% Sections (in document order):
-%%   5.1 -- Evaluation setting and reporting protocol
-%%   5.2 -- Statistical heterogeneity alone gives limited optimiser separation
-%%   5.3 -- mu sensitivity: the proximal term helps only in a narrow range
-%%   5.4 -- Li-style straggler asymmetry (CENTREPIECE)
-%%   5.5 -- Learning-rate asymmetry reveals FedNova regime-dependence
-%%   5.6 -- Rare-class collapse into mel-nevi
-%%   5.7 -- Mechanism and robustness checks
-%%   5.8 -- Integrated summary of findings
-%%   5.9 -- Limitations
+%% Compile with pdflatex + bibtex (or biber). Requires references.bib in the
+%% project root.
 %%
-%% Figure PDFs referenced (upload these to Overleaf):
-%%   F_dataset_classes.pdf                          (Fig 5.1)
-%%   F_statistical_heterogeneity_forest.pdf         (Fig 5.2 panel a)
-%%   F_engineered_per_class.pdf                     (Fig 5.2 panel b)
-%%   F_mu_sensitivity_outcome_and_convergence.pdf   (Fig 5.3)
-%%   F_val_curves_extreme_gaps.pdf                  (Fig 5.4 panel A)
-%%   F_l4_four_condition_per_class_grid.pdf         (Fig 5.4 panel B)
-%%   F_asymmetric_lr_L4.pdf                         (Fig 5.5)
-%%   F_heterogeneity_escalation.pdf                 (Fig 5.6)
-%%   F_cross_experiment_per_class.pdf               (Fig 5.7)
-%%   F_update_norms.pdf                             (Fig 5.8)
+%% Figure PDFs referenced by Chapter 5 (must be on the \graphicspath):
+%%   F_dataset_classes.pdf
+%%   F_statistical_heterogeneity_forest.pdf
+%%   F_engineered_per_class.pdf
+%%   F_mu_sensitivity_outcome_and_convergence.pdf
+%%   F_val_curves_extreme_gaps.pdf
+%%   F_l4_four_condition_per_class_grid.pdf
+%%   F_asymmetric_lr_L4.pdf
+%%   F_heterogeneity_escalation.pdf
+%%   F_cross_experiment_per_class.pdf
+%%   F_update_norms.pdf
 %% =============================================================================
 
 \documentclass[11pt,a4paper]{report}
@@ -45,25 +42,244 @@
 \graphicspath{{mnist_dermnist/results/thesis_ready/figures/}{figures/}{./}}
 \usepackage{booktabs}
 \usepackage{amsmath, amssymb}
+\usepackage{bm}
 \usepackage{microtype}
 \usepackage{hyperref}
 \usepackage{caption}
+\usepackage{xcolor}
 \usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage[round,authoryear]{natbib}
+\onehalfspacing
 
-\title{Results Chapter Draft\\
-\large DermaMNIST FedAvg vs FedProx vs FedNova}
+\title{Federated Optimisation on DermaMNIST\\
+\large FedAvg, FedProx, and FedNova under Statistical and System Heterogeneity}
 \author{Barbara Koch}
 \date{}
 
 \begin{document}
 
+%% =============================================================================
+%% FRONT MATTER
+%% =============================================================================
+
 \maketitle
 
+\begin{abstract}
+%% TODO: 250--350 word abstract.
+%% Required content:
+%%   - The problem: medical FL under severe class imbalance plus mixed
+%%     statistical and system heterogeneity.
+%%   - The contribution: a regime map mapping when FedAvg, FedProx, and
+%%     FedNova preserve or lose rare-class signal.
+%%   - The centrepiece result (sec 5.4): under Li-style straggler asymmetry,
+%%     the FedProx advantage is mediated mainly by gamma-inexact partial-
+%%     update handling, not the proximal regulariser.
+%%   - The clinical framing: rare-class collapse into mel-nevi is the
+%%     common failure mode (24--67 percent misrouting).
+%%   - Caveats: single dataset, simulated stragglers, n=3 for mechanism probes.
+[ABSTRACT TO BE WRITTEN]
+\end{abstract}
+
+\chapter*{Acknowledgements}
+\addcontentsline{toc}{chapter}{Acknowledgements}
+%% TODO
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+
 %% =============================================================================
-%% Chapter wrapper. \setcounter{chapter}{4} so the standalone preview numbers
-%% sections 5.1, 5.2, ... matching the host thesis where this is Chapter 5.
+%% CHAPTER 1: INTRODUCTION
 %% =============================================================================
-\setcounter{chapter}{4}
+\chapter{Introduction}
+\label{ch:intro}
+
+%% TODO: target 1,500-2,000 words.
+
+\section{Motivation}
+\label{sec:intro-motivation}
+%% Why federated learning matters for medical imaging.
+%% Why class imbalance is the load-bearing constraint.
+%% Why optimiser choice is the lever we test.
+
+\section{Research questions}
+\label{sec:intro-questions}
+%% State 3-4 RQs the thesis answers, e.g.:
+%%   RQ1. Does statistical heterogeneity alone separate FedAvg and FedProx?
+%%   RQ2. Within FedProx, which mechanism carries the straggler-regime advantage?
+%%   RQ3. Is FedNova's robustness under LR asymmetry regime-dependent?
+%%   RQ4. Is FedProx an imbalance corrector or a drift/protocol intervention?
+
+\section{Contributions}
+\label{sec:intro-contributions}
+%% List the contributions tied to Chapter 5 results:
+%%   1. A regime map for FedAvg/FedProx/FedNova on imbalanced medical FL.
+%%   2. A four-condition decomposition isolating proximal vs gamma-inex.
+%%   3. L1 cross-partition control identifying the mechanism's information dependency.
+%%   4. Extended LR-asymmetry envelope (six ratios) and FedNova random-tau failure.
+%%   5. Cross-protocol per-class collapse synthesis tying optimiser to clinical failure mode.
+
+\section{Thesis structure}
+\label{sec:intro-structure}
+%% One-paragraph roadmap pointing at Chapters 2-7.
+
+
+%% =============================================================================
+%% CHAPTER 2: BACKGROUND AND RELATED WORK
+%% =============================================================================
+\chapter{Background and Related Work}
+\label{ch:background}
+
+%% TODO: target 2,500-3,500 words.
+
+\section{Federated learning fundamentals}
+\label{sec:bg-fl-fundamentals}
+%% FedAvg \citep{mcmahan2017fedavg}, communication-efficient FL.
+
+\section{Statistical heterogeneity in FL}
+\label{sec:bg-stat-het}
+%% non-IID data partitions; Dirichlet partitions \citep{hsu2019dirichlet};
+%% specialist/quantity skew; FL convergence under non-IID.
+
+\section{System heterogeneity and straggler handling}
+\label{sec:bg-system-het}
+%% Drop vs gamma-inexact; Li et al. 2020 FedProx \citep{li2020fedprox};
+%% Wang et al. 2020 FedNova \citep{wang2020fednova}; partial participation.
+
+\section{Class imbalance in medical imaging}
+\label{sec:bg-imbalance}
+%% Macro-F1 vs accuracy; loss-side rebalancing (weighted CE, focal);
+%% MedMNIST v2 \citep{yang2023medmnistv2}; HAM10000 \citep{tschandl2018ham10000}.
+
+\section{Optimiser comparators and gaps}
+\label{sec:bg-gaps}
+%% What prior work does not isolate: (a) within-FedProx mechanism decomposition,
+%% (b) FedNova regime-dependence under random-tau,
+%% (c) optimiser-vs-loss-side comparator on the same medical benchmark.
+
+
+%% =============================================================================
+%% CHAPTER 3: PROBLEM FORMULATION
+%% =============================================================================
+\chapter{Problem formulation}
+\label{ch:problem}
+
+%% TODO: target 1,000-1,500 words.
+
+\section{Federated learning setup}
+\label{sec:prob-fl-setup}
+%% Formalise: K clients, local objectives, global model, aggregation step.
+
+\section{Heterogeneity decomposition}
+\label{sec:prob-het-decomp}
+%% Statistical heterogeneity (partition design) vs system heterogeneity
+%% (stragglers, work, LR). Define what each variable controls.
+
+\section{Rare-client signal flow as the central concept}
+\label{sec:prob-signal-flow}
+%% Define rare-client signal flow informally: the per-round contribution of
+%% the client holding rare-class data to the global update. This is the
+%% concept Chapter 5 sec 5.8 unifies around.
+
+\section{The experimental variable}
+\label{sec:prob-experimental-variable}
+%% State clearly that the experimental variable is the optimiser/protocol pair;
+%% architecture, dataset, and seed budget are held fixed (see Methods).
+
+
+%% =============================================================================
+%% CHAPTER 4: METHODS
+%% =============================================================================
+\chapter{Methods}
+\label{ch:methods}
+
+%% TODO: target 2,800-3,300 words. Drafting brief: METHODS_BUILD_GUIDE.md
+%% Each section below maps directly to a sec 4.X in that guide. The Results
+%% chapter (Chapter 5) is the consumer.
+
+\section{Experimental design rationale}
+\label{sec:method-rationale}
+%% target 250-300 words. Establish the chapter spine: statistical heterogeneity
+%% controls who owns rare-class signal, system heterogeneity controls whether
+%% it reaches aggregation, optimisers control how the global model responds.
+
+\section{Dataset and rare-class failure motivation}
+\label{sec:method-dataset}
+%% target 300-350 words. DermaMNIST from MedMNIST v2, supports table,
+%% rare-class definition {dermato, melanoma, vascular}, melanoma rationale.
+
+\section{Federated simulation setup}
+\label{sec:method-simulation}
+%% target 300-350 words. Two federation sizes (7-client and 2-client) and
+%% their distinct roles. Training defaults (E=20, R=150, batch 32, SGD m=0.9,
+%% lr 0.01, weight decay 0, best-val checkpoint).
+
+\section{Model architecture and local training}
+\label{sec:method-model}
+%% target 250-300 words. 4-block CNN, GroupNorm (not BatchNorm), 128-FC,
+%% CE loss default.
+
+\section{Client partition designs}
+\label{sec:method-partitions}
+%% target 550-650 words.
+
+\subsection{IID control}
+\subsection{Engineered balanced-paired 7-client partition}
+\subsection{Robustness partitions}
+\subsection{Two-client L1/L4 mechanism partitions}
+
+\section{Federated optimisation methods}
+\label{sec:method-optimisers}
+%% target 450-550 words.
+
+\subsection{FedAvg}
+\subsection{FedProx}
+\subsection{FedNova}
+
+\section{System heterogeneity and partial-update protocols}
+\label{sec:method-protocols}
+%% target 500-600 words.
+
+\subsection{Straggler simulation}
+\subsection{Drop versus gamma-inexact handling}
+\subsection{Four-condition decomposition}
+\subsection{Learning-rate asymmetry}
+\subsection{Random-tau FedNova stress}
+
+\section{Loss-side class-imbalance interventions}
+\label{sec:method-losses}
+%% target 200-250 words. CE, weighted CE, focal (gamma=2).
+
+\section{Runtimes and implementation provenance}
+\label{sec:method-runtimes}
+%% target 250-300 words. Pure-PyTorch reference loop vs Flower; Flower as
+%% central runtime; reference to docs/runpod_log_*.txt for environment.
+
+\section{Experiment families and Results roadmap}
+\label{sec:method-roadmap}
+%% target 350-450 words. Table 4.5 mapping experiment families to Chapter 5
+%% sections. This is the bridge between Methods and Results.
+
+\section{Evaluation metrics and statistical reporting}
+\label{sec:method-metrics}
+%% target 350-450 words. Macro-F1, per-class F1, rare-F1, misrouting,
+%% seed tiers (n=10, n=3, n=1), paired-seed protocol.
+
+\section{Methods summary}
+\label{sec:method-summary}
+%% target 150-200 words. Hand-off to Results.
+
+
+%% =============================================================================
+%% CHAPTER 5: RESULTS  --  COMPLETE; DO NOT MODIFY BODY
+%% =============================================================================
+%% The Results chapter is finalised. Its content is preserved verbatim below.
+%% Source files: mnist_dermnist/results/thesis_ready/writing/5_1_*.tex ... 5_9_*.tex
+%% Verification: docs/VERIFICATION_SHEET.txt
+%% Skeleton:     docs/RESULTS_SKELETON.txt
+
 \chapter{Results}
 \label{ch:results}
 
@@ -1089,5 +1305,118 @@ grids cannot be produced from existing artefacts.
 %% =============================================================================
 %% END OF RESULTS BODY
 %% =============================================================================
+
+
+%% =============================================================================
+%% CHAPTER 6: DISCUSSION
+%% =============================================================================
+\chapter{Discussion}
+\label{ch:discussion}
+
+%% TODO: target 2,000-3,000 words.
+
+\section{Re-stating the regime map}
+\label{sec:disc-regime-map}
+%% Recap the central conditional thesis from sec 5.8.
+
+\section{Mechanism interpretation: signal flow as the unifying rule}
+\label{sec:disc-signal-flow}
+%% The sec 5.8 unifying observation: rare-class F1 is preserved iff rare-
+%% client signal reaches the global model. Discuss why this collapses six
+%% experiments into one rule.
+
+\section{Implications for cross-hospital federated medical learning}
+\label{sec:disc-implications}
+%% What does the regime map suggest for actual hospital FL deployments?
+%% Distinguish recommendations by the kind of heterogeneity expected.
+
+\section{Comparison with prior work}
+\label{sec:disc-prior-work}
+%% Where this thesis confirms, extends, or contradicts Li 2020, Wang 2020,
+%% McMahan 2017. Hedge appropriately --- per guide sec 8 do not say "this
+%% refutes ...".
+
+\section{Threats to validity}
+\label{sec:disc-validity}
+%% Internal: n=3, simulated stragglers, runtime divergence.
+%% External: single dataset, low resolution, mixed federation sizes.
+%% Construct: rare-class definition includes melanoma (mid-support, high-stakes).
+
+
+%% =============================================================================
+%% CHAPTER 7: CONCLUSION
+%% =============================================================================
+\chapter{Conclusion}
+\label{ch:conclusion}
+
+%% TODO: target 500-800 words.
+
+\section{Summary of contributions}
+\label{sec:conc-summary}
+%% Re-state the four or five main contributions from sec~1.3.
+
+\section{Practical recommendations}
+\label{sec:conc-recommendations}
+%% One-paragraph recommendation per regime cell. E.g.,
+%%   - "Under IID-like client distributions, no FL optimiser dominates."
+%%   - "Under straggler protocols on heterogeneous data, prefer FedProx + gamma-inexact."
+%%   - "Under persistent LR asymmetry, prefer FedNova; under random-tau, prefer FedAvg/FedProx."
+%%   - "Loss-side rebalancing (weighted CE) is a competitive complement, not a substitute."
+
+\section{Future work}
+\label{sec:conc-future-work}
+%% Items naturally extending the thesis:
+%%   - SCAFFOLD/FedAdam/FedYogi comparators
+%%   - Cross-dataset validation (Camelyon, full-resolution ISIC)
+%%   - Real wall-clock straggler protocols
+%%   - Per-client validation logging for fairness CDFs
+%%   - Combining gamma-inex aggregation with weighted-CE local objective
+
+
+%% =============================================================================
+%% BIBLIOGRAPHY
+%% =============================================================================
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+
+%% =============================================================================
+%% APPENDICES  (per THESIS_BUILD_GUIDE.md sec 7)
+%% =============================================================================
+\appendix
+
+\chapter{Supplementary statistical heterogeneity}
+\label{app:stat-het}
+%% Full heterogeneity ladder; full Dirichlet seed table; specialist details;
+%% pure-PyTorch vs Flower equivalence notes.
+
+\chapter{$\mu$ and FedProx sensitivity}
+\label{app:mu-sensitivity}
+%% mu x ladder cross-partition pilot (mu_sweep_ladder/);
+%% per-class mu at L0/L2 if not in main;
+%% extended-rounds L3 (250 rounds);
+%% asymmetric mu Yao test.
+
+\chapter{System heterogeneity and FedNova diagnostics}
+\label{app:system-het}
+%% Perfect-storm convergence figure (panel B);
+%% FedNova random-tau trajectories;
+%% FedNova unequal-E pilot;
+%% partial participation C=0.5.
+
+\chapter{Rare-class and clinical failure diagnostics}
+\label{app:clinical}
+%% D1 5:1 confusion matrices;
+%% collapse trajectory plots;
+%% small-hospital case study;
+%% early-warning collapse detector (labelled exploratory).
+
+\chapter{Robustness and mechanism audits}
+\label{app:robustness}
+%% Protocol-flip detailed table;
+%% B-dissimilarity proxy;
+%% training-instability metric;
+%% cross-protocol mechanism scatter if not in main;
+%% arch_ablation_bn one-paragraph BatchNorm note.
 
 \end{document}
