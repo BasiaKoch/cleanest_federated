@@ -1,2 +1,0 @@
-Wrote /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready/data/per_class_delta.csv
-Wrote /Users/basiakoch/cleanest_federated/mnist_dermnist/results/thesis_ready/figures/per_class_delta.png and .pdf

@@ -1,0 +1,170 @@
+% =============================================================================
+% Results sec 5.4 -- Centrepiece
+% Compressed version. Target ~720 words (centrepiece stays substantive).
+% =============================================================================
+
+\section{Under Li-style straggler asymmetry, FedProx's advantage is mediated
+mainly by $\gamma$-inexact partial-update handling}
+\label{sec:li-straggler}
+
+The straggler-regime FedProx advantage requires both statistical and system
+heterogeneity: removing statistical heterogeneity from the straggler
+protocol does not shrink the gain, it reverses it. Under
+\texttt{system\_het\_iid\_random} (IID partition, $n=10$), $\Delta = -0.013$
+macro-F1; under the identical straggler schedule on the L4 partition
+(\texttt{system\_het\_random}, $n=10$), $\Delta = +0.017$. Stragglers alone
+are neutral; label imbalance alone gives the small effects in
+\S\,\ref{sec:statistical-heterogeneity}; their combination opens a
+$3$-percentage-point window in which optimiser choice matters, and
+motivates the four-condition decomposition below.
+
+We decompose the gap into four matched cells at L4, $n=3$
+(Table~\ref{tab:li-decomp-l4}). \emph{FedAvg, no straggler} establishes the
+no-system-heterogeneity baseline. \emph{FedAvg + drop} adds the straggler
+protocol but discards stragglers' partial updates. \emph{FedProx + drop}
+adds the proximal term while holding the drop policy fixed, isolating the
+proximal contribution alone. \emph{FedProx + $\gamma$-inexact} replaces the
+drop policy with $\gamma$-inexact partial-update acceptance, isolating the
+partial-update mechanism on top of the proximal term. All remaining
+hyperparameters are held fixed.
+
+L4 cells give FedAvg-no-straggler $0.485 \pm 0.028$, FA+drop
+$0.364 \pm 0.009$, FP+drop $0.368 \pm 0.005$, FP+$\gamma$-inex
+$0.479 \pm 0.010$. The total gap over FA+drop is $+0.115$, decomposing as
+proximal-only $+0.004$ (FP+drop $-$ FA+drop) and $\gamma$-inexact $+0.111$
+(FP+$\gamma$-inex $-$ FP+drop). Within the FedProx protocol, approximately
+$96\,\%$ of the straggler-regime gain over FedAvg+drop is mediated by
+partial-update acceptance rather than by the proximal regulariser. The
+decomposition does not include an FedAvg+$\gamma$-inex cell, so the
+attribution is to the FedProx+$\gamma$-inex protocol rather than to
+$\gamma$-inex as a standalone mechanism.
+Figure~\ref{fig:val-curves-extreme-gaps}~(A) confirms this at the aggregate
+level: the FA+drop and FP+drop validation trajectories overlap throughout all
+150 rounds, while FP+$\gamma$-inex diverges upward around round 30 and
+stabilises near $0.48$. Under matched drop-handling the proximal term
+changes neither convergence rate nor asymptote; the partial-update accept
+policy does both. Figure~\ref{fig:l4-per-class-grid} resolves this per
+class: mel-nevi saturates at $\approx 0.89$ under all four conditions and is
+invariant; the three rare classes (dermato, melanoma, vascular) flatline at
+zero under FedAvg+drop and FedProx+drop, recover partially under
+FedAvg-no-straggler ($\overline{\text{rare-F1}} = 0.17$), and recover
+furthest under FedProx+$\gamma$-inexact
+($\overline{\text{rare-F1}} = 0.25$, with melanoma reaching $0.36$). The
+aggregate $\gamma$-inexact gain is localised to the rare-class learning
+trajectory, not to the dominant class.
+
+A stress test (L4, full straggler schedule, batch size 10,
+accept-partial-updates, $n=3$) magnifies the same ordering. FedAvg+drop's
+validation trajectory flatlines at each seed's round-1 value for all 150
+rounds (s42: $0.114$, s123: $0.115$, s456: $0.030$); the best-validation
+checkpoint is selected at round 1 for every seed --- the untrained
+initialisation beats every trained checkpoint. Across seeds the mean test
+macro-F1 is $0.087 \pm 0.049$. FedProx $\mu = 1.0$ recovers to $0.365 \pm 0.023$;
+FedProx $\mu = 0.01$ reaches $0.491 \pm 0.003$, matching its four-condition
+value. The $\approx +0.40$ gap demonstrates the same ordering at larger
+magnitude but is not a clean decomposition: multiple hyperparameters change
+between cells. The causal claim rests on Table~\ref{tab:li-decomp-l4};
+perfect-storm only shows the mechanism survives stress severe enough to
+make the trained model lose to its own initialisation.
+
+To test whether the mechanism is generic or requires informationally unique
+class signal at the dropped client, we ran the identical four-condition
+design at L1 --- a quantity-only heterogeneity partition (86/14 sample
+split, identical label distributions across clients, JS divergence
+$\approx 0$). The L1 cells (Table~\ref{tab:li-decomp-l1}, $n=3$) are
+essentially flat: FA-no-strag $0.601 \pm 0.010$, FA+drop $0.599 \pm 0.006$,
+FP+drop $0.593 \pm 0.022$, FP+$\gamma$-inex $0.605 \pm 0.009$.
+Proximal-only $-0.006$, $\gamma$-inexact $+0.012$, drop-cost $-0.001$ ---
+versus $+0.111$ and $-0.121$ at L4. The $\gamma$-inexact contribution
+shrinks by an order of magnitude, and drop-handling stops costing anything
+measurable. $\gamma$-inexact partial-update acceptance has nothing to
+rescue when the dropped client carries no class signal the other client
+lacks: the mechanism is not generic drift-control but operates only when
+statistical heterogeneity makes the dropped client's partial updates
+informationally irreplaceable. The Table~\ref{tab:li-decomp-l4} vs
+Table~\ref{tab:li-decomp-l1} contrast is the strongest single piece of
+evidence for this interpretation in the chapter.
+
+The straggler experiments isolate one axis of system asymmetry.
+\S\,\ref{sec:lr-asymmetry} asks whether persistent learning-rate imbalance
+--- a different axis --- changes the optimiser ranking.
+
+
+% =============================================================================
+% Tables
+% =============================================================================
+
+\begin{table}[h]
+\centering
+\caption{Li-style four-condition decomposition at the L4 partition,
+$n=3$ matched seeds (42, 123, 456). Total gap over FA+drop $= +0.115$;
+proximal-only contribution $+0.004$; $\gamma$-inexact contribution $+0.111$.
+Source: \texttt{li2020\_asymmetric\_L4/analysis/li2020\_asymmetric\_L4\_summary.csv}.}
+\label{tab:li-decomp-l4}
+\begin{tabular}{lccccc}
+\hline
+Condition & Straggler? & Partial-update & Proximal? & macro-F1 & $\Delta$ vs FA+drop \\
+\hline
+FedAvg, no straggler        & no  & ---                  & no  & $0.485 \pm 0.028$ & $+0.121$ \\
+FedAvg + drop               & yes & dropped              & no  & $0.364 \pm 0.009$ & ---      \\
+FedProx + drop              & yes & dropped              & yes & $0.368 \pm 0.005$ & $+0.004$ \\
+FedProx + $\gamma$-inexact  & yes & accepted ($\gamma$)  & yes & $0.479 \pm 0.010$ & $+0.115$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Cross-partition control: same four-condition design at L1
+(quantity-only heterogeneity, JS $\approx 0$, $n=3$). Schema matches
+Table~\ref{tab:li-decomp-l4}. Decomposition: proximal-only $-0.006$,
+$\gamma$-inexact $+0.012$, drop-cost $-0.001$ --- versus $+0.111$ and
+$-0.121$ at L4. Source: \texttt{li2020\_asymmetric\_L1/}.}
+\label{tab:li-decomp-l1}
+\begin{tabular}{lccccc}
+\hline
+Condition & Straggler? & Partial-update & Proximal? & macro-F1 & $\Delta$ vs FA+drop \\
+\hline
+FedAvg, no straggler        & no  & ---                  & no  & $0.601 \pm 0.010$ & $+0.002$ \\
+FedAvg + drop               & yes & dropped              & no  & $0.599 \pm 0.006$ & ---      \\
+FedProx + drop              & yes & dropped              & yes & $0.593 \pm 0.022$ & $-0.006$ \\
+FedProx + $\gamma$-inexact  & yes & accepted ($\gamma$)  & yes & $0.605 \pm 0.009$ & $+0.006$ \\
+\hline
+\end{tabular}
+\end{table}
+
+
+% =============================================================================
+% Figure 5.4 placeholder
+% =============================================================================
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{F_val_curves_extreme_gaps.pdf}
+\caption{Four-condition validation trajectories at L4, mean over $n=3$ seeds
+(Panel A). FedAvg+drop and FedProx+drop overlap throughout 150 rounds,
+isolating the proximal term as inactive under matched drop-handling.
+FedProx+$\gamma$-inexact diverges upward around round 30 and stabilises
+near $0.48$. Panel B (perfect-storm trajectories) is in Appendix~C.}
+\label{fig:val-curves-extreme-gaps}
+\end{figure}
+
+
+% =============================================================================
+% Figure 5.4(b) -- per-class trajectory grid (this session)
+% =============================================================================
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{F_l4_four_condition_per_class_grid.pdf}
+\caption{Per-class validation F1 trajectories under each of the four
+conditions at L4, mean across $n = 3$ seeds. Mel-nevi (dark grey) is
+invariant near $0.89$ across all conditions; the three rare classes ---
+melanoma (red), dermato (orange), vascular (purple) --- flatline at zero
+under FedAvg+drop and FedProx+drop and recover only under
+FedProx+$\gamma$-inexact (melanoma to $\approx 0.36$, rare-F1 mean $0.25$).
+The three common classes (light greys: actinic, basal, b-kerat) are shown
+muted. The $\gamma$-inexact mechanism is localised to the rare-class
+learning trajectory.}
+\label{fig:l4-per-class-grid}
+\end{figure}

@@ -1,0 +1,77 @@
+% =============================================================================
+% Results sec 5.1 -- Evaluation setting and reporting protocol
+% Compressed. Definitional, not interpretive. Target ~250 words.
+% Verified facts: class supports (66.9% / 1.1% / 1.4%); test counts;
+% RARE_IDX = {dermato, melanoma, vascular} (canonical).
+% =============================================================================
+
+\section{Evaluation setting and reporting protocol}
+\label{sec:eval-setting}
+
+DermaMNIST is severely class-imbalanced: mel-nevi occupies $66.9\,\%$ of
+the training set while dermato and vascular together account for $2.5\,\%$,
+with test supports of $1341/2005$ images for mel-nevi versus $23$ for
+dermato and $29$ for vascular (Figure~\ref{fig:dataset-classes}). Raw
+accuracy would saturate at the mel-nevi prevalence floor, so the primary
+metric throughout is test macro-F1 at the best-validation checkpoint, with
+per-class F1, confusion-matrix diagonal entries, and rare-class F1 as
+secondary diagnostics. Rare-class F1 uses the canonical index set
+$\mathrm{RARE\_IDX} = \{\text{dermato}, \text{melanoma}, \text{vascular}\}$;
+the $0.265$ value from earlier drafts excluded melanoma and is not used.
+
+Three seed tiers are reported distinctly. Headline comparisons use $n = 10$
+paired seeds with the within-pair sign count and Wilcoxon signed-rank where
+applicable. Mechanism and asymmetry probes use $n = 3$ as directional only;
+no significance test is applied at this sample size. Single-seed pilots
+(notably the heterogeneity ladder) are labelled explicitly and are not used
+to derive headline numbers.
+
+Two runtimes are used: a pure-PyTorch reference loop and a Flower
+simulation. Their estimates diverge on the engineered partition
+(\S\,\ref{sec:statistical-heterogeneity}); the chapter takes the Flower
+paired replication as the central headline because it carries
+\texttt{git\_commit} and per-round \texttt{client\_update\_norms} provenance
+that the pure-PyTorch loop does not.
+
+Table~\ref{tab:reporting-protocol} summarises these conventions; subsequent
+sections cite them only by reference.
+
+
+% =============================================================================
+% Table 5.1
+% =============================================================================
+
+\begin{table}[h]
+\centering
+\small
+\caption{Reporting protocol and metric hierarchy. Applied uniformly across
+\S\S\,5.2--5.9.}
+\label{tab:reporting-protocol}
+\begin{tabular}{p{0.20\linewidth} p{0.32\linewidth} p{0.40\linewidth}}
+\hline
+Component               & Choice                                       & Reason \\
+\hline
+Primary metric          & Test macro-F1 at best-val checkpoint         & Class-imbalanced; accuracy saturates at majority floor \\
+Secondary metrics       & Per-class F1, confusion-matrix diagonal, rare-F1 & Surface per-class failure that macro can mask \\
+Rare-class definition   & $\{\text{dermato}, \text{melanoma}, \text{vascular}\}$ & Low support + high clinical priority (melanoma is mid-support but high-stakes) \\
+$n = 10$ protocol       & Paired sign count + Wilcoxon where applicable & Headline statistical-heterogeneity comparisons \\
+$n = 3$ protocol        & Directional only; no significance test       & Mechanism probes; power insufficient for $p$-values \\
+$n = 1$ protocol        & Labelled ``pilot''; no headline use          & Heterogeneity ladder; single-class seed events possible \\
+Runtimes                & Flower (central), pure-PyTorch (corroboration) & Flower carries full git+update-norm provenance \\
+\hline
+\end{tabular}
+\end{table}
+
+
+% =============================================================================
+% Figure 5.1
+% =============================================================================
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{F_dataset_classes.pdf}
+\caption{DermaMNIST class distribution. Mel-nevi dominates at $66.9\,\%$ of
+the training set; dermato ($1.1\,\%$), vascular ($1.4\,\%$), and melanoma
+(${\approx}11\,\%$) define the rare-class set used throughout the chapter.}
+\label{fig:dataset-classes}
+\end{figure}

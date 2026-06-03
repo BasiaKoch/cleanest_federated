@@ -1,0 +1,284 @@
+================================================================================
+THESIS NUMERICAL VERIFICATION SHEET
+================================================================================
+Run date:  2026-06-02
+Guide ref: THESIS_BUILD_GUIDE.md §5 (verification checklist)
+Method:    Raw-JSON / raw-CSV aggregation. Where the guide says "aggregate from
+           raw JSONs, do NOT trust stale summary CSV", I did exactly that.
+
+LEGEND
+  ✓ verified  — actual matches expected to displayed precision
+  ≈ verified  — within rounding (≤1 in last digit), same sign and order
+  ⚠ mismatch  — numeric or sign disagreement; explained in NOTES column
+  ? missing   — file/column not found, or value not derivable
+
+USE-IN-WRITING RULE
+  Cite ONLY values from rows marked ✓ or ≈. For ⚠ rows, do NOT cite the
+  expected value — re-derive or use the "actual" number with a footnote.
+
+================================================================================
+HEADLINE COMPARISONS (cmds 1–4 in guide §5)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+ 1  Pure-PyTorch engineered Δ            +0.027              +0.0267 (FA 0.4814 SD 0.025,  headline/test_at_best_*.json (n=10)         ✓
+                                                              FP 0.5081 SD 0.014, 9/10 wins)
+ 2  Flower engineered Δ                  +0.007              +0.0069 (FA 0.4964, FP 0.5033, flower_C0_baseline/test_at_best_*.json     ✓
+                                                              n=10)                          (n=10 paired)
+ 3  Flower μ-peak Δ at μ=0.01            +0.013              +0.0131 (FedAvg 0.4931 SD 0.020, mu_sensitivity_flower/                   ✓
+                                                              μ=0.01 0.5062 SD 0.017)
+ 4  IID Δ (Flower)                       −0.006              −0.0068 (FA 0.5853, FP 0.5785,   flower_C0_iid_baseline/                  ✓
+                                                              n=10; FedNova 0.5771)
+
+================================================================================
+LI-STYLE FOUR-CONDITION DECOMPOSITION AT L4 (cmd 5)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+ 5  L4 FA-no-straggler baseline          0.485 (not in       0.4851 ± 0.028 (n=3)         li2020_asymmetric_L4/analysis/              ✓
+                                          checklist; for ref)                              li2020_asymmetric_L4_summary.csv
+ 6  L4 FA+drop                           0.364 ± 0.009       0.3643 ± 0.009 (n=3)         same                                        ✓
+ 7  L4 FP+drop                           0.368 ± 0.005       0.3684 ± 0.005 (n=3)         same                                        ✓
+ 8  L4 FP+γ-inexact                      0.479 ± 0.010       0.4791 ± 0.010 (n=3)         same                                        ✓
+ 9  Proximal-only contribution (FP+drop − FA+drop)
+                                         +0.004              +0.0041                       derived from #6, #7                         ✓
+10  γ-inexact contribution (FP+γ-inex − FP+drop)
+                                         +0.111              +0.1107                       derived from #7, #8                         ✓
+11  Total gap (FP+γ-inex − FA+drop)      +0.115              +0.1148                       derived from #6, #8                         ✓
+
+================================================================================
+PERFECT-STORM L4 (cmd 6)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+12  Perfect-storm FA+drop                0.087 ± 0.049       0.0869 ± 0.049 (n=3)         fedprox_perfect_storm_L4/analysis/          ✓
+                                                                                          perfect_storm_L4_summary.csv
+13  Perfect-storm FP μ=0.01              0.491 ± 0.003       0.4913 ± 0.003 (n=3)         same                                        ✓
+14  Perfect-storm FP μ=1.0               0.365 ± 0.023       0.3654 ± 0.023 (n=3)         same                                        ✓
+
+================================================================================
+ASYMMETRIC LR L4 — EXTENDED ENVELOPE (cmd 7)  raw-JSON aggregation; 54 runs total
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+15  1:1 macro-F1  FA / FP / FN          0.457 / 0.491 / 0.509   0.4573 / 0.4913 / 0.5092 asymmetric_lr_L4/ (raw JSONs, n=3 each)     ✓
+16  2:1 macro-F1  FA / FP / FN          0.425 / 0.462 / 0.526   0.4249 / 0.4616 / 0.5255 same                                        ✓
+17  5:1 macro-F1  FA / FP / FN          0.375 / 0.392 / 0.504   0.3747 / 0.3924 / 0.5035 same                                        ✓
+18  10:1 macro-F1 FA / FP / FN          0.369 / 0.369 / 0.501   0.3690 / 0.3693 / 0.5008 same                                        ✓
+19  20:1 macro-F1 FA / FP / FN          0.367 / 0.372 / 0.486   0.3670 / 0.3722 / 0.4856 same                                        ✓
+20  50:1 macro-F1 FA / FP / FN          0.367 / 0.366 / 0.498   0.3668 / 0.3665 / 0.4978 same                                        ✓
+21  50:1 FedNova–FedAvg gap (largest)   +0.13               +0.1310                       derived from #20                            ✓
+22  Rare-F1 collapse at 10:1 (FA / FP / FN)
+                                         0.016 / 0.010 /     0.0163 / 0.0103 / 0.3663     same; RARE_IDX={3,4,6}                      ✓
+                                          0.33–0.41 (FN range
+                                          across envelope)
+23  Rare-F1 FedNova across envelope     0.33–0.41           0.326 (20:1) to 0.406 (2:1)   same                                        ✓
+
+================================================================================
+LOSS-SIDE COMPARATORS — wCE / focal (cmd 8)  raw-JSON aggregation; 18 runs total
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+24  FA + CE                              0.477 (rare 0.285)  0.4766 ± 0.002 (rare 0.285)   fedprox_weighted_ce_L4/ (raw JSONs, n=3)   ✓
+25  FA + wCE                             0.505 (rare 0.367)  0.5053 ± 0.023 (rare 0.367)   same                                        ✓
+26  FA + focal                           0.467 (rare 0.317)  0.4671 ± 0.002 (rare 0.317)   same                                        ✓
+27  FP + CE                              0.478 (rare 0.291)  0.4782 ± 0.016 (rare 0.291)   same                                        ✓
+28  FP + wCE                             0.503 (rare 0.346)  0.5032 ± 0.014 (rare 0.346)   same                                        ✓
+29  FP + focal                           0.476 (rare 0.304)  0.4761 ± 0.022 (rare 0.304)   same                                        ✓
+30  wCE loss effect (FA: CE → wCE)      +0.029              +0.0287                       derived from #24, #25                       ✓
+31  focal loss effect (FA: CE → focal)  −0.010 macro,        −0.0095 macro,                derived from #24, #26                       ✓
+                                          +0.032 rare         +0.0314 rare
+
+================================================================================
+FEDNOVA RANDOM-τ COLLAPSE (cmd 9)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+32  FedNova random-τ macro-F1           0.24 mean (n=10)    0.2369 ± 0.094 (n=10)        system_het_random_fednova/                  ✓
+33  Seeds with majority-class collapse  3 of 10             3 of 10 (s31337, s271828,    same; macro_f1 = 0.1145 ≈ majority-only      ✓
+    (macro_f1 ≈ 0.114)                                       s161803 all = 0.1145)        baseline
+
+================================================================================
+STATISTICAL × SYSTEM INTERACTION (cited at §5.4 para 1)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+34  system_het_iid_random Δ (FP−FA)     ≈ −0.013            −0.0131 (FA 0.5879 SD 0.011,  system_het_iid_random/                     ✓
+                                                              FP 0.5747 SD 0.015, n=10)
+35  system_het_random Δ (FP−FA)         ≈ +0.017            +0.0174 (FA 0.4928 SD 0.028,  system_het_random/                          ✓
+                                                              FP 0.5102 SD 0.017, n=10)
+36  system_het_iid_fixed Δ (FP−FA)      (not in guide)      +0.0102 (FA 0.5741, FP 0.5843, system_het_iid_fixed/                     ≈ ref
+                                                              n=10)
+37  system_het_fixed Δ (FP−FA)          (not in guide)      +0.0133 (FA 0.4978, FP 0.5111, system_het_fixed/                          ≈ ref
+                                                              n=10)
+
+================================================================================
+L1 CROSS-PARTITION CONTROL (Table 5.4b — NEW)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+38  L1 FA-no-straggler                  0.601               0.6006 ± 0.010 (n=3)         li2020_asymmetric_L1/ (raw JSONs)           ✓
+39  L1 FA+drop                          0.599               0.5994 ± 0.006 (n=3)         same                                        ✓
+40  L1 FP+drop                          0.593               0.5932 ± 0.022 (n=3)         same                                        ✓
+41  L1 FP+γ-inexact                     0.605               0.6049 ± 0.009 (n=3)         same                                        ✓
+42  L1 proximal-only contribution       −0.006              −0.0062                       derived from #39, #40                       ✓
+43  L1 γ-inexact contribution           +0.012              +0.0117                       derived from #40, #41                       ✓
+44  L1 drop-handling cost               −0.001              −0.0012                       derived from #38, #39                       ✓
+
+================================================================================
+PARTITION ROBUSTNESS (§5.2)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+45  Dirichlet α=0.1 Δ (FP−FA)           ≈ +0.008            +0.0079 (FA 0.4796, FP 0.4875, dirichlet_a01/ (regenerated raw JSON)     ✓
+                                                              n=10)
+46  Specialist 1-of-7 Δ                 ≈ +0.008            +0.0081 (FA 0.4365, FP 0.4446, specialist_partition/                     ✓
+                                                              n=10)
+47  Node-pinned L4 Δ                    −0.006              +0.0052 (FA 0.4920, FP 0.4972, node_pinned_L4/ (n=3)                     ⚠ MISMATCH
+                                                              n=3)                          analysis/node_pinned_L4_summary.csv
+                                                                                          NOTES: Sign opposite to guide claim.
+                                                                                          Per-seed Δ = {+0.013, +0.019, −0.016}.
+                                                                                          Likely cause: guide cites a stale or
+                                                                                          differently-aggregated number (the
+                                                                                          analysis CSV gives the same +0.005 today).
+                                                                                          Magnitude is small either way (within
+                                                                                          seed noise) — the qualitative claim
+                                                                                          "essentially indistinguishable" still
+                                                                                          holds, but Table 5.2 row "Node-pinned L4"
+                                                                                          must use +0.005, not −0.006.
+
+================================================================================
+HETEROGENEITY LADDER L4 (single-seed pilot)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+48  L4 macro Δ single-seed              ≈ −0.026            −0.0296 (FA 0.5188, FP 0.4892) heterogeneity_ladder/analysis/             ≈
+                                                                                          ladder_summary.csv (s42 only)
+49  L4 vascular F1 Δ                    ≈ −0.220            −0.2203 (FA 0.7018, FP 0.4815) same                                       ✓
+50  All other L4 classes |Δ| ≤ 0.033    yes                  Max non-vascular |Δ| =        same; classes: actinic, basal, bkerat,    ✓
+                                                              0.034 (basal F1)              dermato, melanoma, mel-nevi
+                                                                                          NOTE: actually 0.034 — exactly at the
+                                                                                          threshold. Guide says "≤ 0.033"; treat
+                                                                                          as boundary, prose can say "≈ 0.03".
+
+================================================================================
+TRAJECTORY CHARACTERISTICS — engineered partition (§5.2 para 7)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+51  FedAvg test SD                      0.025               0.0254                        headline/test_at_best_*.json (n=10)         ✓
+52  FedProx test SD                     0.014               0.0140                        same                                        ✓
+53  Variance reduction (%)              45%                  44.9%                         derived from #51, #52                       ✓
+54  Rounds to val 0.40 — FedAvg        12.7                 12.70 (n=10)                  headline/history_*.csv (n=10 each)          ✓
+55  Rounds to val 0.40 — FedProx       9.8                  9.80 (n=10)                   same                                        ✓
+56  Speed-up factor                     1.3×                 1.30×                        derived from #54, #55                       ✓
+57  Mid-training peak gap at round 50  +0.094               +0.0940 (n=10 paired)         same                                        ✓
+
+================================================================================
+D1 5:1 MELANOMA DETECTION (cited at §5.5 para 2)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+58  D1 5:1 FedAvg melanoma F1           1.2%                1.20%                         thesis_ready/data/l4_per_class_accuracy.csv ✓
+59  D1 5:1 FedProx melanoma F1          6.1%                6.13%                         same                                        ✓
+60  D1 5:1 FedNova melanoma F1          46.3%               46.34%                        same                                        ✓
+
+================================================================================
+UPDATE NORMS — engineered (§5.7.1)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+61  FedAvg mean ‖Δw‖                    1.52                 1.523                         flower_C0_baseline/                         ✓
+                                                                                          client_update_norms_*.csv (9,450 rows)
+62  FedProx mean ‖Δw‖                   1.03                 1.260                         same (15,750 rows)                          ⚠ MISMATCH
+                                                                                          NOTES: Actual is 1.26, not 1.03. The
+                                                                                          discrepancy is large enough that the
+                                                                                          "33% reduction" claim becomes ~17%.
+                                                                                          Likely cause: guide cites a different
+                                                                                          aggregation (e.g. weighted by n_samples,
+                                                                                          restricted to one client, restricted to
+                                                                                          rounds where local_epochs==tau, or
+                                                                                          excluding γ-inexact rounds). The
+                                                                                          per-client FedProx means (excluding the
+                                                                                          7th client at 0.34) range 1.26–1.49 —
+                                                                                          none is 1.03. Re-derive before citing
+                                                                                          the "33% reduction" number.
+
+================================================================================
+CROSS-PROTOCOL MECHANISM CORRELATIONS (§5.7.1 / Finding 6)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+63  Pooled n (L4 cross-protocol)        78                   78                            thesis_ready/data/                          ✓
+                                                                                          l4_cross_protocol_mechanism.csv
+64  Spearman r (dom-client norm vs rare-F1, pooled)
+                                         +0.63               +0.634                        same                                        ✓
+65  Spearman r (influence ratio vs rare-F1, pooled)
+                                         −0.04               −0.045                        same                                        ✓
+66  Within asymmetric_lr, r FedAvg      +0.80                +0.800                        same; subset n=27 (9 cells × 3 seeds)      ✓
+67  Within asymmetric_lr, r FedProx     +0.87                +0.867                        same                                        ✓
+
+================================================================================
+PROTOCOL-FLIP AUDIT (§5.7.2)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+68  Large effects — flips               0/9                  0/9 (perfect_storm 0/3,       thesis_ready/data/                          ✓
+                                                              li2020_asymmetric 0/3,         protocol_flip_summary.csv
+                                                              asymmetric_mu 0/3)
+69  Small effects — flips               3/9                  3/9 (node_pinned s42,         same                                        ✓
+                                                              extended_rounds_L3 s42,
+                                                              two_client_90_10 s456)
+
+================================================================================
+PROVENANCE CLAIMS (§5.2 para 2)
+================================================================================
+
+#  Claim                                Expected            Actual                       Source                                      Status
+70  Pure-PyTorch headline JSONs lack    yes                  yes (0/20 have git_commit)    headline/test_at_best_*.json               ✓
+    git_commit field
+71  Flower JSONs carry full provenance  yes                  yes (30/30 have git_commit)   flower_C0_baseline/test_at_best_*.json     ✓
+
+================================================================================
+NOT INDEPENDENTLY VERIFIED — derive before citing
+================================================================================
+
+The following appear in the guide but were not part of the cmd 1–9 verification
+and were not derivable from a single CSV today. Re-derive when needed:
+
+#  Claim                                                                                  Status
+72  Wilcoxon p = 0.020 for pure-PyTorch headline (scipy not in venv)                      ? missing
+    — observed: 9/10 paired wins. Either install scipy or report only the win-count.
+73  Pure-PyTorch macro-F1 advantage class concentration (+0.114 melanoma 60%,             ? missing
+    +0.067 actinic 36%) — needs per-class JSON sum, not yet aggregated this run.
+74  μ=1.0 per-class deficit at L4 (vascular −16%, melanoma −11%, dermato −39%)            ? missing
+    — needs the per-class μ-sensitivity table (Table 5.3b).
+75  B-dissimilarity proxy values, training instability metric — appendix only             ? missing
+76  Confusion-matrix misrouting percentages (24% best, 67% perfect-storm FA+drop)         ? missing
+    — needs confusion matrix aggregation across protocols.
+
+================================================================================
+SUMMARY
+================================================================================
+
+Total checks: 76
+✓ verified:   62
+≈ verified:    3  (#36, #37 ref-only; #48 close to threshold)
+⚠ mismatch:   2  (#47 node_pinned_L4 sign; #62 FedProx update norm magnitude)
+? missing:    5  (#72–#76 — derive before citing if needed)
+? not yet:    4  (other items in §5 table 26 already verified by ✓ verified marker)
+
+WRITING ACTIONS REQUIRED BEFORE PROSE
+  1. §5.2 Table 5.2 "Node-pinned L4" row: use +0.005 (not −0.006).
+     Re-word the surrounding sentence to match — the qualitative claim
+     "essentially indistinguishable" still holds at +0.005.
+  2. §5.7.1 update-norm sentence: re-derive the FedProx mean and the
+     reduction percentage. Do NOT cite "1.03 / 33% reduction" verbatim.
+  3. If you need Wilcoxon p for the pure-PyTorch headline, either install
+     scipy or fall back to the 9/10-paired-wins framing only.
+  4. Items #73, #74, #76: do the aggregation before citing; do not paste
+     the guide's numbers without recomputation.
+
+================================================================================
+END OF SHEET
+================================================================================

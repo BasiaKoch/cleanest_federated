@@ -1,0 +1,117 @@
+% =============================================================================
+% Results sec 5.3 -- mu sensitivity
+% Compressed version. Target ~300 words.
+% =============================================================================
+
+\section{$\mu$ sensitivity: the proximal term helps only in a narrow range}
+\label{sec:mu-sensitivity}
+
+A five-cell sweep of $\mu \in \{0.001, 0.01, 0.1, 1.0\}$ against the FedAvg
+baseline ($\mu = 0$) on the engineered partition ($n=10$ paired seeds per
+cell) traces a clear inverted-$U$ (Table~\ref{tab:mu-sweep},
+Figure~\ref{fig:mu-inverted-u}): peak near $\mu = 0.01$, dropping below
+baseline by $\mu = 0.1$ and catastrophic at $\mu = 1.0$.
+
+FedAvg gives $0.493 \pm 0.020$. FedProx at $\mu = 0.001$ reaches
+$0.504 \pm 0.021$ ($\Delta = +0.011$, 6/10 paired wins); at $\mu = 0.01$ it
+peaks at $0.506 \pm 0.017$ ($\Delta = +0.013$, 6/10 wins) --- numerically
+indistinguishable from the $\mu = 0.001$ cell. At $\mu = 0.1$ the mean falls
+to $0.479 \pm 0.017$ ($\Delta = -0.014$, 2/10 wins); at $\mu = 1.0$ it
+collapses to $0.419 \pm 0.013$ ($\Delta = -0.074$, 0/10 wins --- every seed
+loses). The $0.09$ macro-F1 spread between best and worst $\mu$ is an order
+of magnitude larger than any partition-level $\Delta$ in
+\S\,\ref{sec:statistical-heterogeneity}.
+
+The $\mu$-sweep peak $\Delta = +0.013$ exceeds the
+\S\,\ref{sec:statistical-heterogeneity} Flower paired $\Delta = +0.007$
+because the sweep selects best-of-five on the same seeds; the two estimates
+bracket the same small effect at $+0.005$ to $+0.015$.
+
+The practical region of useful $\mu$ on this benchmark is a single decade
+around $0.01$. The expectation that larger $\mu$ should be preferred under
+stronger statistical heterogeneity is not supported here --- a benchmark
+observation, not a refutation of the underlying analysis.
+
+Table~\ref{tab:mu-per-class} breaks down the $\mu = 1.0$ catastrophic cell
+per class. The deficit is concentrated in the rare and minority classes
+(dermato $-0.101$, vascular $-0.113$, actinic $-0.124$) while the dominant
+mel-nevi is essentially invariant ($-0.017$). The same rare-class
+sensitivity that drives the catastrophic large-$\mu$ regime is the
+clinical failure mode characterised in
+\S\,\ref{sec:rare-class-collapse}; large-$\mu$ FedProx fails in the same
+shape as the dropped-stragglers and asymmetric-LR cells, only via a
+different mechanism (over-regularisation rather than under-aggregation).
+Because $\mu$ alone is sensitive and at larger values harmful, the much
+larger FedProx gains under straggler protocols
+(\S\,\ref{sec:li-straggler}) cannot be attributed to the proximal
+coefficient itself.
+
+
+% =============================================================================
+% Table 5.3 placeholder
+% =============================================================================
+
+\begin{table}[h]
+\centering
+\caption{$\mu$ sensitivity on the engineered partition, $n=10$ paired
+seeds per cell. ``Wins'' is paired comparisons where FedProx exceeds
+FedAvg on the matched seed.}
+\label{tab:mu-sweep}
+\begin{tabular}{ccccl}
+\hline
+$\mu$    & macro-F1 (mean $\pm$ SD) & $\Delta$ vs FedAvg & Wins / 10 & Interpretation \\
+\hline
+$0$      & $0.493 \pm 0.020$        & ---               & ---       & FedAvg baseline                \\
+$0.001$  & $0.504 \pm 0.021$        & $+0.011$          & 6         & near peak                      \\
+$0.01$   & $\mathbf{0.506 \pm 0.017}$ & $\mathbf{+0.013}$ & 6       & \textbf{peak}                  \\
+$0.1$    & $0.479 \pm 0.017$        & $-0.014$          & 2         & below baseline                 \\
+$1.0$    & $0.419 \pm 0.013$        & $-0.074$          & 0         & catastrophic                   \\
+\hline
+\end{tabular}
+\end{table}
+
+
+% =============================================================================
+% Figure 5.3 placeholder
+% =============================================================================
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{F_mu_sensitivity_outcome_and_convergence.pdf}
+\caption{Inverted-$U$ $\mu$ sensitivity curve on the engineered partition
+($n=10$ per cell). $x$-axis: $\mu$ on $\log_{10}$ scale across
+$\{0.001, 0.01, 0.1, 1.0\}$, FedAvg baseline as dashed reference line at
+$0.493$. $y$-axis: test macro-F1 with $\pm 1$ SD whiskers.}
+\label{fig:mu-inverted-u}
+\end{figure}
+
+
+% =============================================================================
+% Table 5.3b -- per-class mu sensitivity (engineered partition)
+% =============================================================================
+
+\begin{table}[h]
+\centering
+\small
+\caption{Per-class validation F1 mean across the $\mu$ sweep on the
+engineered partition, $n = 10$ paired seeds per cell. SDs across seeds
+range $0.003$ (mel-nevi) to $0.113$ (rare classes). ``$\Delta$ at $\mu=1.0$''
+is the absolute per-class F1 deficit at the catastrophic cell relative to
+the FedAvg baseline ($\mu = 0$). The deficit concentrates in rare and
+minority classes; the dominant mel-nevi class is essentially invariant.
+Source: \texttt{mu\_sensitivity\_flower/}.}
+\label{tab:mu-per-class}
+\begin{tabular}{lcccccc}
+\hline
+Class       & $\mu = 0$ & $\mu = 0.001$ & $\mu = 0.01$ & $\mu = 0.1$ & $\mu = 1.0$ & $\Delta$ at $\mu = 1.0$ \\
+\hline
+actinic     & $0.475$   & $0.470$       & $0.489$      & $0.434$     & $0.351$     & $-0.124$ \\
+basal       & $0.497$   & $0.513$       & $0.497$      & $0.405$     & $0.438$     & $-0.060$ \\
+b-kerat     & $0.405$   & $0.400$       & $0.423$      & $0.416$     & $0.328$     & $-0.077$ \\
+dermato     & $0.259$   & $0.287$       & $0.283$      & $0.279$     & $0.158$     & $\mathbf{-0.101}$ \\
+melanoma    & $0.244$   & $0.258$       & $0.304$      & $0.287$     & $0.216$     & $-0.028$ \\
+mel-nevi    & $0.884$   & $0.885$       & $0.886$      & $0.886$     & $0.867$     & $-0.017$ \\
+vascular    & $0.687$   & $0.713$       & $0.661$      & $0.646$     & $0.574$     & $\mathbf{-0.113}$ \\
+\hline
+\end{tabular}
+\end{table}

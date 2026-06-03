@@ -1,0 +1,93 @@
+% =============================================================================
+% Results sec 5.8 -- Integrated summary of findings
+% Compressed. Target ~350 words. Closes with the central thesis sentence
+% verbatim per guide sec 1.
+% =============================================================================
+
+\section{Integrated summary of findings}
+\label{sec:integrated-summary}
+
+Across the six experiments above, rare-class outcomes track rare-client
+signal flow into the global model. FedAvg under stragglers drops the
+rare-client update outright; FedProx with the proximal term alone does
+not change which clients aggregate, so it cannot recover signal that was
+discarded; FedProx + $\gamma$-inexact accepts partial rare-client updates
+and recovers the signal; FedNova's $\tau$-normalisation rescales by
+effective work and recovers signal under persistent LR asymmetry but
+amplifies noise under random-$\tau$; weighted CE re-weights rare classes
+during local training but only on clients that are actually aggregated.
+The conditional thesis collapses to one rule: optimiser/protocol cells
+preserve rare-class F1 if and only if rare-client signal reaches the
+global model. Table~\ref{tab:final-claims} reports the chapter's findings
+with explicit strength labels; five take-aways anchor the regime map.
+
+(1) Statistical heterogeneity alone yields a small, runtime-sensitive
+FedProx--FedAvg separation: Flower paired $\Delta = +0.007$ on the
+engineered partition ($n=10$, 7/10 paired wins) with the pure-PyTorch
+$\Delta = +0.027$ as the upper end of a $0.01$--$0.03$ band; the IID
+negative control is $\Delta = -0.007$.
+
+(2) The proximal coefficient is sharply tuned: the $\mu$-sweep traces an
+inverted-$U$ with a useful single-decade range around $\mu = 0.01$ and a
+catastrophic $\Delta = -0.074$ at $\mu = 1.0$ ($n=10$, 0/10 paired wins).
+
+(3) Under Li-style straggler asymmetry at L4, the total FedProx--FedAvg gap
+is $+0.115$ ($n=3$), but only $+0.004$ comes from the proximal term ---
+about $96\,\%$ of the gain is mediated by $\gamma$-inexact partial-update
+handling. The L1 cross-partition control flattens the $\gamma$-inexact
+contribution to $+0.012$, confirming that the mechanism operates only when
+the dropped client carries informationally unique class signal.
+
+(4) FedNova is regime-dependent in both directions: the 50:1 FedNova--FedAvg
+gap is $+0.131$ macro-F1 (the largest single-axis system-asymmetry gap in
+the thesis, $n=3$), while random-$\tau$ straggler heterogeneity collapses
+FedNova to mean macro-F1 $= 0.237$ with three of ten seeds reduced to the
+majority-class-only baseline.
+
+(5) Across failing protocols, the clinically motivated failure mode is
+rare-class collapse into mel-nevi ($24\,\%$ to $67\,\%$ misrouting), and
+weighted CE on FedAvg ($0.505$, $n=3$) matches or exceeds FedProx+CE
+($0.478$, $n=3$) in the tested L4 symmetric setting --- FedProx is best
+understood as a drift/protocol intervention rather than a class-imbalance
+corrector.
+
+Federated optimiser performance in imbalanced medical FL is regime-dependent:
+FedAvg remains competitive under IID or symmetric low-risk protocols;
+FedProx becomes valuable under Li-style straggler asymmetry mainly because
+$\gamma$-inexact partial-update handling preserves the rare-client signal;
+FedNova is robust under the tested learning-rate asymmetry but fails under
+random-$\tau$ straggler regimes; and across failing settings, the common
+clinical failure mode is rare-class collapse into the majority class
+(mel-nevi). These results do not establish a universal ranking of FedAvg,
+FedProx, and FedNova. They instead map which optimiser/protocol choices
+preserve or lose rare-class performance under different heterogeneity
+regimes.
+
+
+% =============================================================================
+% Table 5.5 -- Final claim-evidence-caveat summary
+% =============================================================================
+
+\begin{table}[h]
+\centering
+\small
+\caption{Final claim--evidence--caveat summary. Strength labels: \emph{strong}
+= multi-seed, mechanism-isolable, checkpoint-robust; \emph{medium} =
+multi-seed but small effect or single-protocol; \emph{exploratory} =
+correlational, single-protocol, or $n=3$ without mechanism isolation.}
+\label{tab:final-claims}
+\begin{tabular}{p{3.0cm}p{3.6cm}p{1.6cm}p{2.6cm}p{2.6cm}}
+\hline
+Claim & Evidence & Strength & Caveat & Implication \\
+\hline
+FedProx not free under IID & Flower IID $\Delta = -0.007$ ($n=10$) & strong & IID is artificial & Reach for FedProx only when heterogeneity exists \\
+Stat-het alone gives fragile separation & Flower engineered $\Delta = +0.007$ (7/10 wins, $n=10$) & medium & Runtime-sensitive (PyTorch $+0.027$) & Do not recommend FedProx on partition alone \\
+$\mu$ must be tuned & Sweep $n=10$: peak $+0.013$ at $\mu = 0.01$; $-0.074$ at $\mu = 1.0$ & strong & Engineered partition only & Default $\mu = 0.01$; do not raise under heterogeneity \\
+$\gamma$-inexact dominates straggler gain & L4 four-condition $n=3$: total $+0.115$, $\gamma$-inex $+0.111$; L1 control $+0.012$ & strong & Simulated stragglers (epoch-count, not wall-clock) & Use FedProx + $\gamma$-inexact under straggler protocols \\
+FedNova regime-dependent & LR envelope: FN holds $0.49$--$0.53$ across 1:1--50:1 ($n=3$); random-$\tau$ collapses to $0.237$ ($n=10$, 3/10 majority) & medium--strong & Wang 2020 stable-$\tau$ assumption violated by random-$\tau$ & Prefer FedNova under persistent LR asymmetry, not under random-$\tau$ \\
+Rare-class collapse is the clinical failure mode & Misrouting $24\,\%$--$67\,\%$; D1 5:1 melanoma F1 $= 1.2$/$6.1$/$46.3\,\%$ ($n=3$) & strong & Single dataset, $28 \times 28$ resolution & Report per-class metrics; macro-F1 alone hides it \\
+wCE competes with FedProx & L4 $n=3$: FA+wCE $0.505$ vs FP+CE $0.478$ & medium & $n=3$, L4 symmetric only & Loss-side rebalancing is a competitive intervention \\
+Update-norms support drift-control reading & Engineered: FA $1.523$ vs FP $1.029$ ($-32\,\%$); cross-protocol $r = +0.634$ & exploratory & Within-protocol $r$ does not extrapolate & Drift-control reading is supported, not proven \\
+\hline
+\end{tabular}
+\end{table}

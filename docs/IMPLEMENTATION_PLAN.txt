@@ -1,0 +1,477 @@
+================================================================================
+THESIS IMPLEMENTATION PLAN
+================================================================================
+Source of truth: THESIS_BUILD_GUIDE.md
+Target file:     condensed_results.tex
+Target shape:    ~5,200 words, 8 main figures, 6 main tables
+Writing order:   §5.4 → §5.2 → §5.6 → §5.5 → §5.3 → §5.7 → §5.1 → §5.8 → §5.9 → Discussion
+
+Every step below is self-contained: data path(s), verify command, required
+content, target table/figure, overclaiming guard, closing transition.
+Do each step in order. Tick the [ ] boxes as you finish.
+
+Repo invariants (do not violate):
+  - Do NOT add new experiments.
+  - Do NOT modify code in mnist_dermnist/fl/ or mnist_dermnist/experiments/.
+  - Do NOT change the central thesis sentence (see PHASE 0).
+  - Lead with Flower +0.007, not pure-PyTorch +0.027.
+  - Use RARE_IDX = {3 dermato, 4 melanoma, 6 vascular}. Never use 0.265.
+
+================================================================================
+PHASE 0 — PRE-FLIGHT (do before writing any prose)
+================================================================================
+
+Central thesis sentence (must appear verbatim in §5.8 closing):
+  "Federated optimiser performance in imbalanced medical FL is regime-dependent:
+   FedAvg remains competitive under IID or symmetric low-risk protocols;
+   FedProx becomes valuable under Li-style straggler asymmetry mainly because
+   γ-inexact partial-update handling preserves the rare-client signal;
+   FedNova is robust under the tested learning-rate asymmetry but fails under
+   random-τ straggler regimes; and across failing settings, the common clinical
+   failure mode is rare-class collapse into the majority class (mel-nevi)."
+
+[ ] P0.1  Run all 9 verification queries in guide §5 (commands 1–9). Record any
+          mismatch — if a number disagrees, investigate before writing.
+[ ] P0.2  Re-generate stale analysis CSVs if needed:
+            bash mnist_dermnist/scripts/analyse_all.sh
+          (PYTHONPATH=. ; mu_sensitivity_flower may fail — OK, verified directly)
+[ ] P0.3  Update references.bib placeholders:
+            - yao2024 (asymmetric per-client μ paper)
+            - charles2024stability (training instability metric)
+[ ] P0.4  Regenerate §5.5 LR figure to include ratios 10:1, 20:1, 50:1.
+          Target: mnist_dermnist/results/thesis_ready/figures/F_asymmetric_lr_L4.pdf
+          Source: mnist_dermnist/results/asymmetric_lr_L4/  (54 runs now)
+[ ] P0.5  Generate Table 5.4b (L1 cross-partition control). Schema must match
+          Table 5.4 exactly (4 conditions × {macro-F1, rare-F1}).
+[ ] P0.6  Confirm Methods chapter (Ch 2) covers everything in guide §2.
+          If not, write/fix Methods first — otherwise §5.1 overflows.
+
+================================================================================
+STEP 1 — §5.4 CENTREPIECE (1,100 words)  ← write this FIRST
+================================================================================
+
+Title: Under Li-style straggler asymmetry, FedProx's advantage is mediated
+       mainly by γ-inexact partial-update handling
+
+Data sources:
+  - mnist_dermnist/results/li2020_asymmetric_L4/analysis/li2020_asymmetric_L4_summary.csv
+  - mnist_dermnist/results/li2020_asymmetric_L1/   (NEW — Table 5.4b control)
+  - mnist_dermnist/results/fedprox_perfect_storm_L4/analysis/perfect_storm_L4_summary.csv
+  - mnist_dermnist/results/system_het_iid_random/  (Δ ≈ −0.013)
+  - mnist_dermnist/results/system_het_random/      (Δ ≈ +0.017)
+
+Verify:
+  python3 -c "import pandas as pd; \
+df=pd.read_csv('mnist_dermnist/results/li2020_asymmetric_L4/analysis/li2020_asymmetric_L4_summary.csv'); \
+print(df.groupby('condition').macro_f1.agg(['mean','std','count']))"
+
+Required numbers (verify each before citing):
+  L4:  FA-no-strag, FA+drop 0.364±0.009, FP+drop 0.368±0.005, FP+γ-inex 0.479±0.010
+       → proximal-only +0.004, γ-inexact +0.111, total +0.115
+  L1:  FA-no-strag 0.601, FA+drop 0.599, FP+drop 0.593, FP+γ-inex 0.605
+       → proximal-only −0.006, γ-inexact +0.012, drop-cost −0.001
+  Perfect-storm: FA+drop 0.087±0.049 (flat at round 1!), FP μ=1.0 0.365±0.023,
+                 FP μ=0.01 0.491±0.003
+
+Required paragraphs (in this order):
+  [ ] 1. Statistical × system interaction. Removing stat het from straggler
+        protocol REVERSES the advantage (not merely shrinks it). Cite
+        system_het_iid_random −0.013 vs system_het_random +0.017.
+  [ ] 2. Four-condition design definition. State what each cell isolates.
+  [ ] 3. Four-condition results with arithmetic decomposition spelled out.
+  [ ] 4. Perfect-storm demonstration. Frame as "same ordering at much larger
+        magnitude, NOT a clean causal decomposition." Add: FA+drop val macro-F1
+        flat at 0.087 for all 150 rounds — model selected at round 1.
+  [ ] 5. L1 cross-partition control (NEW). Required interpretive sentence:
+        "The γ-inexact mechanism operates only when statistical heterogeneity
+        makes the dropped client's data informationally unique; under
+        quantity-only heterogeneity (L1), the four-condition decomposition
+        flattens and γ-inexact has nothing to rescue."
+  [ ] 6. Closing — DO NOT place Figure 5.6 here; it goes at end of §5.5.
+
+Required tables:
+  [ ] Table 5.4  — 4 rows (Li-style decomp at L4). Print arithmetic decomp
+                   under the table: proximal-only +0.004; γ-inexact +0.111.
+  [ ] Table 5.4b — 4 rows (L1 control). Identical schema to 5.4 for visual
+                   comparison. Decomp line: prox-only −0.006; γ-inex +0.012;
+                   drop-cost −0.001.
+
+Required figure:
+  [ ] Figure 5.4 = mnist_dermnist/results/thesis_ready/figures/F_val_curves_extreme_gaps.pdf
+      Use Panel A only (FA+drop and FP+drop overlap throughout 150 rounds).
+      Move Panel B (perfect-storm) to appendix.
+
+Overclaiming guard (search draft before submitting):
+  ✗ "FedProx wins because of the proximal term"
+  ✓ "Under the Li-style straggler protocol, the FedAvg–FedProx advantage is
+     mediated mainly by γ-inexact partial-update handling; the proximal term
+     alone contributes only about +0.004 under matched drop handling."
+
+Closing transition: "The straggler experiments show one form of system
+asymmetry. The next section asks whether a different asymmetry type changes
+the optimiser ranking."
+
+================================================================================
+STEP 2 — §5.2 STATISTICAL HETEROGENEITY (900 words)
+================================================================================
+
+Title: Statistical heterogeneity alone gives limited optimiser separation
+
+Data sources:
+  - mnist_dermnist/results/headline/per_seed_results.csv  (pure-PyTorch +0.027)
+  - mnist_dermnist/results/flower_C0_baseline/             (Flower +0.007)
+  - mnist_dermnist/results/flower_C0_iid_baseline/         (IID −0.006)
+  - mnist_dermnist/results/mu_sensitivity_flower/          (μ-peak +0.013)
+  - mnist_dermnist/results/dirichlet_a01/                  (+0.008, regenerated)
+  - mnist_dermnist/results/specialist_partition/           (+0.008)
+  - mnist_dermnist/results/heterogeneity_ladder/           (ladder pilot, n=1)
+  - mnist_dermnist/results/node_pinned_L4/                 (Δ −0.006)
+
+Required paragraphs (in order):
+  [ ] 1. IID negative control. Δ ≈ −0.006. Words: "functionally
+        indistinguishable... not a meaningful penalty."
+  [ ] 2. Engineered partition + runtime divergence. Three numbers:
+          - Pure-PyTorch: Δ +0.027 (Wilcoxon p=0.020, 9/10 wins)
+          - Flower paired:  Δ +0.007 (CI includes 0, 7/10 wins) ← CENTRAL
+          - Flower μ-peak:  Δ +0.013 at μ=0.01
+        Include the required reconciliation sentence (see guide §5.2 para 2).
+  [ ] 3. Per-class concentration. Of pure-PyTorch +0.027: melanoma +0.114
+        (60%), actinic keratoses +0.067 (36%); 5 other classes ≈ 0; mel-nevi
+        invariant.
+  [ ] 4. Partition robustness. Dirichlet α=0.1 +0.008; specialist 1-of-7
+        +0.008; ladder non-monotone single-seed; node-pinned L4 multi-seed
+        Δ −0.006.
+  [ ] 5. Dirichlet provenance note. State that legacy CSVs were stale; thesis
+        uses regenerated raw-JSON summaries; do NOT cite the old catastrophic
+        seed-8675309 failure.
+  [ ] 6. L4 vascular single-seed diagnostic. Δ −0.026 driven by one vascular
+        F1 drop of ≈ −0.220; all other classes |Δ| ≤ 0.033.
+  [ ] 7. Trajectory characteristics. Variance: FA SD 0.025 vs FP 0.014 (45%
+        lower). Convergence: FP reaches val 0.40 in 9.8 rounds vs FA's 12.7.
+        Mid-training peak gap +0.094 at round 50. Caveat: engineered only.
+
+Required table:
+  [ ] Table 5.2 — 6 rows (IID, Engineered pure-PyTorch, Engineered Flower,
+                  Dirichlet α=0.1, Specialist, Node-pinned L4).
+                  Columns: Setting | Runtime | Clients | Seeds | FedAvg | FedProx
+                           | Δ | 95% CI/SD | Wins | Note
+
+Required figure:
+  [ ] Figure 5.2 — Forest plot of Δ across settings. ⚠ MUST GENERATE.
+      Target: mnist_dermnist/results/thesis_ready/figures/F_statistical_heterogeneity_forest.pdf
+      Build from Table 5.2 rows; one error-bar row per setting.
+
+Overclaiming guards:
+  ✗ "FedProx is better than FedAvg"   (use the conditional from guide §8 row 1)
+  ✗ "FedProx is fragile"               (use the runtime-sensitivity phrasing)
+  ✗ "Statistically significant" with n=3
+
+Closing transition: "Since statistical heterogeneity alone gives only small
+and fragile separation, the next question is whether the proximal coefficient
+itself explains when FedProx helps."
+
+================================================================================
+STEP 3 — §5.6 RARE-CLASS COLLAPSE + WEIGHTED CE (750 words)
+================================================================================
+
+Title: Rare-class collapse into mel-nevi, and why FedProx is not simply an
+       imbalance corrector
+
+Three subsections (compact):
+
+§5.6.1 Per-class collapse:
+  [ ] Headline figure: per-class cross-experiment heatmap.
+  [ ] Misrouting to mel-nevi: 24% (best protocol) to 67% (perfect-storm FA+drop).
+  [ ] Melanoma detection at D1 5:1: FA 1.2%, FP 6.1%, FN 46.3%.
+  [ ] Note: heatmap also explains the L4 pilot problem (isolated class variance
+      dominates macro-F1 at single seed).
+
+§5.6.2 Collapse modes (~100 words):
+  [ ] Perfect-storm FA flatlining (§5.4) and gradual D1 5:1 degradation (§5.5)
+      are two trajectories of the SAME failure mode. Instant collapse when rare
+      client is dropped; gradual collapse when its updates are accepted but
+      overwhelmed.
+
+§5.6.3 Loss-side imbalance correction — wCE AND focal (extended):
+  Data source: mnist_dermnist/results/fedprox_weighted_ce_L4/   (18 runs:
+               2 algos × 3 losses × 3 seeds; aggregate from raw JSONs)
+  [ ] 3-column in-text sub-table (NOT numbered): rows FedAvg/FedProx,
+      cols CE / Weighted CE / Focal. Cells = macro-F1 ± SD (rare F1).
+        FedAvg + CE   0.477 ± 0.002 (rare 0.285)
+        FedAvg + wCE  0.505 ± 0.023 (rare 0.367)   ← best macro-F1
+        FedAvg + focal 0.467 ± 0.002 (rare 0.317)
+        FedProx + CE   0.478 ± 0.016 (rare 0.291)
+        FedProx + wCE  0.503 ± 0.014 (rare 0.346)
+        FedProx + focal 0.476 ± 0.022 (rare 0.304)
+  [ ] Key sentences:
+        - "FedAvg with class-weighted CE (0.505) marginally exceeds FedProx
+           with standard CE (0.478)."
+        - "Focal loss improves rare-class F1 over plain CE (+0.03 on FedAvg)
+           but does not improve macro-F1; it is dominated by weighted CE."
+        - "Across all six (algorithm × loss) cells, FedProx adds essentially
+           nothing on top of the loss-side intervention."
+  [ ] Two-effect decomposition (FedAvg-only):
+        plain CE → wCE   = +0.029 macro-F1
+        plain CE → focal = −0.010 macro-F1, +0.032 rare-F1
+  [ ] Caveat: n=3, symmetric L4 only.
+  [ ] Closing: "FedProx should be understood as a drift/protocol intervention,
+      not as a direct class-imbalance correction method."
+
+Required figure:
+  [ ] Figure 5.7 = mnist_dermnist/results/thesis_ready/figures/F_cross_experiment_per_class.pdf
+
+Optional appendix figures: D1 5:1 confusion matrices; collapse trajectory plots.
+
+Overclaiming guard:
+  ✗ "Weighted CE makes FedProx useless"
+  ✓ "In this L4 setting, FedProx adds little on top of weighted CE."
+
+================================================================================
+STEP 4 — §5.5 FEDNOVA REGIME-DEPENDENCE (800–900 words)
+================================================================================
+
+Title: Learning-rate asymmetry reveals FedNova regime-dependence
+
+Data sources:
+  - mnist_dermnist/results/asymmetric_lr_L4/                  (54 runs)
+  - mnist_dermnist/results/system_het_random_fednova/         (random-τ collapse)
+
+Verify (raw-JSON aggregation, do NOT trust stale summary CSV):
+  see guide §5 command 7 (full snippet under §5.5 verification)
+
+Required paragraphs (in order):
+  [ ] 1. LR asymmetry experiment description. L4 partition, ratios {1:1, 2:1,
+        5:1, 10:1, 20:1, 50:1}, n=3 per cell, 3 algos = 54 runs.
+  [ ] 2. LR results across full envelope. Reproduce the 6×3 table from guide
+        §5.5 verbatim. Key observations to state explicitly:
+          (a) FA and FP plateau at ~0.367 by 5:1 — rare-class floor.
+          (b) FedNova stays 0.49–0.53 across the whole envelope; |Δ vs its own
+              1:1| never exceeds 0.024.
+          (c) At 50:1, FN–FA gap = +0.13 macro-F1 — LARGEST single-axis system-
+              asymmetry gap in the thesis.
+          (d) Rare F1: FA/FP collapse to near-zero by 10:1 (0.016 / 0.010);
+              FedNova stays 0.33–0.41 throughout.
+        Mechanism: τ-normalisation preserves smaller client's contribution.
+        At 5:1, Client 1 update-norm ratio: FA 0.47, FP 0.50, FN 0.91.
+  [ ] 3. FedNova random-τ collapse (own paragraph!). Mean macro-F1 = 0.24 over
+        10 seeds; 3 seeds collapse to majority-class prediction. "Regime
+        outside Wang 2020's stable-τ assumption." Robustness regime-specific
+        in BOTH directions.
+  [ ] 4. Heterogeneity-escalation synthesis figure placement. This is where
+        Figure 5.6 goes (NOT in §5.4).
+        Escalation: IID → L4 symmetric → Li 2020 §5.2 → perfect-storm μ=1.0
+                   → perfect-storm μ=0.01
+        Δ: −0.006 → −0.006 → +0.115 → +0.278 → +0.404 (monotone).
+
+Required figures:
+  [ ] Figure 5.5 — two panels (macro-F1, rare-class F1) vs LR ratio, log x-axis
+      1:1 to 50:1. ⚠ MUST REGENERATE from F_asymmetric_lr_L4.pdf to include
+      the new ratios 10:1, 20:1, 50:1.
+  [ ] Figure 5.6 — mnist_dermnist/results/thesis_ready/figures/F_heterogeneity_escalation.pdf
+      Already exists. Place at END of this section.
+
+Overclaiming guards:
+  ✗ "FedNova is best"
+  ✓ "FedNova is more robust under the tested LR asymmetry, but not under all
+     forms of system heterogeneity."
+  ✗ "FedNova's mechanism is proven"  (Wang 2020 covers stable-τ only)
+
+Closing transition: "These regime-dependent optimiser differences matter
+because the weak protocols fail in a clinically specific way: they lose
+rare-class sensitivity."
+
+================================================================================
+STEP 5 — §5.3 μ SENSITIVITY (500 words)
+================================================================================
+
+Title: μ sensitivity — the proximal term helps only in a narrow range
+
+Data source:
+  - mnist_dermnist/results/mu_sensitivity_flower/  (50 runs: 10 seeds × 5 μ)
+
+Required content:
+  [ ] 10-seed μ-sweep at engineered partition.
+  [ ] Inverted-U with peak at μ=0.01 (macro-F1 0.506 ± 0.017).
+  [ ] μ=0.001 close to peak (0.504 ± 0.021).
+  [ ] μ=0.1 below FedAvg (0.479).
+  [ ] μ=1.0 catastrophic (0.419 ± 0.013, Δ vs FA = −0.074).
+  [ ] Required reconciliation sentence: μ-peak Δ +0.013 vs paired Δ +0.007 —
+      both in same small-effect range, treated as modest code-path-sensitive
+      effect.
+
+Required table:
+  [ ] Table 5.3 — 5 rows (μ ∈ {0, 0.001, 0.01, 0.1, 1.0}).
+  [ ] (Optional in-main) Table 5.3b — per-class μ sensitivity (7 classes × 5 μ).
+      INCLUDE if space allows; bridges to §5.6. Rare-class deficit at μ=1.0:
+      vascular −16%, melanoma −11%, dermato −39%.
+
+Required figure:
+  [ ] Figure 5.3 — μ inverted-U. Spec: log-x μ ∈ {0.001, 0.01, 0.1, 1.0},
+      FA baseline as horizontal dashed line at 0.493, highlight peak at μ=0.01,
+      error bars = SD across 10 seeds.
+      Existing: mnist_dermnist/results/thesis_ready/figures/F_mu_sensitivity_outcome_and_convergence.pdf
+      Verify it shows the inverted-U cleanly before reusing.
+
+Overclaiming guard:
+  ✗ "This refutes Li et al."
+  ✓ "In this benchmark, the practical expectation that larger μ should be
+     preferred under stronger heterogeneity is not supported."
+
+Closing transition: "Because the proximal term itself is sensitive and
+sometimes harmful, the larger FedProx gains under straggler protocols
+require a separate explanation." (this leads INTO the centrepiece §5.4
+when read linearly — though we wrote §5.4 first.)
+
+================================================================================
+STEP 6 — §5.7 MECHANISM + ROBUSTNESS (500 words)
+================================================================================
+
+Title: Mechanism and robustness checks
+
+§5.7.1 Update norms (local + cross-protocol):
+  Data:
+    - mnist_dermnist/results/flower_C0_baseline/client_update_norms_*.csv
+    - mnist_dermnist/results/thesis_ready/data/l4_cross_protocol_mechanism.csv
+  [ ] Engineered: FA mean ‖Δw‖ = 1.52, FP = 1.03, 33% reduction.
+  [ ] Cross-protocol (Finding 6): 78 L4 runs across 8 (alg × protocol) cells.
+      - Dominant-client update-norm magnitude vs rare-F1: Spearman r = +0.63.
+      - Relative-influence ratio of rare-client vs rare-F1: r = −0.04
+        (across protocols).
+      - WITHIN LR-asymmetry: r = +0.80 (FA), +0.87 (FP) — within-protocol
+        order does NOT extrapolate.
+  [ ] Interpretation: "Rare-class preservation appears to pace with the
+      dominant client's update activity rather than with the rare-client
+      aggregation share. Exploratory, not causal."
+  [ ] Figure 5.8 — mnist_dermnist/results/thesis_ready/figures/F_update_norms.pdf
+      (+ optional cross-protocol scatter panel)
+
+§5.7.2 Protocol-flip audit:
+  Data: mnist_dermnist/results/thesis_ready/data/protocol_flip_summary.csv
+  [ ] Large effects: 0/9 seed-level comparisons flip.
+  [ ] Small effects: 3/9 flip (verified — node_pinned_L4 s42, extended_rounds_L3
+      s42, two_client_90_10_rare_stress s456).
+  [ ] Practical reading rule (verbatim): "The thesis should weight conclusions
+      by effect magnitude. Sub-1pp differences observed in symmetric settings
+      are reporting-protocol-fragile; the four-condition decomposition and
+      perfect-storm findings are not."
+
+[ ] Move to appendix: B-dissimilarity proxy, training instability metric,
+    asymmetric μ Yao test, early-warning detector, small-hospital case study.
+
+================================================================================
+STEP 7 — §5.1 EVALUATION SETTING (250 words)  ← write LAST in Results body
+================================================================================
+
+Tone: Definitional, not interpretive.
+
+Required content:
+  [ ] Class support facts: mel-nevi 66.9%, dermato 1.1%, vascular 1.4%.
+  [ ] Primary metric: test macro-F1 at best-val checkpoint.
+  [ ] Secondary metrics: per-class F1, confusion-matrix diagonal, rare-class F1.
+  [ ] Seed tiers: n=10, n=3, n=1 pilot framing.
+  [ ] Runtime policy: two runtimes; divergence discussed in §5.2.
+
+Required table:
+  [ ] Table 5.1 — Reporting protocol and metric hierarchy (7 rows).
+                  Cols: Component | Choice | Reason
+
+Required figure (decision: INCLUDE):
+  [ ] Figure 5.1 = mnist_dermnist/results/thesis_ready/figures/F_dataset_classes.pdf
+      Primes the rare-class story. Note: if included, all subsequent
+      figure numbers shift up by one — confirm references resolve.
+
+Closing transition: "With these reporting rules fixed, the first question is
+whether statistical heterogeneity alone reliably separates FedAvg and FedProx."
+
+================================================================================
+STEP 8 — §5.8 INTEGRATED SUMMARY (350 words)
+================================================================================
+
+Required table:
+  [ ] Table 5.5 — 8 rows max. Cols: Claim | Evidence | Strength | Caveat |
+                  Implication.
+      Suggested rows: FedProx-not-free-IID; Stat-het-alone-fragile;
+                      μ-must-be-tuned; γ-inexact-dominates-stragglers;
+                      FedNova-regime-dependent; rare-class-collapse-is-clinical-
+                      failure-mode; weighted-CE-competes-with-FedProx;
+                      update-norms-support-drift-control.
+
+Required closing paragraph:
+  [ ] Use the central thesis sentence VERBATIM from PHASE 0 above.
+  [ ] Add: "Overall, these results do not establish a universal ranking of
+      FedAvg, FedProx, and FedNova. They instead map which optimiser/protocol
+      choices preserve or lose rare-class performance under different
+      heterogeneity regimes."
+
+================================================================================
+STEP 9 — §5.9 LIMITATIONS (200 words)
+================================================================================
+
+Required items (one bullet each, terse):
+  [ ] Single dataset (DermaMNIST 28×28).
+  [ ] Mixed federation sizes: 7-client (headline / stat-het); 2-client
+      (mechanism probes). NO cross-scale generalisation claim.
+  [ ] E = 20 local epochs fixed.
+  [ ] No true wall-clock straggler deadlines (simulated via epoch counts).
+  [ ] n = 3 for several strong asymmetry claims.
+  [ ] Heterogeneity ladder is n = 1 single-seed pilot.
+  [ ] Runtime divergence between pure-PyTorch and Flower on engineered partition.
+  [ ] No SCAFFOLD / FedAdam / FedYogi comparator.
+  [ ] No AUC / calibration (argmax predictions only).
+  [ ] Per-client validation distributions not logged centrally → q-FFL fairness
+      CDFs and Sheller-style cross-client grids cannot be produced.
+
+================================================================================
+STEP 10 — DISCUSSION
+================================================================================
+
+[ ] Echo the central thesis sentence from PHASE 0 in the Discussion conclusion.
+[ ] Do not introduce new claims; synthesise §5.2 / §5.4 / §5.5 / §5.6.
+
+================================================================================
+PHASE 11 — FINAL COMPILE CHECKS (do before submitting)
+================================================================================
+
+[ ] grep -c '^\\section' condensed_results.tex   →  expected 11 if Methods + Results in same file
+[ ] Every \ref{} resolves to a \label{}.
+[ ] Every \includegraphics{...} file exists in figures/.
+[ ] Every \cite{} key exists in references.bib.
+[ ] Word count: ~5,000 words ± 500 for Results chapter only.
+[ ] Every numeric value cross-checked against PHASE 0 verification table.
+[ ] Search prose for every unsafe phrase in guide §8 table:
+      - "FedProx is better than FedAvg"
+      - "FedProx works because of the proximal term"
+      - "FedNova is best"
+      - "Weighted CE makes FedProx useless"
+      - "This refutes Li et al."  /  "Yao 2024 is wrong"
+      - "Clinically deployable"
+      - "Early-warning detector works"
+      - "FedNova's mechanism is proven"
+      - "Statistically significant" (with n=3)
+      - "FedProx is fragile"
+      - "Variance reduction is universal"
+      - "Stragglers cause FedAvg to fail"
+[ ] Central thesis sentence appears verbatim in §5.8 closing paragraph.
+
+================================================================================
+APPENDIX MAP (for completeness — see guide §7)
+================================================================================
+
+Appendix A — Supplementary statistical heterogeneity
+            (full ladder, Dirichlet seed table, specialist details, runtime notes)
+Appendix B — μ and FedProx sensitivity
+            (μ × ladder pilot, per-class μ at L0/L2, extended-rounds L3,
+             asymmetric μ Yao test)
+Appendix C — System heterogeneity and FedNova diagnostics
+            (perfect-storm convergence panel B, FedNova random-τ trajectories,
+             FedNova unequal-E pilot, partial participation C=0.5)
+Appendix D — Rare-class and clinical failure diagnostics
+            (D1 5:1 confusion matrices, collapse trajectories, small-hospital
+             case study, early-warning detector — clearly labelled exploratory)
+Appendix E — Robustness and mechanism audits
+            (protocol-flip detailed table, B-dissimilarity, training instability,
+             cross-protocol scatter, arch_ablation_bn one-paragraph BN note)
+
+================================================================================
+END OF PLAN
+================================================================================

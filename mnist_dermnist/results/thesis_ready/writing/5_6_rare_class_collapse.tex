@@ -1,0 +1,132 @@
+% =============================================================================
+% Results sec 5.6 -- Rare-class collapse + loss-side correction
+% Compressed version. Target ~470 words.
+% =============================================================================
+
+\section{Rare-class collapse into mel-nevi, and why FedProx is not simply
+an imbalance corrector}
+\label{sec:rare-class-collapse}
+
+
+\subsection*{\S\,5.6.1 Per-class collapse}
+
+The low-macro-F1 cells in \S\S\,\ref{sec:li-straggler}--\ref{sec:lr-asymmetry}
+fail the same way: rare-class images are routed to mel-nevi
+(Figure~\ref{fig:cross-experiment-per-class}). Mean rare-to-mel-nevi
+misrouting (over dermato, melanoma, vascular) ranges from $24\,\%$ in the
+best protocol (perfect-storm FP $\mu = 0.01$, $n=3$) to $67\,\%$ in the
+worst (perfect-storm FA+drop, $n=3$), and $28\,\%$ even under the IID
+Flower negative control ($n=10$) --- a class-imbalance saturation that the
+FL protocol preserves or amplifies but does not itself create.
+
+The D1 5:1 cell isolates the optimiser dimension: melanoma per-class F1 is
+$1.20\,\%$ for FedAvg, $6.13\,\%$ for FedProx, $46.34\,\%$ for FedNova
+($n=3$ each) --- same disease, three detection regimes spanning two orders
+of magnitude. Macro-F1 is structurally sensitive: each class enters with
+weight $1/7$, so a single class dropping from per-class F1 $\approx 0.4$ to
+$0.0$ moves macro by $\approx 0.057$, the order of the entire engineered
+$\Delta$ in \S\,\ref{sec:statistical-heterogeneity}. The same
+rare-class-concentration pattern reappears in the
+\S\,\ref{sec:mu-sensitivity} $\mu = 1.0$ catastrophic cell
+(Table~\ref{tab:mu-per-class}, where dermato loses $-0.101$, vascular
+$-0.113$, and mel-nevi is invariant), so across three different mechanisms
+--- aggregation dropout, learning-rate asymmetry, and over-regularisation
+--- failure expresses itself in the same rare-class shape.
+
+\begin{center}
+\small
+\begin{tabular}{p{0.16\linewidth} p{0.14\linewidth} c c c p{0.32\linewidth}}
+\hline
+Protocol                  & Algorithm & Rare-F1 & Melanoma F1 & Misrouting & Interpretation \\
+\hline
+Perfect-storm + drop      & FedAvg    & $0.000$ & $0.00\,\%$  & $67\,\%$   & Rare client dropped; flatline \\
+Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
+D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
+D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $26\,\%$   & $\tau$-normalisation preserves contribution \\
+\hline
+\end{tabular}
+\end{center}
+
+\noindent
+These four cells span instant-collapse and gradual-erosion modes across
+straggler and LR-asymmetry axes; the misrouting rate co-varies with rare-F1
+across all four.
+
+
+\subsection*{\S\,5.6.2 Collapse modes}
+
+Two trajectories of the same failure mode. Perfect-storm FedAvg+drop's
+validation trajectory flatlines at each seed's round-1 value for all 150
+rounds (best-val checkpoint selected at round 1, untrained init beating
+every trained checkpoint; across-seed mean test macro-F1 $= 0.087 \pm 0.049$):
+the rare-class client is dropped every round, so its signal has no path
+into the global parameters. D1 5:1 degrades gradually instead: the rare client's updates
+are accepted but progressively under-weighted, macro-F1 drifts $0.457 \to
+0.375$ with rare-F1 collapsing in lockstep. Instant collapse and gradual
+erosion of the same rare-class-signal-suppression mechanism, distinguished
+only by whether the rare-class updates are dropped wholesale or simply
+under-weighted.
+
+
+\subsection*{\S\,5.6.3 Loss-side imbalance correction: weighted CE and
+focal loss}
+
+To test whether the FedProx advantage might be class-imbalance correction
+in disguise, we ran FedAvg and FedProx at L4 with three loss functions
+($n=3$ per cell): plain cross-entropy, class-weighted CE with
+inverse-frequency weights, and focal loss ($\gamma = 2$). Cells are test
+macro-F1 $\pm$ SD with rare-class F1 in parentheses.
+
+\begin{center}
+\begin{tabular}{lccc}
+\hline
+Algorithm & CE & Weighted CE & Focal \\
+\hline
+FedAvg  & $0.477 \pm 0.002$ ($0.285$) & $\mathbf{0.505 \pm 0.023}$ ($\mathbf{0.367}$) & $0.467 \pm 0.002$ ($0.317$) \\
+FedProx & $0.478 \pm 0.016$ ($0.291$) & $0.503 \pm 0.014$ ($0.346$)                   & $0.476 \pm 0.022$ ($0.304$) \\
+\hline
+\end{tabular}
+\end{center}
+
+Three observations. (i) Weighted CE is the strongest loss-side correction:
+FedAvg+wCE $0.505$ marginally exceeds FedProx+CE $0.478$ in this L4
+symmetric setting; the FedAvg-only CE-to-wCE intervention raises macro by
+$+0.029$ and rare-F1 by $+0.082$. (ii) Focal helps rare-F1 ($+0.032$ on
+FedAvg) but hurts macro ($-0.010$): focal trades macro for rare-recall,
+while wCE wins on both at the tested $\gamma=2$ and inverse-frequency
+weights. (iii) FedProx adds little on top of either: FP+wCE
+$0.503 \pm 0.014$ sits inside FA+wCE's SD of $0.023$, and FP/FA differ by
+$0.009$ at focal. FedProx is a drift/protocol intervention (per
+\S\,\ref{sec:li-straggler}), not a substitute for direct loss-side
+imbalance correction; the two axes can in principle be combined but are
+tested only separately here ($n=3$, L4 symmetric only).
+
+The \S\,\ref{sec:li-straggler} FedProx + $\gamma$-inexact result and this
+\S\,5.6.3 weighted-CE result are not in tension: $\gamma$-inex restores
+aggregation under straggler-induced signal loss, while weighted CE
+re-weights rare classes during local training. They act at different
+pipeline stages and address different failure modes (signal loss vs label
+saturation); they could in principle be combined but are tested only
+separately here.
+
+The rare-class collapse documented here is clinically \emph{motivated},
+not clinically \emph{validated}: DermaMNIST is a $28 \times 28$-pixel
+benchmark and not a deployment artefact. The next section turns to the
+per-round update-norm activity behind these per-class outcomes.
+
+
+% =============================================================================
+% Figure 5.7 placeholder
+% =============================================================================
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{F_cross_experiment_per_class.pdf}
+\caption{Per-class diagonal accuracy (correct-prediction rate per class)
+across twelve protocol cells spanning baselines, Li 2020 straggler
+conditions, perfect-storm, asymmetric LR (D1 1:1 and 5:1), and node-pinned
+L4. The mel-nevi column saturates near $0.85$--$0.95$ in nearly every cell
+while the dermato, melanoma, and vascular columns collapse to near zero in
+the failing cells.}
+\label{fig:cross-experiment-per-class}
+\end{figure}
