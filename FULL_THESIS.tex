@@ -306,11 +306,18 @@ the training set while dermato and vascular together account for $2.5\,\%$,
 with test supports of $1341/2005$ images for mel-nevi versus $23$ for
 dermato and $29$ for vascular (Figure~\ref{fig:dataset-classes}). Raw
 accuracy would saturate at the mel-nevi prevalence floor, so the primary
-metric throughout is test macro-F1 at the best-validation checkpoint, with
-per-class F1, confusion-matrix diagonal entries, and rare-class F1 as
-secondary diagnostics. Rare-class F1 uses the canonical index set
-$\mathrm{RARE\_IDX} = \{\text{dermato}, \text{melanoma}, \text{vascular}\}$;
-the $0.265$ value from earlier drafts excluded melanoma and is not used.
+metric throughout is test macro-F1 at the best-validation checkpoint. The
+secondary metric stack is: per-class F1 (which classes drive the macro
+score); per-class recall read off the confusion-matrix diagonal (clinical
+missed-class sensitivity); rare-class F1 over
+$\mathrm{RARE\_IDX} = \{\text{dermato}, \text{melanoma}, \text{vascular}\}$
+(compact rare-class summary; the $0.265$ value from earlier drafts excluded
+melanoma and is not used); and rare-to-mel-nevi misrouting rate (the
+specific collapse mode shown in \S\,\ref{sec:rare-class-collapse}). Test
+accuracy and balanced accuracy are reported in the JSON sidecars for every
+run but are used only as sanity checks, never to rank optimisers --- raw
+accuracy in particular would mis-rank the L4 5:1 learning-rate-asymmetry
+cell (see \S\,\ref{sec:lr-asymmetry}).
 
 Three seed tiers are reported distinctly. Headline comparisons use $n = 10$
 paired seeds with the within-pair sign count and Wilcoxon signed-rank where
@@ -345,7 +352,7 @@ sections cite them only by reference.
 Component               & Choice                                       & Reason \\
 \hline
 Primary metric          & Test macro-F1 at best-val checkpoint         & Class-imbalanced; accuracy saturates at majority floor \\
-Secondary metrics       & Per-class F1, confusion-matrix diagonal, rare-F1 & Surface per-class failure that macro can mask \\
+Secondary metrics       & Per-class F1, per-class recall (confusion-matrix diagonal), rare-F1, rare-to-mel-nevi misrouting & Surface per-class failure that macro can mask; misrouting names the specific collapse mode \\
 Rare-class definition   & $\{\text{dermato}, \text{melanoma}, \text{vascular}\}$ & Low support + high clinical priority (melanoma is mid-support but high-stakes) \\
 $n = 10$ protocol       & Paired sign count + Wilcoxon where applicable & Headline statistical-heterogeneity comparisons \\
 $n = 3$ protocol        & Directional only; no significance test       & Mechanism probes; power insufficient for $p$-values \\
@@ -611,6 +618,7 @@ the FedAvg baseline ($\mu = 0$). The deficit concentrates in rare and
 minority classes; the dominant mel-nevi class is essentially invariant.
 Source: \texttt{mu\_sensitivity\_flower/}.}
 \label{tab:mu-per-class}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \hline
 Class       & $\mu = 0$ & $\mu = 0.001$ & $\mu = 0.01$ & $\mu = 0.1$ & $\mu = 1.0$ & $\Delta$ at $\mu = 1.0$ \\
@@ -623,7 +631,8 @@ melanoma    & $0.244$   & $0.258$       & $0.304$      & $0.287$     & $0.216$  
 mel-nevi    & $0.884$   & $0.885$       & $0.886$      & $0.886$     & $0.867$     & $-0.017$ \\
 vascular    & $0.687$   & $0.713$       & $0.661$      & $0.646$     & $0.574$     & $\mathbf{-0.113}$ \\
 \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 
@@ -670,20 +679,24 @@ accept or drop a straggler's partial update.
 matched seeds; mean $\pm$ sample SD across seeds).}
 \label{tab:li-decomp-l4}
 \small
-\begin{tabular}{lc}
+\begin{tabular}{lcc}
 \toprule
-Condition                                       & Test macro-F1 \\
+Condition                                       & Test macro-F1                & Rare-class F1 \\
 \midrule
-FedAvg, no straggler                            & $0.485 \pm 0.028$ \\
-FedAvg + drop                                   & $0.364 \pm 0.009$ \\
-FedProx + drop (control)                        & $0.368 \pm 0.005$ \\
-FedProx + $\gamma$-inexact                      & $\mathbf{0.479 \pm 0.010}$ \\
+FedAvg, no straggler                            & $0.485 \pm 0.028$            & $0.316 \pm 0.060$ \\
+FedAvg + drop                                   & $0.364 \pm 0.009$            & $0.000 \pm 0.000$ \\
+FedProx + drop (control)                        & $0.368 \pm 0.005$            & $0.000 \pm 0.000$ \\
+FedProx + $\gamma$-inexact                      & $\mathbf{0.479 \pm 0.010}$   & $\mathbf{0.291 \pm 0.018}$ \\
 \bottomrule
 \end{tabular}
 
 \smallskip
 \noindent\textit{Decomposition:} proximal-only $= 0.368 - 0.364 = +0.004$;
-$\gamma$-inexact $= 0.479 - 0.368 = +0.111$; total $= +0.115$.
+$\gamma$-inexact $= 0.479 - 0.368 = +0.111$; total $= +0.115$. Rare-F1 is
+the mean over $\mathrm{RARE\_IDX} = \{\text{dermato}, \text{melanoma},
+\text{vascular}\}$ and shows that the macro-F1 gap lives entirely in the
+rare classes: both drop-handling cells flatline rare-F1 to exactly zero,
+and only FedProx+$\gamma$-inexact rescues it.
 \end{table}
 
 The first two cells measure the cost of straggling under FedAvg. FedAvg with
@@ -719,15 +732,15 @@ straggler's partial contribution in aggregation.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{F_val_curves_extreme_gaps.pdf}
-\caption{Validation macro-F1 trajectories at the two settings with the
-largest FedAvg vs FedProx differences (mean over three seeds; shaded bands
-are $\pm 1$ sample SD). (A) Li 2020 §5.2 four-condition decomposition at
-L4: the FedAvg+drop and FedProx+drop trajectories overlap throughout the
-150 rounds; only FedProx+$\gamma$-inexact separates and recovers towards
-the no-straggler baseline. (B) Perfect-storm L4 with $90\%$ random
-stragglers: FedAvg+drop flatlines at its round-1 validation value, so the
-selected checkpoint is effectively the untrained model.}
+\includegraphics[width=\textwidth]{F_val_curves_l4_four_condition.pdf}
+\caption{Li 2020 §5.2 four-condition decomposition at L4: validation
+macro-F1 trajectories (mean over three seeds; shaded bands are $\pm 1$
+sample SD). The FedAvg+drop and FedProx+drop trajectories overlap
+throughout 150 rounds, isolating the proximal term as inactive under
+matched drop-handling. Only FedProx+$\gamma$-inexact separates and
+recovers towards the no-straggler baseline. The perfect-storm convergence
+trajectories (random $90\%$ straggler regime) are reproduced in
+Appendix~C.}
 \label{fig:val-curves-extreme-gaps}
 \end{figure}
 
@@ -800,11 +813,45 @@ Finally, the L1 control tests whether partial-update acceptance helps simply
 because it is a better generic straggler policy. It does not. L1 uses the
 same two-client four-condition design, but the clients have identical label
 proportions; the split changes quantity, not class information. In this
-setting, all four cells are nearly flat: FedAvg-no-straggler
-$0.601 \pm 0.010$, FedAvg+drop $0.599 \pm 0.006$, FedProx+drop
-$0.593 \pm 0.022$, and FedProx+$\gamma$-inexact $0.605 \pm 0.009$.
-Dropping the straggler costs almost nothing, and accepting the partial update
-adds only $+0.012$, compared with $+0.111$ at L4.
+setting, all four cells are nearly flat (Table~\ref{tab:li-decomp-l1}):
+FedAvg-no-straggler $0.601 \pm 0.010$, FedAvg+drop $0.599 \pm 0.006$,
+FedProx+drop $0.593 \pm 0.022$, and FedProx+$\gamma$-inexact
+$0.605 \pm 0.009$. Dropping the straggler costs almost nothing, and accepting
+the partial update adds only $+0.012$, compared with $+0.111$ at L4.
+
+\begin{table}[H]
+\centering
+\caption{L1 cross-partition control: same four-condition design as
+Table~\ref{tab:li-decomp-l4} but on the L1 partition (quantity-only
+heterogeneity, JS divergence $\approx 0$); $n=3$ matched seeds, mean
+$\pm$ sample SD. The proximal-only and $\gamma$-inexact contributions both
+collapse toward zero relative to L4, which is the cleanest negative
+control for the rare-class-signal-rescue mechanism interpretation.}
+\label{tab:li-decomp-l1}
+\small
+\begin{tabular}{lcc}
+\toprule
+Condition                                       & Test macro-F1        & Rare-class F1 \\
+\midrule
+FedAvg, no straggler                            & $0.601 \pm 0.010$    & $0.530 \pm 0.008$ \\
+FedAvg + drop                                   & $0.599 \pm 0.006$    & $0.539 \pm 0.012$ \\
+FedProx + drop (control)                        & $0.593 \pm 0.022$    & $0.537 \pm 0.039$ \\
+FedProx + $\gamma$-inexact                      & $0.605 \pm 0.009$    & $0.556 \pm 0.014$ \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\noindent\textit{Decomposition (vs L4 in parentheses):}
+proximal-only $= 0.593 - 0.599 = -0.006$ (L4: $+0.004$);
+$\gamma$-inexact $= 0.605 - 0.593 = +0.012$ (L4: $+0.111$);
+drop-cost $= 0.601 - 0.599 = +0.002$ (L4: $+0.121$). The $\gamma$-inexact
+contribution shrinks by an order of magnitude when the dropped client
+carries no class signal the other client lacks. The rare-F1 column makes
+this concrete: at L1 every cell sits in $0.53$--$0.56$ (a $\pm 0.026$
+band), while at L4 the two drop cells crash to exactly zero and only
+$\gamma$-inexact recovers rare-F1 to $0.29$. There is nothing to rescue
+when the dropped client carries no unique rare-class signal.
+\end{table}
 
 The L4/L1 contrast is therefore the key mechanism evidence. At L4, the
 dropped client carries class information the other client does not have, so
@@ -825,20 +872,27 @@ imbalance --- a different axis --- changes the optimiser ranking.
 
 % =============================================================================
 % Results sec 5.5 -- Learning-rate asymmetry, FedNova regime-dependence
-% Compressed version. Target ~560 words.
 % =============================================================================
 
 \section{Learning-rate asymmetry reveals FedNova regime-dependence}
 \label{sec:lr-asymmetry}
 
-On L4, Client 0 (the dominant client, $\approx 90\,\%$ of training samples)
-keeps $\textrm{lr} = 0.01$ throughout while Client 1 (rare classes) takes
-one of six learning-rate values, defining six asymmetry ratios from 1:1 to
-50:1. Each cell is run across FedAvg, FedProx, and FedNova ($n=3$ matched
-seeds per cell, $54$ runs total). Test macro-F1 across the envelope splits
-the three optimisers cleanly:
+This experiment tests a different form of system heterogeneity from
+\S\,\ref{sec:li-straggler}. There, the rare-class client was slow and its
+partial update could be dropped. Here, the rare-class client is not dropped:
+it still participates in every round, but its learning rate is made smaller.
+The question is whether an optimiser can preserve rare-class learning when
+the rare client's update becomes progressively weaker.
+
+The experiment is run on L4. Client 0 is the dominant client and keeps
+$\textrm{lr}=0.01$ throughout. Client 1 holds the rare classes and is assigned
+one of six smaller learning rates, producing asymmetry ratios from 1:1 to
+50:1. Each ratio is tested with FedAvg, FedProx, and FedNova using $n=3$
+matched seeds per cell, giving $54$ runs in total. Test macro-F1 across the
+six-ratio envelope is reported below.
 
 \begin{center}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{c|cc|ccc|cc}
 \hline
 Ratio & Client 0 lr & Client 1 lr & FedAvg & FedProx & FedNova & FN$-$FA & FN$-$FP \\
@@ -850,102 +904,119 @@ Ratio & Client 0 lr & Client 1 lr & FedAvg & FedProx & FedNova & FN$-$FA & FN$-$
 20:1  & $0.01$ & $0.0005$  & $0.367$ & $0.372$ & $\mathbf{0.486}$ & $+0.119$ & $+0.114$ \\
 50:1  & $0.01$ & $0.0002$  & $0.367$ & $0.367$ & $\mathbf{0.498}$ & $\mathbf{+0.131}$ & $\mathbf{+0.131}$ \\
 \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{center}
 
-FedAvg and FedProx drop $\approx 0.10$ macro-F1 between 1:1 and 5:1 and then
-plateau at the rare-class floor near $0.367$; FedNova stays in the
-$0.486$--$0.526$ band across the entire envelope ($|\Delta$ vs its own 1:1
-baseline$|$ $\leq 0.024$). At 50:1 the FedNova--FedAvg gap is $+0.131$ macro-F1
---- the largest single-axis system-asymmetry gap in this thesis and an order
-of magnitude larger than the engineered statistical-heterogeneity
-$\Delta = +0.007$ in \S\,\ref{sec:statistical-heterogeneity}. Rare-class F1
-(mean across dermato, melanoma, vascular) collapses for FedAvg and FedProx
-(FA $0.016$, FP $0.010$ at 10:1; $\approx 0$ by 50:1) while FedNova holds
-$0.33$--$0.41$ throughout (FN $0.366$ at 10:1, $0.353$ at 50:1).
-Figure~\ref{fig:lr-asymmetry-envelope} plots both axes of the envelope ---
-test macro-F1 and rare-class F1 --- across the six ratios.
+The pattern is clear. FedAvg and FedProx both degrade as soon as Client 1's
+learning rate is reduced. Between the symmetric 1:1 setting and the 5:1
+setting, FedAvg falls from $0.457$ to $0.375$, while FedProx falls from
+$0.491$ to $0.392$. After that, both methods plateau near $0.367$ macro-F1.
+This plateau is the rare-class floor: the model still learns parts of the
+dominant-client distribution, but rare-class learning has largely collapsed.
 
-A mechanism-consistent reading: scaling Client 1's $\textrm{lr}$ by $1/5$
-shrinks its per-round update magnitude correspondingly, and sample-weighted
-aggregation does not normalise this away. FedNova's $\tau$-normalisation
-divides each client's update by its effective work, which would restore
-approximate contribution parity in this regime. The empirical update-norm
-trace is consistent with this reading: at the 5:1 cell, Client 1's mean
-update-norm ratio (5:1 $\div$ 1:1) is $0.47$ for FedAvg, $0.50$ for FedProx,
-and $0.91$ for FedNova. This is mechanism-consistent evidence, not a
-mechanism proof.
+FedNova behaves differently. Its macro-F1 remains between $0.486$ and
+$0.526$ across the full 1:1--50:1 envelope. Even at 50:1, where Client 1's
+learning rate is fifty times smaller than Client 0's, FedNova reaches
+$0.498$ macro-F1, compared with $0.367$ for both FedAvg and FedProx. The
+FedNova--FedAvg gap at 50:1 is therefore $+0.131$ macro-F1.
 
-The same FedNova that preserves macro-F1 under deterministic LR asymmetry
-fails under random-$\tau$ straggler heterogeneity. On
-\texttt{system\_het\_random\_fednova} (L4, per-round random straggler
-schedule, $\gamma$-inexact, $n=10$), mean macro-F1 is $0.237 \pm 0.094$, far
-below FedAvg and FedProx on the matching \texttt{system\_het\_random} cells
-(FA $0.493$, FP $0.510$ from \S\,\ref{sec:li-straggler}). Three of ten seeds
-(s31337, s271828, s161803) collapse to macro-F1 $= 0.114$ --- the majority-
-class-only baseline (predicting mel-nevi on every test image). This regime
-lies outside Wang 2020's stable-$\tau$ assumption: $\tau$-normalisation
-amplifies stragglers' noisy partial updates rather than correcting for them.
-FedNova's robustness is regime-dependent \emph{in both directions} ---
-strongly robust under persistent LR asymmetry, brittle under random-$\tau$
-instability.
-
-\begin{center}
-\begin{tabular}{lll}
-\hline
-FedNova regime              & Result                                   & Interpretation \\
-\hline
-Persistent LR asymmetry     & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & $\tau$-normalisation preserves smaller client's contribution \\
-Random-$\tau$ stragglers    & macro-F1 = $0.237 \pm 0.094$; 3/10 majority collapse & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
-\hline
-\end{tabular}
-\end{center}
-
-Figure~\ref{fig:heterogeneity-escalation} places these gaps on one axis.
-The escalation IID $\to$ symmetric L4 $\to$ Li 2020 contrast $\to$
-perfect-storm $\mu = 1.0$ $\to$ perfect-storm $\mu = 0.01$ has within-pair
-$\Delta$ rising from $-0.007$ and $+0.005$ (inside seed noise) to $+0.115$,
-$+0.278$, $+0.404$ (large, mechanism-isolable, regime-driven). The
-optimiser ranking is a function of which regime cell the protocol occupies,
-not a property of the optimiser in the abstract.
-
-The weak protocols fail in a clinically specific way: they lose rare-class
-sensitivity, detailed next.
-
-
-% =============================================================================
-% Figure 5.5 -- learning-rate asymmetry envelope
-% =============================================================================
+The rare-class F1 confirms that this is not just a macro-F1 artefact. At
+10:1, rare-class F1 is already almost zero for FedAvg and FedProx
+(FA $0.016$, FP $0.010$), and by 50:1 it is approximately zero. FedNova keeps
+rare-class F1 much higher throughout the envelope, with $0.366$ at 10:1 and
+$0.353$ at 50:1. Figure~\ref{fig:lr-asymmetry-envelope} shows both views:
+overall macro-F1 and rare-class F1.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{F_asymmetric_lr_L4.pdf}
-\caption{Learning-rate asymmetry envelope at L4, $n=3$ per cell. Two panels:
-test macro-F1 and rare-class F1 (mean over dermato, melanoma, vascular) vs
-the Client 1 LR ratio on $\log_{10}$ axis from 1:1 to 50:1. FedAvg and
-FedProx plateau at the rare-class floor; FedNova stays flat across the
-envelope.}
+\caption{Learning-rate asymmetry envelope at L4, $n=3$ per cell. Two
+panels: test macro-F1 and rare-class F1 (mean over dermato, melanoma,
+vascular) vs the Client 1 LR ratio on a $\log_{10}$ axis from 1:1 to 50:1.
+FedAvg and FedProx plateau at the rare-class floor; FedNova stays flat
+across the envelope.}
 \label{fig:lr-asymmetry-envelope}
 \end{figure}
 
+The 5:1 cell is also where the chapter's metric choice earns its keep. Mean
+test accuracy across the three matched seeds is $0.753$ for FedAvg and
+$0.726$ for FedNova: ranking by raw accuracy would prefer FedAvg, even
+though its macro-F1 ($0.375$) and rare-class F1 ($\approx 0.02$) make it
+clear that FedAvg has lost the rare-class signal almost entirely while
+FedNova has not (macro-F1 $0.504$, rare-F1 $\approx 0.37$). The accuracy
+gap is small precisely because both models still get mel-nevi
+($66.9\,\%$ of the test set) right; macro-F1 separates them because it
+weights all seven classes equally. This is the operational reason \S\,5.1
+ranks optimisers by macro-F1 and never by accuracy.
 
-% =============================================================================
-% Figure 5.6 -- heterogeneity escalation
-% =============================================================================
+A simple interpretation is that FedAvg and FedProx allow the rare client's
+update to become too small. When Client 1's learning rate is reduced, its
+local model moves less during training, so the update it sends back to the
+server carries weaker rare-class information. FedAvg does not correct this,
+and the FedProx proximal term does not restore a rare-client update that has
+already become too small. FedNova, by contrast, normalises client updates by
+effective local work, which helps preserve Client 1's contribution in this
+deterministic asymmetry setting.
+
+The update-norm logs support this reading. At the 5:1 cell, Client 1's mean
+update size relative to its own 1:1 update is $0.47$ for FedAvg and $0.50$
+for FedProx, but $0.91$ for FedNova. In other words, FedAvg and FedProx let
+the rare-client update shrink by roughly half, while FedNova keeps it much
+closer to its original size. This is mechanism-consistent evidence, not a
+causal proof, but it matches the rare-class F1 pattern.
+
+FedNova's success here is not universal. The same method fails under
+random-$\tau$ straggler heterogeneity. In that setting, the amount of local
+work changes randomly from round to round. FedNova obtains only
+$0.237 \pm 0.094$ macro-F1, far below the matching FedAvg and FedProx cells
+(FA $0.493$, FP $0.510$ from \S\,\ref{sec:li-straggler}). Three of ten seeds
+collapse to macro-F1 $=0.114$, the majority-class-only baseline obtained by
+predicting mel-nevi for every test image.
+
+This contrast is the main point of the section. FedNova is robust when the
+asymmetry is stable and deterministic: the rare client is consistently
+weakened, and normalisation can compensate. It is brittle when the amount of
+local work is random and noisy: normalisation can then amplify unstable
+partial updates instead of correcting them. FedNova is therefore
+regime-dependent, not universally superior.
+
+\begin{center}
+\begin{tabular}{p{0.22\linewidth}p{0.32\linewidth}p{0.38\linewidth}}
+\hline
+FedNova regime & Result & Interpretation \\
+\hline
+Persistent LR asymmetry & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & $\tau$-normalisation preserves smaller client's contribution \\
+Random-$\tau$ stragglers & macro-F1 $= 0.237 \pm 0.094$; 3/10 majority collapse & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
+\hline
+\end{tabular}
+\end{center}
+
+Figure~\ref{fig:heterogeneity-escalation} places the large FedAvg--FedProx
+gaps from the previous section on one axis. The progression from IID to
+symmetric L4 to Li-style straggler asymmetry and then to perfect-storm shows
+that optimiser gaps become large only in specific stress regimes. Together
+with the FedNova result above, this reinforces the chapter's central point:
+the optimiser ranking depends on the heterogeneity regime, not on the
+optimiser name alone.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{F_heterogeneity_escalation.pdf}
 \caption{Heterogeneity-escalation synthesis. Within-pair
-$\Delta(\textrm{FedProx} - \textrm{FedAvg})$ macro-F1 across five regime cells
-of increasing severity: IID Flower negative control ($-0.007$), symmetric L4
-multi-seed node-pinned ($+0.005$), Li 2020 four-condition contrast
-(FA+drop vs FP+$\gamma$-inex, $+0.115$), perfect-storm $\mu = 1.0$
-($+0.278$), perfect-storm $\mu = 0.01$ ($+0.404$). The first two cells sit
-inside seed noise; the last three are large, mechanism-isolable, and
-regime-driven.}
+$\Delta(\textrm{FedProx} - \textrm{FedAvg})$ macro-F1 across five regime
+cells of increasing severity: IID Flower negative control ($-0.007$),
+symmetric L4 multi-seed node-pinned ($+0.005$), Li 2020 four-condition
+contrast (FA+drop vs FP+$\gamma$-inex, $+0.115$), perfect-storm
+$\mu = 1.0$ ($+0.278$), perfect-storm $\mu = 0.01$ ($+0.404$). The first
+two cells sit inside seed noise; the last three are large,
+mechanism-isolable, and regime-driven.}
 \label{fig:heterogeneity-escalation}
 \end{figure}
+
+The weak protocols fail in a clinically specific way: they lose rare-class
+sensitivity. The next section shows that this failure usually appears as
+rare-class images being routed into the dominant mel-nevi class.
 
 
 
@@ -1100,68 +1171,94 @@ the failing cells.}
 \section{Mechanism and robustness checks}
 \label{sec:mechanism-robustness}
 
-
 \subsection*{\S\,5.7.1 Update-norm activity}
 
-FedProx has two distinct mechanisms: a per-client proximal regulariser
-that operates during local training, and a protocol-level $\gamma$-inexact
-policy that operates at aggregation. The centrepiece
-\S\,\ref{sec:li-straggler} result attributes the straggler-regime win to
-the latter. The engineered update-norm reduction reported here reflects
-the former: on the engineered partition ($n=10$), mean per-round
-update-norm magnitude $\overline{\lVert \Delta w \rVert}$ is $1.523$ for
-FedAvg vs $1.029$ for FedProx ($\mu = 0.01$) --- a $\approx 32\,\%$
-reduction, consistent with the proximal term's drift-control intent
-(Figure~\ref{fig:update-norms}, trajectory panel). This is a per-protocol
-observation of drift control under symmetric conditions, distinct from the
-\S\,\ref{sec:li-straggler} aggregation-level mechanism that carries the
-straggler-regime win.
+The update-norm logs are used here as a diagnostic: they measure how far a
+client's local model moves away from the round-start global model. In other
+words, $\lVert \Delta w \rVert$ is the size of the client update sent back to
+the server. This helps separate two ideas that are easy to confuse. FedProx's
+proximal term acts during local training and should make client updates
+smaller. The $\gamma$-inexact policy acts later, at aggregation, by deciding
+whether a straggler's partial update is accepted or dropped.
 
-Across 78 L4 runs pooled over eight algorithm-by-protocol cells (baselines,
-Li 2020 four-condition, perfect-storm, asymmetric $\mu$, asymmetric LR,
-weighted-CE), dominant-client mean update-norm magnitude correlates with
-rare-class F1 at Spearman $r = +0.634$
-(Figure~\ref{fig:update-norms}, scatter panel). The relative-influence
-ratio of the rare-class-holding client (its update-norm $\div$ Client 0's)
-correlates near zero across protocols, $r = -0.045$: it is not by itself
-predictive when the comparison spans heterogeneous protocols.
+On the engineered partition ($n=10$), FedProx does reduce update size. The
+mean per-round update norm is $1.523$ for FedAvg and $1.029$ for FedProx
+($\mu=0.01$), a reduction of about $32\%$
+(Figure~\ref{fig:update-norms}, trajectory panel). This confirms that the
+FedProx proximal term is doing its intended local job: it keeps client models
+closer to the global model. This does not contradict
+Section~\ref{sec:li-straggler}.
+There, the large straggler-regime gain came mainly from accepting the rare
+client's partial update, not from the proximal term alone.
 
-Within the asymmetric-LR experiment alone ($n=27$ cells), the relative-
-influence ratio does track rare-class F1 closely: $r = +0.80$ for FedAvg,
-$r = +0.87$ for FedProx (cf.\ \S\,\ref{sec:lr-asymmetry}). Within-protocol
-ordering does not extrapolate across the eight-cell L4 protocol family. We
-report these correlations as exploratory mechanism evidence --- consistent
-with a FedProx drift-control and a FedNova contribution-preservation
-interpretation --- not as causal proof. The mechanism interpretation rests on
-\S\,\ref{sec:li-straggler}.
+We then asked whether update size helps explain rare-class performance across
+the L4 experiments. Across 78 L4 runs pooled from the baseline, Li-style
+four-condition, perfect-storm, asymmetric-$\mu$, asymmetric-LR, and
+weighted-CE experiments, larger Client 0 update norms tend to appear in runs
+with higher rare-class F1 (Spearman $r=+0.634$;
+Figure~\ref{fig:update-norms}, scatter panel). This should be read only as a
+training-health signal: runs with healthier optimisation tend to have both
+larger useful updates and better rare-class performance.
 
+The rare client's update size is more informative only when the comparison is
+made inside a single controlled protocol. Across all pooled L4 protocols, the
+simple ratio between Client 1's update size and Client 0's update size is not
+predictive of rare-class F1 (Spearman $r=-0.045$). This is because the pooled
+runs mix different mechanisms: some drop stragglers, some accept partial
+updates, some change the learning rate, some change $\mu$, and some change
+the loss. The same update-size ratio can therefore mean different things in
+different protocols.
 
+Inside the asymmetric-LR experiment alone, the interpretation is cleaner
+because the main change is Client 1's learning rate. In that setting, rare-class
+F1 closely follows how strong Client 1's update remains relative to Client 0's:
+$r=+0.80$ for FedAvg and $r=+0.87$ for FedProx
+(cf.\ \S\,\ref{sec:lr-asymmetry}). This supports the interpretation from
+\S\,\ref{sec:lr-asymmetry}: when the rare client's update becomes too small,
+FedAvg and FedProx lose rare-class performance.
+
+These update-norm results are therefore supporting evidence, not causal proof.
+They show that FedProx reduces local update size, as expected, and that rare-
+class performance can track the rare client's update strength inside a clean
+learning-rate asymmetry experiment. The main mechanism claims still rest on
+the controlled contrasts in \S\,\ref{sec:li-straggler} and
+\S\,\ref{sec:lr-asymmetry}.
 \subsection*{\S\,5.7.2 Protocol-flip audit}
 
-A protocol-flip audit across six multi-seed L4 cells under three
-measurement choices (best-validation checkpoint, final-round, last-$K$-round
-mean): large-effect cells (perfect-storm, Li 2020 asymmetric,
-asymmetric-$\mu$) flip $0/9$ seed-level comparisons; small-effect cells
-(node-pinned L4 s42, extended-rounds L3 s42, two-client 90/10 s456) flip
-$3/9$. Small effects in symmetric protocols are reporting-protocol-fragile;
-large asymmetric-protocol effects are not.
+The protocol-flip audit checks whether the reported algorithm ranking depends
+on how performance is measured. For each selected L4 comparison, I compared
+three reporting choices: the best-validation checkpoint, the final round, and
+the mean over the last (K) rounds. A flip occurs when the sign of the paired
+difference changes across these choices; for example, if FedProx is ahead at
+the best-validation checkpoint but FedAvg is ahead at the final round.
 
-The chapter therefore weights conclusions by effect magnitude: the
-\S\,\ref{sec:li-straggler} centrepiece ($+0.115$ macro-F1) and the
-\S\,\ref{sec:lr-asymmetry} 50:1 FedNova--FedAvg gap ($+0.131$) are robust
-to checkpoint choice; the sub-$1$\,pp differences in
-\S\,\ref{sec:statistical-heterogeneity} are not. \S\,5.8 labels each
-finding's strength accordingly.
+The audit separates large effects from small effects. In the large-effect
+settings, including the Li-style straggler decomposition and perfect-storm
+experiments, none of the nine seed-level comparisons changed sign
+((0/9) flips). In the small-effect settings, three of nine comparisons did
+change sign ((3/9) flips). This means that sub-(1) percentage-point
+differences are sensitive to the reporting protocol, while the large
+asymmetric-protocol effects are not.
 
-The $B$-dissimilarity proxy, training-instability metric, asymmetric-$\mu$
-Yao test, early-warning collapse detector, and small-hospital case study
-are reported in Appendix~E as exploratory; none is load-bearing for any
-\S\S\,5.2--5.8 conclusion.
+This affects how the chapter weights its conclusions. The centrepiece
+\S\,\ref{sec:li-straggler} effect ($+0.115$ macro-F1) and the
+\S\,\ref{sec:lr-asymmetry} FedNova--FedAvg gap at 50:1 ($+0.131$ macro-F1)
+are large enough to survive checkpoint-choice changes. By contrast, the
+small differences in \S\,\ref{sec:statistical-heterogeneity} should be
+read as weak and fragile rather than as stable optimiser rankings.
+\S\,5.8 therefore labels each finding by its strength.
 
-These checks sketch a regime map for the three optimisers, summarised next.
+Several additional diagnostics are kept in Appendix~E: the
+(B)-dissimilarity proxy, the training-instability metric, the asymmetric
+(\mu) Yao test, the early-warning collapse detector, and the small-hospital
+case study. These checks are useful for interpretation, but none is used as
+load-bearing evidence for the main conclusions in \S\S\,5.2--5.8.
 
-
-% =============================================================================
+Together, the update-norm and protocol-flip checks support the main message:
+large regime-dependent effects are robust, while small symmetric-protocol
+differences should be treated cautiously. The next section summarises this
+regime map.
+=============================================================================
 % Figure 5.8 -- update-norm mechanism
 % =============================================================================
 
