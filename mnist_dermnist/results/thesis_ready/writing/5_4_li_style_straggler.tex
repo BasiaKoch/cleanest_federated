@@ -173,13 +173,18 @@ FedProx + $\gamma$-inexact  & yes & accepted ($\gamma$)  & yes & $0.605 \pm 0.00
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.85\textwidth]{F_val_curves_l4_four_condition.pdf}
-\caption{Four-condition validation trajectories at L4, mean over $n=3$ seeds.
-FedAvg+drop and FedProx+drop overlap throughout 150 rounds, isolating the
-proximal term as inactive under matched drop-handling.
+\includegraphics[width=\textwidth]{F_val_curves_extreme_gaps.pdf}
+\caption{Validation macro-F1 trajectories at the two settings with the
+largest FedAvg vs FedProx differences, mean over $n=3$ seeds; shaded
+bands are $\pm 1$ sample SD. (A) Li 2020 §5.2 four-condition decomposition
+at L4: FedAvg+drop and FedProx+drop overlap throughout 150 rounds,
+isolating the proximal term as inactive under matched drop-handling;
 FedProx+$\gamma$-inexact diverges upward around round 30 and stabilises
-near $0.48$. Perfect-storm trajectories (90\% random stragglers) are in
-Appendix~C.}
+near $0.48$ ($\Delta$ up to $+0.115$). (B) Perfect-storm L4 with $90\%$
+random stragglers: FedAvg+drop flatlines at its round-1 validation value,
+so the selected checkpoint is effectively the untrained model, while
+FedProx+$\gamma$-inexact climbs to $0.491$ at $\mu = 0.01$ ($\Delta$ up
+to $+0.404$ --- the largest FedProx--FedAvg gap measured in the thesis).}
 \label{fig:val-curves-extreme-gaps}
 \end{figure}
 
