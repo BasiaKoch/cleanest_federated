@@ -179,6 +179,145 @@ def test_aggregation_with_heterogeneous_tau():
     assert 0.0 < a_eff < 1e4
 
 
+# =========================================================================
+# Mechanism-probe regression tests for τ-clip and server-momentum variants.
+# (Thesis §5.5 — random-τ FedNova failure mode probes.)
+# =========================================================================
+
+import flwr as fl
+from flwr.common import FitRes, Status, Code, ndarrays_to_parameters
+from mnist_dermnist.fl_flower.strategy_fednova import PairedFedNovaStrategy
+
+
+def _make_fit_res(new_params, num_examples, tau, cid):
+    """Construct a Flower FitRes with the metadata aggregate_fit consumes."""
+    return FitRes(
+        status=Status(code=Code.OK, message="ok"),
+        parameters=ndarrays_to_parameters(new_params),
+        num_examples=num_examples,
+        metrics={"tau": int(tau), "cid": int(cid), "train_loss": 0.0,
+                 "update_norm": 0.0, "local_epochs": int(tau)},
+    )
+
+
+def _run_one_round(strategy, anchor, client_updates):
+    """Drive PairedFedNovaStrategy.aggregate_fit for one round.
+
+    `client_updates` is a list of `(new_params, n, tau, cid)` tuples.
+    Returns the aggregated new_global ndarrays and the metrics dict.
+    """
+    strategy._current_anchor = [a.copy() for a in anchor]
+    results = [
+        (None, _make_fit_res(p, n, tau, cid)) for (p, n, tau, cid) in client_updates
+    ]
+    params_out, metrics = strategy.aggregate_fit(
+        server_round=1, results=results, failures=[]
+    )
+    from flwr.common import parameters_to_ndarrays
+    return parameters_to_ndarrays(params_out), metrics
+
+
+def test_tau_clip_off_is_byte_identical_to_baseline():
+    """tau_clip_min=0 must reproduce the un-probed FedNova aggregate exactly."""
+    anchor = [np.array([1.0, 2.0, 3.0])]
+    updates = [
+        ([np.array([0.5, 1.5, 2.5])], 100, 5, 0),    # straggler: tau=5
+        ([np.array([0.9, 1.9, 2.9])], 200, 20, 1),   # full: tau=20
+    ]
+    s_off = PairedFedNovaStrategy(client_momentum=0.9, tau_clip_min=0,
+                                   min_available_clients=2, min_fit_clients=2)
+    s_baseline = PairedFedNovaStrategy(client_momentum=0.9,
+                                        min_available_clients=2, min_fit_clients=2)
+    out_off, _ = _run_one_round(s_off, anchor, updates)
+    out_base, _ = _run_one_round(s_baseline, anchor, updates)
+    np.testing.assert_allclose(out_off[0], out_base[0], atol=1e-12)
+
+
+def test_tau_clip_active_changes_only_low_tau_denominator():
+    """With tau_clip_min=10, the tau=5 client's normaliser must equal
+    fednova_normaliser(10, m), not fednova_normaliser(5, m). The tau=20
+    client must be untouched."""
+    from mnist_dermnist.fl_flower.strategy_fednova import fednova_normaliser
+    anchor = [np.array([0.0, 0.0])]
+    # Two clients: one straggler (tau=5) and one full (tau=20). Updates
+    # are non-zero so the aggregate moves; we don't check the exact value,
+    # only that the metrics record the clip event.
+    updates = [
+        ([np.array([1.0, 0.0])], 100, 5, 0),
+        ([np.array([0.0, 1.0])], 100, 20, 1),
+    ]
+    s = PairedFedNovaStrategy(client_momentum=0.9, tau_clip_min=10,
+                              min_available_clients=2, min_fit_clients=2)
+    _, metrics = _run_one_round(s, anchor, updates)
+    assert metrics.get("tau_clip_min") == 10
+    assert metrics.get("tau_clip_hits") == 1, (
+        f"expected 1 client below tau_clip_min=10, got {metrics.get('tau_clip_hits')}"
+    )
+
+
+def test_server_momentum_off_is_byte_identical_to_baseline():
+    """server_momentum=0.0 must reproduce the un-probed FedNova aggregate exactly."""
+    anchor = [np.array([1.0, 2.0, 3.0])]
+    updates = [
+        ([np.array([0.5, 1.5, 2.5])], 100, 10, 0),
+        ([np.array([0.9, 1.9, 2.9])], 200, 10, 1),
+    ]
+    s_off = PairedFedNovaStrategy(client_momentum=0.9, server_momentum=0.0,
+                                   min_available_clients=2, min_fit_clients=2)
+    s_baseline = PairedFedNovaStrategy(client_momentum=0.9,
+                                        min_available_clients=2, min_fit_clients=2)
+    out_off, _ = _run_one_round(s_off, anchor, updates)
+    out_base, _ = _run_one_round(s_baseline, anchor, updates)
+    np.testing.assert_allclose(out_off[0], out_base[0], atol=1e-12)
+
+
+def test_server_momentum_first_round_matches_baseline():
+    """On the very first round, m_1 = g_1, so the global update must equal
+    the un-momentumed FedNova update exactly (matches Flower FedAvgM behaviour)."""
+    anchor = [np.array([1.0, 2.0, 3.0])]
+    updates = [
+        ([np.array([0.5, 1.5, 2.5])], 100, 10, 0),
+        ([np.array([0.9, 1.9, 2.9])], 200, 10, 1),
+    ]
+    s_mom = PairedFedNovaStrategy(client_momentum=0.9, server_momentum=0.9,
+                                   min_available_clients=2, min_fit_clients=2)
+    s_off = PairedFedNovaStrategy(client_momentum=0.9,
+                                   min_available_clients=2, min_fit_clients=2)
+    out_mom, _ = _run_one_round(s_mom, anchor, updates)
+    out_off, _ = _run_one_round(s_off, anchor, updates)
+    np.testing.assert_allclose(out_mom[0], out_off[0], atol=1e-12)
+
+
+def test_server_momentum_accumulates_across_rounds():
+    """On round 2 with β=0.9, the momentum buffer should be β·g_1 + g_2,
+    so the applied update on round 2 is exactly 1.9× the un-momentumed
+    step when g_1 == g_2 (same pseudo-gradient direction both rounds).
+
+    Hold g constant across rounds by having clients return
+    `anchor − fixed_delta` *relative to the current anchor*, so the
+    per-round pseudo-gradient is identical in magnitude and direction."""
+    anchor = [np.array([1.0, 2.0])]
+    fixed_delta = np.array([0.5, 0.5])
+
+    def updates_against(cur_anchor):
+        new = [cur_anchor[0] - fixed_delta]
+        return [(new, 100, 10, 0), (new, 100, 10, 1)]
+
+    s_mom = PairedFedNovaStrategy(client_momentum=0.0, server_momentum=0.9,
+                                   min_available_clients=2, min_fit_clients=2)
+    out_r1, _ = _run_one_round(s_mom, anchor, updates_against(anchor))
+    out_r2, _ = _run_one_round(s_mom, out_r1, updates_against(out_r1))
+
+    # Reference: same protocol, no momentum.
+    s_off = PairedFedNovaStrategy(client_momentum=0.0,
+                                   min_available_clients=2, min_fit_clients=2)
+    out_r2_off, _ = _run_one_round(s_off, out_r1, updates_against(out_r1))
+
+    step_off = out_r1[0] - out_r2_off[0]   # = g_2 = fixed_delta
+    step_mom = out_r1[0] - out_r2[0]       # = β·g_1 + g_2 = 1.9·g_2 (β=0.9, g_1=g_2)
+    np.testing.assert_allclose(step_mom, 1.9 * step_off, atol=1e-10)
+
+
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-v"]))

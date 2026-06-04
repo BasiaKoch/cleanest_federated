@@ -137,6 +137,17 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--log-update-norms", action="store_true",
                     help="Capture per-(round, client) L2 update norm and "
                          "write client_update_norms_*.csv alongside the JSON.")
+    # --- Mechanism probes for random-τ FedNova failure (thesis §5.5). ---
+    ap.add_argument("--tau-clip-min", type=int, default=0,
+                    help="Lower clamp on tau_i used in the FedNova normaliser "
+                         "denominator. 0 disables (default). Recommended "
+                         "diagnostic value: E_max // 2 (e.g. 10 for E=20). "
+                         "Partial parameter deltas still enter aggregation "
+                         "unchanged; only the 1/tau scaling is bounded.")
+    ap.add_argument("--server-momentum", type=float, default=0.0,
+                    help="Heavy-ball server-side momentum coefficient applied "
+                         "to the FedNova pseudo-gradient (Hsu et al. 2019, "
+                         "FedAvgM). 0.0 disables (default). Recommended: 0.9.")
     return ap
 
 
@@ -250,6 +261,8 @@ def main():
     n_fit = max(1, int(round(args.fraction_fit * num_clients)))
     strategy = PairedFedNovaStrategy(
         client_momentum=float(args.momentum),       # ← MF2: momentum-aware normaliser
+        tau_clip_min=int(args.tau_clip_min),         # 0 = off (byte-identical)
+        server_momentum=float(args.server_momentum), # 0.0 = off (byte-identical)
         fraction_fit=float(args.fraction_fit),       # ← MF4: respect partial participation
         fraction_evaluate=0.0,
         min_fit_clients=n_fit,
@@ -346,7 +359,13 @@ def main():
         )
     else:
         lrc_tag = ""
-    stem = f"fednova_mu0.0_E{args.local_epochs}{sh_tag}{c_tag}{lrc_tag}_s{seed}"
+    # Probe-variant tags. Both default to empty string so baseline filenames
+    # stay byte-identical to pre-probe runs.
+    tc_tag = f"_tauclip{args.tau_clip_min}" if args.tau_clip_min > 0 else ""
+    sm_tag = (f"_smom{args.server_momentum:g}"
+              if args.server_momentum > 0.0 else "")
+    stem = (f"fednova_mu0.0_E{args.local_epochs}"
+            f"{sh_tag}{c_tag}{lrc_tag}{tc_tag}{sm_tag}_s{seed}")
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
@@ -388,6 +407,9 @@ def main():
             "loss_type": "cross_entropy",
             "client_momentum_for_fednova_normaliser": args.momentum,
             "fednova_normaliser_formula": "(tau*(1-m) - m*(1-m**tau)) / (1-m)**2  [L1 norm of cumulative momentum series; Wang 2020 §3.3]",
+            # Mechanism-probe settings (default 0 = baseline FedNova).
+            "tau_clip_min": int(args.tau_clip_min),
+            "server_momentum": float(args.server_momentum),
             "system_het": sh_cfg.to_dict(),
             "elapsed_s": elapsed,            # legacy field name
             "wall_clock_seconds": elapsed,   # canonical (audit fix)

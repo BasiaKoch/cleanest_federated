@@ -35,7 +35,7 @@ proximal-only $+0.004$ (FP+drop $-$ FA+drop) and $\gamma$-inexact $+0.111$
 (FP+$\gamma$-inex $-$ FP+drop). Within the FedProx protocol, approximately
 $96\,\%$ of the straggler-regime gain over FedAvg+drop is mediated by
 partial-update acceptance rather than by the proximal regulariser. The
-decomposition does not include an FedAvg+$\gamma$-inex cell, so the
+decomposition does not include a FedAvg+$\gamma$-inex cell, so the
 attribution is to the FedProx+$\gamma$-inex protocol rather than to
 $\gamma$-inex as a standalone mechanism.
 Figure~\ref{fig:val-curves-extreme-gaps}~(A) confirms this at the aggregate
@@ -53,19 +53,52 @@ furthest under FedProx+$\gamma$-inexact
 aggregate $\gamma$-inexact gain is localised to the rare-class learning
 trajectory, not to the dominant class.
 
-A stress test (L4, full straggler schedule, batch size 10,
-accept-partial-updates, $n=3$) magnifies the same ordering. FedAvg+drop's
+A stress test (L4, full straggler schedule, batch size $10$,
+accept-partial-updates, $n=3$) magnifies the same ordering and produces the
+\emph{largest FedProx--FedAvg macro-F1 gap measured anywhere in this
+thesis}: $\Delta = +0.404$ (FedProx $\mu = 0.01$ minus FedAvg+drop).
+FedAvg+drop's
 validation trajectory flatlines at each seed's round-1 value for all 150
 rounds (s42: $0.114$, s123: $0.115$, s456: $0.030$); the best-validation
 checkpoint is selected at round 1 for every seed --- the untrained
 initialisation beats every trained checkpoint. Across seeds the mean test
-macro-F1 is $0.087 \pm 0.049$. FedProx $\mu = 1.0$ recovers to $0.365 \pm 0.023$;
-FedProx $\mu = 0.01$ reaches $0.491 \pm 0.003$, matching its four-condition
-value. The $\approx +0.40$ gap demonstrates the same ordering at larger
-magnitude but is not a clean decomposition: multiple hyperparameters change
-between cells. The causal claim rests on Table~\ref{tab:li-decomp-l4};
-perfect-storm only shows the mechanism survives stress severe enough to
-make the trained model lose to its own initialisation.
+macro-F1 is $0.087 \pm 0.049$, and the sample SD reflects which class the
+collapsed model defaults to predicting (nv for seeds $42, 123$; bkl for seed
+$456$) rather than any partial recovery. FedProx $\mu = 1.0$ recovers to
+$0.365 \pm 0.023$; FedProx $\mu = 0.01$ reaches $0.491 \pm 0.003$, matching
+its four-condition value.
+
+\emph{Why is the gap so large?}
+The mechanism is the same information-flow asymmetry that
+Table~\ref{tab:li-decomp-l4} isolated, pushed to its limit. At each round
+the server samples participating clients independently with
+$P(\text{straggle}) = 0.9$; under FedAvg+drop, whenever both clients
+straggle the aggregator has nothing to apply and the global model is
+unchanged. In the L4 two-client setting this means the rare-class client
+contributes a full update to only $\approx 1$ round in $10$ and a partial
+update never (partials are discarded). The global model drifts almost
+exclusively along the dominant client's gradient direction; rare-class
+logits decay, validation macro-F1 never beats the round-1 value, and the
+best-val selector therefore returns the untrained init for every seed.
+FedProx+$\gamma$-inexact breaks the collapse by a single structural change:
+stragglers contribute the partial work they did manage, so the rare-class
+gradient enters aggregation in essentially every round even when local
+training was incomplete. The proximal term anchors those partials to the
+previous round; the smaller $\mu = 0.01$ outperforms $\mu = 1.0$ here
+because looser anchoring lets more partial-update signal through per round.
+The $\Delta = +0.404$ gap is therefore the difference between
+\emph{information loss} (FedAvg+drop silently discarding the only client
+that holds rare-class signal) and \emph{information rescue}
+(FedProx+$\gamma$-inexact preserving that signal under the same client
+schedule).
+
+The $\Delta = +0.404$ gap demonstrates the same ordering at larger magnitude
+but is not a clean decomposition: multiple hyperparameters change between
+cells, and FedAvg+drop collapses too completely for a separate
+$\gamma$-inexact-vs-proximal split. The mechanism interpretation rests on
+Table~\ref{tab:li-decomp-l4}; perfect-storm only shows the mechanism
+survives stress severe enough to make the trained model lose to its own
+initialisation.
 
 To test whether the mechanism is generic or requires informationally unique
 class signal at the dropped client, we ran the identical four-condition
@@ -135,7 +168,7 @@ FedProx + $\gamma$-inexact  & yes & accepted ($\gamma$)  & yes & $0.605 \pm 0.00
 
 
 % =============================================================================
-% Figure 5.4 placeholder
+% Figure 5.4(a) -- four-condition validation trajectories
 % =============================================================================
 
 \begin{figure}[h]

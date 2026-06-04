@@ -107,14 +107,41 @@ class PairedFedNovaStrategy(FedAvg):
         client (must be the SAME across all clients for the FedNova
         derivation to apply). Default 0.9, matching the rest of the
         thesis. Set to 0.0 for vanilla-SGD experiments.
+    tau_clip_min : int, optional
+        Lower clamp on the per-client local-step count `tau_i` used in the
+        FedNova normaliser denominator. When `tau_i < tau_clip_min`, the
+        client's `tau_i` is replaced by `tau_clip_min` *only* in the
+        normaliser computation (the partial parameter delta still enters
+        aggregation unchanged). This is a 1/τ-amplification mitigation
+        proposed for random-τ straggler regimes; see the thesis §5.5
+        discussion. Default 0 = OFF (byte-identical to FedNova).
+    server_momentum : float, optional
+        Heavy-ball server-side momentum coefficient β applied to the
+        FedNova pseudo-gradient `g_t = a_eff * d_norm`. The server tracks
+        a running buffer `m_t = β·m_{t-1} + g_t` and steps with `m_t`
+        instead of `g_t`. Pattern mirrors flwr.server.strategy.FedAvgM
+        (Hsu et al. 2019, "Measuring the Effects of Non-Identical Data
+        Distribution for Federated Visual Classification"). Default 0.0
+        = OFF (byte-identical to FedNova).
     All other arguments are forwarded to flwr.server.strategy.FedAvg.
     """
 
     def __init__(self, *args, client_momentum: float = 0.9,
+                 tau_clip_min: int = 0,
+                 server_momentum: float = 0.0,
                  update_norm_rows: Optional[List[Dict]] = None,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.client_momentum = float(client_momentum)
+        self.tau_clip_min = int(tau_clip_min)
+        self.server_momentum = float(server_momentum)
+        # Server-momentum running buffer (lazy-init on round 1). Shape
+        # matches `anchor`; one ndarray per parameter tensor.
+        self._momentum_buffer: Optional[NDArrays] = None
+        # Diagnostic counter: number of (round, client) pairs whose tau
+        # fell below tau_clip_min and triggered the clamp. Persisted in
+        # the aggregated fit metrics so the runner can log it.
+        self._tau_clip_hits_total: int = 0
         # Tracks the most-recent global parameters (anchor) for delta computation.
         self._current_anchor: Optional[NDArrays] = None
         # Optional sink for per-(round, client) update norms. When the runner
@@ -151,11 +178,25 @@ class PairedFedNovaStrategy(FedAvg):
         a_eff = 0.0
         per_client_a: List[Tuple[int, float, float]] = []  # (cid, tau, a_i) for logging
 
+        tau_clip_hits_round = 0
         for _, fit_res in results:
             tau = float(fit_res.metrics.get("tau", 1))
             if tau <= 0:
                 continue
-            a_i = fednova_normaliser(tau, m)        # ← MF2: momentum-aware
+            # --- τ-clipping (default OFF; tau_clip_min == 0). ---
+            # When active, raise the τ used in the normaliser to at least
+            # tau_clip_min. The partial parameter delta d_i still enters
+            # aggregation unchanged; only the denominator a_i is bounded.
+            # Rationale: under γ-inexact partial-update acceptance, FedNova's
+            # 1/τ rescaling can blow up when a straggler returns τ ≈ 1.
+            # Mathematically this is the τ analog of gradient clipping
+            # (Pascanu et al. 2013); no FedNova-specific paper proposes it,
+            # so this is a thesis-original mechanism probe.
+            tau_for_normaliser = tau
+            if self.tau_clip_min > 0 and tau < self.tau_clip_min:
+                tau_for_normaliser = float(self.tau_clip_min)
+                tau_clip_hits_round += 1
+            a_i = fednova_normaliser(tau_for_normaliser, m)
             if a_i <= 0:
                 continue
             n = fit_res.num_examples
@@ -180,10 +221,34 @@ class PairedFedNovaStrategy(FedAvg):
                     "tau": int(tau),
                 })
 
-        # Aggregated update: w_new = w_anchor - a_eff * normalised_delta
+        # FedNova pseudo-gradient: g_t = a_eff * normalised_delta. This is
+        # the un-momentumed global update direction the server would apply
+        # to the anchor (`w^{t+1} = w^t - g_t` in vanilla FedNova).
+        pseudo_gradient: NDArrays = [
+            (a_eff * d).astype(np.float64) for d in normalised_delta
+        ]
+
+        # --- Server momentum (default OFF; server_momentum == 0.0). ---
+        # When active, maintain the heavy-ball buffer m_t = β·m_{t-1} + g_t
+        # and use m_t in place of g_t. Mirrors flwr.server.strategy.FedAvgM
+        # (Hsu et al. 2019); the first-round behaviour is m_1 = g_1 so the
+        # initial step matches vanilla FedNova exactly.
+        if self.server_momentum > 0.0:
+            if self._momentum_buffer is None:
+                self._momentum_buffer = [g.copy() for g in pseudo_gradient]
+            else:
+                self._momentum_buffer = [
+                    self.server_momentum * mb + g
+                    for mb, g in zip(self._momentum_buffer, pseudo_gradient)
+                ]
+            applied_update = self._momentum_buffer
+        else:
+            applied_update = pseudo_gradient
+
+        # Aggregated update: w_new = w_anchor - applied_update
         new_global = [
-            (anc.astype(np.float64) - a_eff * d).astype(anc.dtype)
-            for anc, d in zip(anchor, normalised_delta)
+            (anc.astype(np.float64) - upd).astype(anc.dtype)
+            for anc, upd in zip(anchor, applied_update)
         ]
         self._current_anchor = new_global
 
@@ -202,5 +267,13 @@ class PairedFedNovaStrategy(FedAvg):
                 ) / total_n_local
                 metrics_agg["a_eff"] = float(a_eff)
                 metrics_agg["client_momentum"] = float(m)
+                # Mechanism-diagnostic counters (only populated when the
+                # corresponding intervention is active).
+                if self.tau_clip_min > 0:
+                    metrics_agg["tau_clip_min"] = int(self.tau_clip_min)
+                    metrics_agg["tau_clip_hits"] = int(tau_clip_hits_round)
+                    self._tau_clip_hits_total += tau_clip_hits_round
+                if self.server_momentum > 0.0:
+                    metrics_agg["server_momentum"] = float(self.server_momentum)
 
         return ndarrays_to_parameters(new_global), metrics_agg
