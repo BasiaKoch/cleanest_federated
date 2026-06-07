@@ -6,7 +6,7 @@
 # passing `--account=...` on the sbatch command line (CLI overrides #SBATCH).
 #SBATCH -A FERGUSSON-SL3-GPU
 #SBATCH -p ampere
-#SBATCH --exclude=gpu-q-31,gpu-q-32
+#SBATCH --exclude=gpu-q-19,gpu-q-31,gpu-q-32
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
@@ -18,8 +18,12 @@
 # NOTE: gpu-q-31 was excluded after its /var/spool filled up on 2026-06-05;
 # gpu-q-32 was added on 2026-06-07 after a smoke test reproduced the same
 # Ray "Failed to start GCS" failure mode there (job 30215930). Both nodes
-# appear to share a degraded /tmp or /dev/shm state. Drop entries once the
-# nodes are confirmed clean by HPC ops.
+# appear to share a degraded /tmp or /dev/shm state.
+# gpu-q-19 was added on 2026-06-07 after jobs 30218952/30218953 (mechanism-fork
+# pilot, serverlr03 arm, seeds 42/123) failed all 3 retry attempts there with
+# "RuntimeError: CUDA driver initialization failed, you might not have a CUDA
+# gpu" — a node-local GPU/driver problem the retry loop cannot work around.
+# Drop entries once the nodes are confirmed clean by HPC ops.
 
 # SLURM template for one FedNova run, mirroring slurm_template_flower.sh.
 # Args:
