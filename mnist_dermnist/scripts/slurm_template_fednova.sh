@@ -52,26 +52,18 @@ if [ ! -f "$REPO_ROOT/dermamnist_64.npz" ]; then
     exit 2
 fi
 
-# Per-job Ray session dir — see slurm_template_flower.sh for rationale.
-# This must match slurm_template_flower.sh exactly because that path has
-# worked for every prior FedNova/Flower experiment on this HPC; deviating
-# from the known-good path created new failures during the 2026-06-05 probe
-# attempt.
+# Per-job Ray session dir — IDENTICAL Ray-launch handling to the PROVEN
+# slurm_template_system_het.sh / slurm_template_flower.sh, i.e. the templates
+# that produced the working system_het / headline CSVs on this HPC. The full
+# Ray contract those runs relied on is: bare ray.init() in the runner (NO
+# ray_init_args — an explicit ray_init_args dict caused "Failed to start GCS"
+# across nodes; see run_one_flower.py:496 and ray_diagnostic.sh) + a per-SLURM-
+# job RAY_TMPDIR exported here so ray.init() reads it from the environment.
+# (Reverted from the earlier ray_log_save trap to match the proven path byte
+# for byte; re-add log-copying only for ad-hoc GCS debugging.)
 export RAY_TMPDIR="/tmp/ray-${SLURM_JOB_ID:-$$}"
 mkdir -p "$RAY_TMPDIR"
-# Postmortem: copy the Ray session logs to a durable location before
-# the trap removes RAY_TMPDIR. Diagnoses GCS startup failures (which
-# leave gcs_server.out empty in the .err message but write to other
-# files in the session dir).
-ray_log_save() {
-    local dest="$REPO_ROOT/mnist_dermnist/logs/ray_session_${SLURM_JOB_ID}"
-    if [ -d "$RAY_TMPDIR" ]; then
-        mkdir -p "$dest"
-        cp -r "$RAY_TMPDIR"/* "$dest/" 2>/dev/null || true
-    fi
-    rm -rf "$RAY_TMPDIR"
-}
-trap ray_log_save EXIT
+trap 'rm -rf "$RAY_TMPDIR"' EXIT
 
 # Preflight import check. Use `python -c` (not a heredoc) so it does NOT
 # depend on the compute node being able to create a heredoc temp file —

@@ -1,6 +1,8 @@
 #!/bin/bash
 #SBATCH -J ray_diag
-#SBATCH -A MPHIL-DIS-SL2-GPU
+# FERGUSSON-SL3-GPU: MPHIL-DIS-SL2-GPU ran out of GPU-minutes (2026-06-07).
+# Override per run with: sbatch --account=... mnist_dermnist/scripts/ray_diagnostic.sh
+#SBATCH -A FERGUSSON-SL3-GPU
 #SBATCH -p ampere
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
