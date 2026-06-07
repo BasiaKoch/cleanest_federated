@@ -2,7 +2,7 @@
 #SBATCH -J mn_derm_fn
 #SBATCH -A MPHIL-DIS-SL2-GPU
 #SBATCH -p ampere
-#SBATCH --exclude=gpu-q-31
+#SBATCH --exclude=gpu-q-31,gpu-q-32
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
@@ -11,10 +11,11 @@
 #SBATCH --output=/home/bk489/federated_clean/cleanest_federated/mnist_dermnist/logs/%x_%j.out
 #SBATCH --error=/home/bk489/federated_clean/cleanest_federated/mnist_dermnist/logs/%x_%j.err
 #
-# NOTE: gpu-q-31 is excluded because its /var/spool was full during the 2026-06-05
-# run, causing heredoc preflight to fail with "No space left on device" inside
-# slurm_script:line 49 before Python even started. Drop the exclusion once the
-# node is confirmed clean.
+# NOTE: gpu-q-31 was excluded after its /var/spool filled up on 2026-06-05;
+# gpu-q-32 was added on 2026-06-07 after a smoke test reproduced the same
+# Ray "Failed to start GCS" failure mode there (job 30215930). Both nodes
+# appear to share a degraded /tmp or /dev/shm state. Drop entries once the
+# nodes are confirmed clean by HPC ops.
 
 # SLURM template for one FedNova run, mirroring slurm_template_flower.sh.
 # Args:
@@ -54,7 +55,19 @@ fi
 # attempt.
 export RAY_TMPDIR="/tmp/ray-${SLURM_JOB_ID:-$$}"
 mkdir -p "$RAY_TMPDIR"
-trap 'rm -rf "$RAY_TMPDIR"' EXIT
+# Postmortem: copy the Ray session logs to a durable location before
+# the trap removes RAY_TMPDIR. Diagnoses GCS startup failures (which
+# leave gcs_server.out empty in the .err message but write to other
+# files in the session dir).
+ray_log_save() {
+    local dest="$REPO_ROOT/mnist_dermnist/logs/ray_session_${SLURM_JOB_ID}"
+    if [ -d "$RAY_TMPDIR" ]; then
+        mkdir -p "$dest"
+        cp -r "$RAY_TMPDIR"/* "$dest/" 2>/dev/null || true
+    fi
+    rm -rf "$RAY_TMPDIR"
+}
+trap ray_log_save EXIT
 
 python - <<'PY'
 import flwr
