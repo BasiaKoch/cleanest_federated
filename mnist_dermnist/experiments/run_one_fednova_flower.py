@@ -140,10 +140,12 @@ def build_parser() -> argparse.ArgumentParser:
     # --- Mechanism probes for random-τ FedNova failure (thesis §5.5). ---
     ap.add_argument("--tau-clip-min", type=int, default=0,
                     help="Lower clamp on tau_i used in the FedNova normaliser "
-                         "denominator. 0 disables (default). Recommended "
-                         "diagnostic value: E_max // 2 (e.g. 10 for E=20). "
-                         "Partial parameter deltas still enter aggregation "
-                         "unchanged; only the 1/tau scaling is bounded.")
+                         "denominator. 0 disables (default). NOTE tau_i is the "
+                         "local SGD STEP count (= local_epochs × batches_per_epoch), "
+                         "not the epoch count: with batch=32 on ~1001 samples per "
+                         "client a 10-epoch clamp is ~320 steps. Partial parameter "
+                         "deltas still enter aggregation unchanged; only the "
+                         "1/tau scaling is bounded.")
     ap.add_argument("--server-momentum", type=float, default=0.0,
                     help="Heavy-ball server-side momentum coefficient applied "
                          "to the FedNova pseudo-gradient (Hsu et al. 2019, "
