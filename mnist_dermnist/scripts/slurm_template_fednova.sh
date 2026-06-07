@@ -1,6 +1,10 @@
 #!/bin/bash
 #SBATCH -J mn_derm_fn
-#SBATCH -A MPHIL-DIS-SL2-GPU
+# Account switched from MPHIL-DIS-SL2-GPU -> FERGUSSON-SL3-GPU on 2026-06-07:
+# the SL2-GPU association ran out of GPU-minutes on `ampere` (jobs pended with
+# reason AssocGrpGRESMinutes). Submit scripts can override this per-run by
+# passing `--account=...` on the sbatch command line (CLI overrides #SBATCH).
+#SBATCH -A FERGUSSON-SL3-GPU
 #SBATCH -p ampere
 #SBATCH --exclude=gpu-q-31,gpu-q-32
 #SBATCH --nodes=1

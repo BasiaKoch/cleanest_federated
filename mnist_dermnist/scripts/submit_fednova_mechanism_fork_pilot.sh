@@ -55,6 +55,11 @@ ARM_FLAGS=(
 
 # DRY-RUN by default. Set DRY_RUN=0 to actually sbatch.
 DRY_RUN="${DRY_RUN:-1}"
+# Slurm account (overridable). Switched to FERGUSSON-SL3-GPU after
+# MPHIL-DIS-SL2-GPU ran out of GPU-minutes (AssocGrpGRESMinutes). The CLI
+# --account below overrides the template's #SBATCH -A directive; override per
+# run with e.g.  ACCOUNT=SOME-OTHER-SL2-GPU DRY_RUN=0 bash <this script>.
+ACCOUNT="${ACCOUNT:-FERGUSSON-SL3-GPU}"
 FAILED=()
 N_PLANNED=0
 
@@ -66,13 +71,13 @@ submit() {
   if [ "$DRY_RUN" = "1" ]; then
     # Print a copy-pasteable, shell-escaped sbatch invocation.
     printf '  '
-    printf '%q ' sbatch --job-name="$jobname" "$template" \
+    printf '%q ' sbatch --account="$ACCOUNT" --job-name="$jobname" "$template" \
       "$seed" "$LOCAL_EPOCHS" "$out" "$PARTITION" "$SH_MODE" "$extra"
     printf '\n'
     return 0
   fi
   mkdir -p "$REPO_ROOT/$out"
-  if ! sbatch --job-name="$jobname" "$template" \
+  if ! sbatch --account="$ACCOUNT" --job-name="$jobname" "$template" \
        "$seed" "$LOCAL_EPOCHS" "$out" "$PARTITION" "$SH_MODE" "$extra"; then
     echo "  FAILED to submit: seed=$seed arm=$name"
     FAILED+=("$seed $name")
@@ -102,6 +107,7 @@ echo "Mechanism-fork pilot: ${#ARM_NAMES[@]} arms x ${#SEEDS[@]} seeds = ${N_PLA
 echo "  seeds:  ${SEEDS[*]}"
 echo "  arms:   ${ARM_NAMES[*]}"
 echo "  out:    mnist_dermnist/results/system_het_random_fednova_{${ARM_NAMES[*]// /,}}/"
+echo "  account: ${ACCOUNT}  partition: ampere"
 echo "  ~14 min/run on A100  =>  ~6 GPU-h total"
 if [ "$DRY_RUN" = "1" ]; then
   echo ""
