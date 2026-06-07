@@ -34,6 +34,13 @@ VENV_DIR=/home/bk489/federated_clean/.venv
 cd "$REPO_ROOT"
 source "$VENV_DIR/bin/activate"
 
+# CRITICAL Ray fix (2026-06-07): clear the module-injected LD_LIBRARY_PATH
+# (Intel oneAPI MPI / libfabric / UCX). Those libs break Ray's GCS startup
+# ("Failed to start GCS", empty gcs_server.out); ray.init() succeeds only with
+# LD_LIBRARY_PATH unset (torch CUDA cu128 wheel is unaffected). See
+# ray_gcs_probe.sh. Single-node Flower/Ray needs none of those HPC libs.
+unset LD_LIBRARY_PATH
+
 ALGO="${1:?algorithm required}"
 MU="${2:?mu required}"
 SEED="${3:?seed required}"

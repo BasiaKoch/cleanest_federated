@@ -38,6 +38,16 @@ VENV_DIR=/home/bk489/federated_clean/.venv
 cd "$REPO_ROOT"
 source "$VENV_DIR/bin/activate"
 
+# CRITICAL Ray fix (2026-06-07): clear the module-injected LD_LIBRARY_PATH
+# (Intel oneAPI MPI / libfabric / UCX from the 2024-06 CSD3 spack module set).
+# Those libraries break Ray's GCS startup — "RuntimeError: Failed to start GCS,
+# Last 0 lines of error files" with an empty gcs_server.out — which killed every
+# FedNova/Flower job. Confirmed by ray_gcs_probe.sh: ray.init() FAILS with
+# LD_LIBRARY_PATH set and SUCCEEDS with it unset, while torch CUDA is unaffected
+# (it's a self-contained cu128 pip wheel). Single-node Flower/Ray needs none of
+# those HPC networking libs.
+unset LD_LIBRARY_PATH
+
 SEED="${1:?seed required}"
 LOCAL_EPOCHS="${2:?local_epochs required}"
 OUT_DIR="${3:?out_dir required}"
