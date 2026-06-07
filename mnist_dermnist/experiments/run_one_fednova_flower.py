@@ -150,6 +150,13 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Heavy-ball server-side momentum coefficient applied "
                          "to the FedNova pseudo-gradient (Hsu et al. 2019, "
                          "FedAvgM). 0.0 disables (default). Recommended: 0.9.")
+    ap.add_argument("--server-lr", type=float, default=1.0,
+                    help="SCIENTIFIC INTERVENTION: scale the final FedNova "
+                         "server update (after normalisation + any server "
+                         "momentum) by this factor: w<-w - server_lr*update. "
+                         "Server-side STEP SIZE for the effective-LR/magnitude "
+                         "hypothesis, NOT the client local LR. 1.0 disables "
+                         "(default, byte-identical). Probe value: 0.3.")
     return ap
 
 
@@ -212,6 +219,10 @@ def main():
 
     best_val_macro_f1 = {"value": -1.0, "round": -1,
                          "params": [a.copy() for a in initial_params]}
+    # Final-round model tracker. Best-val selection can hide a final-round
+    # collapse (a seed that peaks transiently then degenerates to the
+    # majority class), so we additionally evaluate the LAST-round model.
+    final_state = {"round": -1, "params": None}
     history_rows: List[Dict] = []
     # Populated post-simulation from history_obj.metrics_distributed_fit
     # so the FedNova CSV has the same `train_loss` column as the pure-
@@ -248,6 +259,11 @@ def main():
                 best_val_macro_f1["round"] = int(server_round)
                 best_val_macro_f1["params"] = [a.copy() for a in parameters]
 
+            # Track the latest-round model for final-round evaluation.
+            if int(server_round) > final_state["round"]:
+                final_state["round"] = int(server_round)
+                final_state["params"] = [a.copy() for a in parameters]
+
         return metrics["loss"], {
             "val_macro_f1": metrics["macro_f1"],
             "val_balanced_accuracy": metrics["balanced_accuracy"],
@@ -260,11 +276,16 @@ def main():
     # Per-(round, client) update-norm sink. The strategy appends one row
     # per participating client per round whenever this list is not None.
     update_norm_rows: List[Dict] = []
+    # Aggregation-side mechanism diagnostics (per-client and per-round).
+    # Gated on the same --log-update-norms flag so normal runs stay quiet.
+    agg_client_rows: List[Dict] = []
+    agg_round_rows: List[Dict] = []
     n_fit = max(1, int(round(args.fraction_fit * num_clients)))
     strategy = PairedFedNovaStrategy(
         client_momentum=float(args.momentum),       # ← MF2: momentum-aware normaliser
         tau_clip_min=int(args.tau_clip_min),         # 0 = off (byte-identical)
         server_momentum=float(args.server_momentum), # 0.0 = off (byte-identical)
+        server_lr=float(args.server_lr),             # 1.0 = off (byte-identical)
         fraction_fit=float(args.fraction_fit),       # ← MF4: respect partial participation
         fraction_evaluate=0.0,
         min_fit_clients=n_fit,
@@ -275,6 +296,8 @@ def main():
         on_fit_config_fn=on_fit_config_fn,
         accept_failures=False,
         update_norm_rows=(update_norm_rows if args.log_update_norms else None),
+        agg_client_rows=(agg_client_rows if args.log_update_norms else None),
+        agg_round_rows=(agg_round_rows if args.log_update_norms else None),
     )
 
     def client_fn(context_or_cid) -> fl.client.Client:
@@ -366,8 +389,12 @@ def main():
     tc_tag = f"_tauclip{args.tau_clip_min}" if args.tau_clip_min > 0 else ""
     sm_tag = (f"_smom{args.server_momentum:g}"
               if args.server_momentum > 0.0 else "")
+    # Server-LR tag — keeps server-lr probe outputs from overwriting the
+    # baseline (server_lr=1.0 ⇒ empty tag ⇒ byte-identical filenames).
+    slr_tag = (f"_slr{args.server_lr:g}"
+               if abs(args.server_lr - 1.0) > 1e-12 else "")
     stem = (f"fednova_mu0.0_E{args.local_epochs}"
-            f"{sh_tag}{c_tag}{lrc_tag}{tc_tag}{sm_tag}_s{seed}")
+            f"{sh_tag}{c_tag}{lrc_tag}{tc_tag}{sm_tag}{slr_tag}_s{seed}")
 
     import pandas as pd
     pd.DataFrame(history_rows).to_csv(out_dir / f"history_{stem}.csv", index=False)
@@ -375,6 +402,13 @@ def main():
     if args.log_update_norms and update_norm_rows:
         pd.DataFrame(update_norm_rows).to_csv(
             out_dir / f"client_update_norms_{stem}.csv", index=False)
+    # Aggregation-side mechanism diagnostics (per-client + per-round).
+    if args.log_update_norms and agg_client_rows:
+        pd.DataFrame(agg_client_rows).to_csv(
+            out_dir / f"aggregation_client_diag_{stem}.csv", index=False)
+    if args.log_update_norms and agg_round_rows:
+        pd.DataFrame(agg_round_rows).to_csv(
+            out_dir / f"aggregation_round_diag_{stem}.csv", index=False)
     predictions_file = None
     if _preds is not None and _targets is not None:
         predictions_file = f"test_predictions_{stem}.npz"
@@ -409,9 +443,10 @@ def main():
             "loss_type": "cross_entropy",
             "client_momentum_for_fednova_normaliser": args.momentum,
             "fednova_normaliser_formula": "(tau*(1-m) - m*(1-m**tau)) / (1-m)**2  [L1 norm of cumulative momentum series; Wang 2020 §3.3]",
-            # Mechanism-probe settings (default 0 = baseline FedNova).
+            # Mechanism-probe settings (defaults = baseline FedNova).
             "tau_clip_min": int(args.tau_clip_min),
             "server_momentum": float(args.server_momentum),
+            "server_lr": float(args.server_lr),
             "system_het": sh_cfg.to_dict(),
             "elapsed_s": elapsed,            # legacy field name
             "wall_clock_seconds": elapsed,   # canonical (audit fix)
@@ -420,10 +455,68 @@ def main():
             **collect_runtime_provenance(run_started_at),
         }, f, indent=2)
 
+    # --- Final-round metrics + collapse-round detection. ---
+    # Best-val selection can hide a final-round collapse (transient peak then
+    # degeneration to the majority class). Evaluate the LAST-round model on the
+    # test set and record where the validation macro-F1 first fell below the
+    # collapse threshold AFTER a prior peak.
+    COLLAPSE_THRESHOLD = 0.20
+
+    def _detect_collapse_round(rows, threshold):
+        """First round where val macro-F1 falls below `threshold` AFTER the
+        model had previously been at/above it (i.e. it learned, then
+        collapsed). Returns None if the model never reached `threshold`
+        (never-trained / born-collapsed seeds) or never fell below it
+        (healthy). best/final macro-F1 disambiguates the None cases."""
+        seen_healthy = False
+        for r in sorted(rows, key=lambda x: int(x["round"])):
+            vmf = float(r["val_macro_f1"])
+            if vmf >= threshold:
+                seen_healthy = True
+            elif seen_healthy:
+                return int(r["round"])
+        return None
+
+    collapse_round = _detect_collapse_round(history_rows, COLLAPSE_THRESHOLD)
+    final_val_macro_f1 = (float(history_rows[-1]["val_macro_f1"])
+                          if history_rows else float("nan"))
+
+    final_params = final_state["params"] if final_state["params"] is not None \
+        else best_val_macro_f1["params"]
+    final_model = DermMNISTCNN(num_classes=7, dropout=0.2).to(device)
+    numpy_to_state_dict(final_model, final_params)
+    final_metrics = evaluate(final_model, test_loader, device, num_classes=7)
+    final_record = {
+        "seed": seed,
+        "algorithm": "fednova",
+        "partition": args.partition,
+        "system_het_mode": args.system_het_mode,
+        "round": int(final_state["round"]),
+        "final_macro_f1": float(final_metrics["macro_f1"]),
+        "final_accuracy": float(final_metrics["accuracy"]),
+        "final_balanced_accuracy": float(final_metrics["balanced_accuracy"]),
+        "final_per_class_f1": [float(x) for x in final_metrics["per_class_f1"]],
+        "final_val_macro_f1": final_val_macro_f1,
+        "best_macro_f1": float(best_val_macro_f1["value"]),
+        "best_round": int(best_val_macro_f1["round"]),
+        "collapse_round": collapse_round,   # null = no collapse detected
+        "collapse_threshold": COLLAPSE_THRESHOLD,
+        # Echo intervention settings for grouping.
+        "tau_clip_min": int(args.tau_clip_min),
+        "server_momentum": float(args.server_momentum),
+        "server_lr": float(args.server_lr),
+        "num_rounds": int(args.num_rounds),
+    }
+    with open(out_dir / f"test_at_final_{stem}.json", "w") as f:
+        json.dump(final_record, f, indent=2)
+
     print(f"\nTest @ best-val (round {test_metrics['selected_round']}, val_macro_f1={test_metrics['best_val_macro_f1']:.4f}):")
     print(f"  test_macro_f1   = {test_metrics['macro_f1']:.4f}")
     print(f"  test_balanced_a = {test_metrics['balanced_accuracy']:.4f}")
     print(f"  test_accuracy   = {test_metrics['accuracy']:.4f}")
+    print(f"Test @ final-round (round {final_record['round']}):")
+    print(f"  final_macro_f1  = {final_record['final_macro_f1']:.4f}"
+          f"   collapse_round = {final_record['collapse_round']}")
     print(f"  elapsed: {elapsed:.1f}s")
     print(f"\nWrote outputs to {out_dir}")
 

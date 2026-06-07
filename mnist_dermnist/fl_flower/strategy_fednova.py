@@ -123,18 +123,37 @@ class PairedFedNovaStrategy(FedAvg):
         (Hsu et al. 2019, "Measuring the Effects of Non-Identical Data
         Distribution for Federated Visual Classification"). Default 0.0
         = OFF (byte-identical to FedNova).
+    server_lr : float, optional
+        Scientific-intervention scale applied to the FINAL server update
+        (after FedNova normalisation and any server momentum), i.e.
+        `w^{t+1} = w^t - server_lr · applied_update`. This is a SERVER-side
+        step-size knob for the effective-LR / magnitude hypothesis, NOT the
+        client local learning rate (which is set on the optimiser). Default
+        1.0 = OFF (byte-identical to FedNova). Values < 1 down-scale the
+        global step; the FedNova normaliser math is untouched.
+    agg_client_rows, agg_round_rows : list[dict], optional
+        Mechanism-diagnostic sinks. When the runner passes list references,
+        aggregate_fit appends one per-(round, client) row (cid, tau, a_i,
+        a_eff, p_i, raw_update_norm, contribution_norm, amp_vs_fedavg) and
+        one per-round row (a_eff, mean_tau, global_update_norm,
+        straggler_share, dominating_cid, max_contribution_share, server_lr).
+        Default None = no logging (zero overhead, byte-identical behaviour).
     All other arguments are forwarded to flwr.server.strategy.FedAvg.
     """
 
     def __init__(self, *args, client_momentum: float = 0.9,
                  tau_clip_min: int = 0,
                  server_momentum: float = 0.0,
+                 server_lr: float = 1.0,
                  update_norm_rows: Optional[List[Dict]] = None,
+                 agg_client_rows: Optional[List[Dict]] = None,
+                 agg_round_rows: Optional[List[Dict]] = None,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.client_momentum = float(client_momentum)
         self.tau_clip_min = int(tau_clip_min)
         self.server_momentum = float(server_momentum)
+        self.server_lr = float(server_lr)
         # Server-momentum running buffer (lazy-init on round 1). Shape
         # matches `anchor`; one ndarray per parameter tensor.
         self._momentum_buffer: Optional[NDArrays] = None
@@ -149,6 +168,10 @@ class PairedFedNovaStrategy(FedAvg):
         # participating client per round. Default None = no logging
         # (zero overhead, byte-identical to the pre-flag behaviour).
         self._update_norm_rows = update_norm_rows
+        # Optional sinks for aggregation-side mechanism diagnostics (see the
+        # class docstring). Both default None = no logging.
+        self._agg_client_rows = agg_client_rows
+        self._agg_round_rows = agg_round_rows
 
     def initialize_parameters(self, client_manager):
         params = super().initialize_parameters(client_manager)
@@ -177,6 +200,12 @@ class PairedFedNovaStrategy(FedAvg):
         normalised_delta = [np.zeros_like(a, dtype=np.float64) for a in anchor]
         a_eff = 0.0
         per_client_a: List[Tuple[int, float, float]] = []  # (cid, tau, a_i) for logging
+
+        # Aggregation-side mechanism diagnostics. Collected only when a sink
+        # is attached; otherwise zero extra work (byte-identical behaviour).
+        want_diag = (self._agg_client_rows is not None
+                     or self._agg_round_rows is not None)
+        diag_clients: List[Dict] = []  # raw per-client fields, finalised post-loop
 
         tau_clip_hits_round = 0
         for _, fit_res in results:
@@ -207,6 +236,18 @@ class PairedFedNovaStrategy(FedAvg):
                 normalised_delta[k] += p_i * (d_i / a_i)
             a_eff += p_i * a_i
             per_client_a.append((int(fit_res.metrics.get("cid", -1)), tau, a_i))
+
+            # Collect raw per-client fields for the aggregation diagnostics.
+            # contribution_norm / amp_vs_fedavg are finalised after the loop
+            # once a_eff is known.
+            if want_diag:
+                diag_clients.append({
+                    "cid": int(fit_res.metrics.get("cid", -1)),
+                    "tau": int(tau),
+                    "a_i": float(a_i),
+                    "p_i": float(p_i),
+                    "raw_update_norm": float(fit_res.metrics.get("update_norm", float("nan"))),
+                })
 
             # Mechanism diagnostic: capture the client's reported update norm.
             # Clients always include it in fit metrics; we only persist when
@@ -245,12 +286,66 @@ class PairedFedNovaStrategy(FedAvg):
         else:
             applied_update = pseudo_gradient
 
-        # Aggregated update: w_new = w_anchor - applied_update
+        # --- Server learning rate (default 1.0; byte-identical when OFF). ---
+        # Scale the FINAL applied step (after FedNova normalisation and any
+        # server momentum). This is a server-side step size for the
+        # effective-LR / magnitude probe, NOT the client local LR. With
+        # server_lr == 1.0 the multiplication is a no-op.
+        eta_g = self.server_lr
         new_global = [
-            (anc.astype(np.float64) - upd).astype(anc.dtype)
+            (anc.astype(np.float64) - eta_g * upd).astype(anc.dtype)
             for anc, upd in zip(anchor, applied_update)
         ]
         self._current_anchor = new_global
+
+        # --- Emit aggregation-side mechanism diagnostics (gated). ---
+        if want_diag:
+            # u_i = p_i * ||delta_i|| / a_i is the a_eff-independent part of
+            # each client's contribution; shares use it directly.
+            u = [(c["p_i"] * c["raw_update_norm"] / c["a_i"]) if c["a_i"] > 0 else 0.0
+                 for c in diag_clients]
+            u_total = float(sum(u))
+            mean_tau_round = (sum(c["tau"] * c["p_i"] for c in diag_clients)
+                              if diag_clients else 0.0)
+            # Actual global step magnitude that hit the model (= eta_g * applied_update).
+            global_update_norm = float(np.sqrt(sum(
+                float(np.sum((eta_g * up.astype(np.float64)) ** 2)) for up in applied_update
+            )))
+            # Straggler (lowest-tau client) share of the normalised update.
+            straggler_share = float("nan")
+            dominating_cid = -1
+            max_contribution_share = float("nan")
+            if diag_clients and u_total > 0:
+                strag_idx = min(range(len(diag_clients)),
+                                key=lambda i: diag_clients[i]["tau"])
+                straggler_share = u[strag_idx] / u_total
+                dom_idx = max(range(len(diag_clients)), key=lambda i: u[i])
+                dominating_cid = diag_clients[dom_idx]["cid"]
+                max_contribution_share = max(u) / u_total
+            if self._agg_client_rows is not None:
+                for c, u_i in zip(diag_clients, u):
+                    self._agg_client_rows.append({
+                        "round": int(server_round),
+                        "cid": c["cid"],
+                        "tau": c["tau"],
+                        "a_i": c["a_i"],
+                        "a_eff": float(a_eff),
+                        "p_i": c["p_i"],
+                        "raw_update_norm": c["raw_update_norm"],
+                        "contribution_norm": float(a_eff * u_i),
+                        "amp_vs_fedavg": (float(a_eff / c["a_i"]) if c["a_i"] > 0 else float("nan")),
+                    })
+            if self._agg_round_rows is not None:
+                self._agg_round_rows.append({
+                    "round": int(server_round),
+                    "a_eff": float(a_eff),
+                    "mean_tau": float(mean_tau_round),
+                    "global_update_norm": global_update_norm,
+                    "straggler_share": straggler_share,
+                    "dominating_cid": int(dominating_cid),
+                    "max_contribution_share": max_contribution_share,
+                    "server_lr": float(eta_g),
+                })
 
         # Aggregate fit metrics (size-weighted mean of train_loss, as in FedAvg)
         metrics_agg = {}
@@ -275,5 +370,7 @@ class PairedFedNovaStrategy(FedAvg):
                     self._tau_clip_hits_total += tau_clip_hits_round
                 if self.server_momentum > 0.0:
                     metrics_agg["server_momentum"] = float(self.server_momentum)
+                if abs(self.server_lr - 1.0) > 1e-12:
+                    metrics_agg["server_lr"] = float(self.server_lr)
 
         return ndarrays_to_parameters(new_global), metrics_agg

@@ -69,18 +69,24 @@ ray_log_save() {
 }
 trap ray_log_save EXIT
 
-python - <<'PY'
-import flwr
-import torch
-print(f"Preflight OK: flwr={flwr.__version__}, torch={torch.__version__}")
-PY
+# Preflight import check. Use `python -c` (not a heredoc) so it does NOT
+# depend on the compute node being able to create a heredoc temp file —
+# the gpu-q-31/gpu-q-32 failures were node-local /tmp problems, and a
+# heredoc preflight could itself fail to stage on a degraded node.
+python -c 'import flwr, torch; print(f"Preflight OK: flwr={flwr.__version__}, torch={torch.__version__}")'
 
 # Retry loop — see slurm_template_flower.sh for rationale.
 RETRY_MAX=3
 SUCCESS=0
 for attempt in $(seq 1 $RETRY_MAX); do
     echo "=== Attempt $attempt/$RETRY_MAX at $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
-    if PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_fednova_flower \
+    # Capture the REAL python exit code. The previous `if python ...; then`
+    # pattern is broken under `set -e`: when the command fails the `if`
+    # compound returns 0 (no else branch ran), so a trailing `rc=$?` always
+    # read 0 and every failure was logged as "exit code 0". Disable -e only
+    # around the run, grab $? immediately, then re-enable.
+    set +e
+    PYTHONPATH=. python -m mnist_dermnist.experiments.run_one_fednova_flower \
             --seed "$SEED" \
             --local-epochs "$LOCAL_EPOCHS" \
             --num-rounds 150 \
@@ -92,12 +98,14 @@ for attempt in $(seq 1 $RETRY_MAX); do
             --npz-path "$REPO_ROOT/dermamnist_64.npz" \
             --out-dir "$OUT_DIR" \
             --system-het-mode "$SH_MODE" \
-            $EXTRA_ARGS; then
+            $EXTRA_ARGS
+    rc=$?
+    set -e
+    if [ "$rc" -eq 0 ]; then
         SUCCESS=1
         echo "Job complete on attempt $attempt (FedNova): seed=$SEED E=$LOCAL_EPOCHS partition=$PARTITION sh=$SH_MODE"
         break
     fi
-    rc=$?
     echo "Attempt $attempt failed with exit code $rc"
     if [ $attempt -lt $RETRY_MAX ]; then
         echo "Sleeping 90s to let GPU recover before retry..."

@@ -318,6 +318,106 @@ def test_server_momentum_accumulates_across_rounds():
     np.testing.assert_allclose(step_mom, 1.9 * step_off, atol=1e-10)
 
 
+# =========================================================================
+# Stage-0 instrumentation regression tests: --server-lr and aggregation diag.
+# =========================================================================
+
+
+def test_server_lr_one_is_byte_identical_to_baseline():
+    """server_lr=1.0 must reproduce the un-probed FedNova aggregate exactly."""
+    anchor = [np.array([1.0, 2.0, 3.0])]
+    updates = [
+        ([np.array([0.5, 1.5, 2.5])], 100, 5, 0),
+        ([np.array([0.9, 1.9, 2.9])], 200, 20, 1),
+    ]
+    s_one = PairedFedNovaStrategy(client_momentum=0.9, server_lr=1.0,
+                                  min_available_clients=2, min_fit_clients=2)
+    s_base = PairedFedNovaStrategy(client_momentum=0.9,
+                                   min_available_clients=2, min_fit_clients=2)
+    out_one, _ = _run_one_round(s_one, anchor, updates)
+    out_base, _ = _run_one_round(s_base, anchor, updates)
+    np.testing.assert_allclose(out_one[0], out_base[0], atol=1e-12)
+
+
+def test_server_lr_scales_the_applied_step():
+    """server_lr=η must scale the whole applied step by η: the step
+    (anchor − new_global) at η=0.3 equals 0.3× the step at η=1.0."""
+    anchor = [np.array([1.0, 2.0, 3.0])]
+    updates = [
+        ([np.array([0.5, 1.5, 2.5])], 100, 5, 0),
+        ([np.array([0.9, 1.9, 2.9])], 200, 20, 1),
+    ]
+    s_full = PairedFedNovaStrategy(client_momentum=0.9, server_lr=1.0,
+                                   min_available_clients=2, min_fit_clients=2)
+    s_03 = PairedFedNovaStrategy(client_momentum=0.9, server_lr=0.3,
+                                 min_available_clients=2, min_fit_clients=2)
+    out_full, _ = _run_one_round(s_full, anchor, updates)
+    out_03, _ = _run_one_round(s_03, anchor, updates)
+    step_full = anchor[0] - out_full[0]
+    step_03 = anchor[0] - out_03[0]
+    np.testing.assert_allclose(step_03, 0.3 * step_full, atol=1e-10)
+
+
+def _fit_res_with_norm(new_params, n, tau, cid, update_norm):
+    return FitRes(
+        status=Status(code=Code.OK, message="ok"),
+        parameters=ndarrays_to_parameters(new_params),
+        num_examples=n,
+        metrics={"tau": int(tau), "cid": int(cid), "train_loss": 0.0,
+                 "update_norm": float(update_norm), "local_epochs": int(tau)},
+    )
+
+
+def test_aggregation_diagnostics_rows_and_math():
+    """When agg sinks are attached, per-client and per-round diagnostics are
+    populated and amp_vs_fedavg / contribution_norm / shares match the
+    closed-form definitions."""
+    anchor = [np.array([0.0, 0.0])]
+    results = [
+        (None, _fit_res_with_norm([np.array([1.0, 0.0])], 100, 5, 0, 2.0)),   # straggler
+        (None, _fit_res_with_norm([np.array([0.0, 1.0])], 100, 20, 1, 4.0)),  # full
+    ]
+    agg_c: list = []
+    agg_r: list = []
+    s = PairedFedNovaStrategy(client_momentum=0.9,
+                              min_available_clients=2, min_fit_clients=2,
+                              agg_client_rows=agg_c, agg_round_rows=agg_r)
+    s._current_anchor = [a.copy() for a in anchor]
+    s.aggregate_fit(server_round=1, results=results, failures=[])
+
+    assert len(agg_c) == 2 and len(agg_r) == 1
+    a5 = fednova_normaliser(5, 0.9)
+    a20 = fednova_normaliser(20, 0.9)
+    a_eff = 0.5 * a5 + 0.5 * a20  # p_i = 0.5 each (n=100,100)
+    rows = {r["cid"]: r for r in agg_c}
+    assert abs(rows[0]["amp_vs_fedavg"] - a_eff / a5) < 1e-9
+    assert abs(rows[1]["amp_vs_fedavg"] - a_eff / a20) < 1e-9
+    assert abs(rows[0]["contribution_norm"] - a_eff * 0.5 * 2.0 / a5) < 1e-9
+    rr = agg_r[0]
+    # u_0 = 0.5*2/a5 > u_1 = 0.5*4/a20  -> dominating + straggler are cid 0 (tau=5)
+    assert rr["dominating_cid"] == 0
+    assert 0.0 <= rr["straggler_share"] <= 1.0
+    assert abs(rr["a_eff"] - a_eff) < 1e-9
+    assert rr["server_lr"] == 1.0
+
+
+def test_aggregation_diagnostics_do_not_change_aggregate():
+    """Attaching diagnostic sinks must not alter the aggregated parameters."""
+    anchor = [np.array([1.0, 2.0, 3.0])]
+    updates = [
+        ([np.array([0.5, 1.5, 2.5])], 100, 5, 0),
+        ([np.array([0.9, 1.9, 2.9])], 200, 20, 1),
+    ]
+    s_diag = PairedFedNovaStrategy(client_momentum=0.9,
+                                   min_available_clients=2, min_fit_clients=2,
+                                   agg_client_rows=[], agg_round_rows=[])
+    s_plain = PairedFedNovaStrategy(client_momentum=0.9,
+                                    min_available_clients=2, min_fit_clients=2)
+    out_diag, _ = _run_one_round(s_diag, anchor, updates)
+    out_plain, _ = _run_one_round(s_plain, anchor, updates)
+    np.testing.assert_allclose(out_diag[0], out_plain[0], atol=1e-12)
+
+
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-v"]))

@@ -13,10 +13,11 @@
 # 320 in the FedNova normaliser denominator when tau_i < 320; partial
 # parameter deltas still enter aggregation unchanged.
 #
-# Seeds tested: the three collapsed seeds (31337, 271828, 161803) plus
-# two healthy controls (42, 123) to verify the probe is benign on seeds
-# that already trained successfully. A baseline-recovery success criterion
-# would be: collapsed seeds reach macro-F1 > 0.4 with the probe applied.
+# Seeds tested: the Stage-2 pilot set (FEDNOVA_RANDOM_TAU_THESIS_PLAN.md §6):
+# 2 born-collapse seeds (31337, 271828), 2 transient-peak-then-collapse seeds
+# (42, 123), and the best-baseline seed (8675309). NB under FedNova-random ALL
+# baseline seeds are < 0.40 (best 0.364); the success criterion is lifting the
+# set toward the FedAvg band (~0.49) with no trivial-predictor endpoints.
 #
 # Output dir: mnist_dermnist/results/system_het_random_fednova_tauclip/
 # Compute: ~5 GPU-h on A100 (5 seeds × ~1 GPU-h each).
@@ -28,7 +29,7 @@ LOCAL_EPOCHS=20
 # balanced_paired_7_clients (~1001 samples/client) and batch=32,
 # batches_per_epoch ≈ 32, so a 10-epoch clamp ≈ 320 steps.
 TAU_CLIP_MIN=320            # ≈ E_max/2 epochs in step units (10 × 32 batches)
-SEEDS=(31337 271828 161803 42 123)
+SEEDS=(42 123 8675309 31337 271828)   # Stage-2 pilot set (plan §6)
 PARTITION=balanced_paired_7_clients
 
 FAILED=()
@@ -58,13 +59,13 @@ done
 
 echo ""
 echo "Submitted FedNova τ-clip probe sweep:"
-echo "  - random_stragglers × ${#SEEDS[@]} seeds (3 collapsed + 2 controls)"
+echo "  - random_stragglers × ${#SEEDS[@]} seeds (pilot: 2 born-collapse, 2 transient, 1 best)"
 echo "  - τ_clip_min = ${TAU_CLIP_MIN} steps  (= 10 epochs × 32 batches; ≈ E_max/2 in step units)"
 echo "  - output: $OUT/"
 echo ""
-echo "Success criterion: macro-F1 > 0.4 for ALL three previously-collapsed"
-echo "seeds (31337, 271828, 161803) confirms the 1/τ amplification mechanism."
-echo "Healthy-control seeds (42, 123) should match baseline within \$\\pm 0.02\$."
+echo "Success criterion: τ-clip lifts the pilot seeds out of majority-class"
+echo "collapse (final-round macro-F1 toward the FedAvg band ~0.49, 0 trivial"
+echo "endpoints), implicating the 1/τ-amplification (direction) mechanism."
 echo ""
 echo "When complete:"
 echo "  PYTHONPATH=. python mnist_dermnist/results/thesis_ready/scripts/peek_system_het_progress.py \\"

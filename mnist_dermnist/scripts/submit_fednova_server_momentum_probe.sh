@@ -20,7 +20,7 @@ set -uo pipefail
 REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
 LOCAL_EPOCHS=20
 SERVER_MOMENTUM=0.9
-SEEDS=(31337 271828 161803 42 123)
+SEEDS=(42 123 8675309 31337 271828)   # Stage-2 pilot set (plan §6)
 PARTITION=balanced_paired_7_clients
 
 FAILED=()
@@ -50,14 +50,13 @@ done
 
 echo ""
 echo "Submitted FedNova server-momentum probe sweep:"
-echo "  - random_stragglers × ${#SEEDS[@]} seeds (3 collapsed + 2 controls)"
+echo "  - random_stragglers × ${#SEEDS[@]} seeds (pilot: 2 born-collapse, 2 transient, 1 best)"
 echo "  - server_momentum = β = ${SERVER_MOMENTUM}  (Hsu 2019 default)"
 echo "  - output: $OUT/"
 echo ""
-echo "Success criterion: macro-F1 > 0.4 for ALL three previously-collapsed"
-echo "seeds confirms that round-to-round τ-jitter is the dominant failure mode."
-echo "Healthy-control seeds (42, 123) may shift modestly — momentum is not"
-echo "neutral on already-converging trajectories — but should remain > 0.3."
+echo "Success criterion: server momentum lifts the pilot seeds out of"
+echo "majority-class collapse (final-round macro-F1 toward the FedAvg band"
+echo "~0.49), implicating round-to-round τ-jitter as the failure mode."
 echo ""
 echo "When complete:"
 echo "  PYTHONPATH=. python mnist_dermnist/results/thesis_ready/scripts/peek_system_het_progress.py \\"
