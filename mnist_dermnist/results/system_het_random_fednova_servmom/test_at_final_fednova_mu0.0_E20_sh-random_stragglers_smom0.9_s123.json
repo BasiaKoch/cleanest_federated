@@ -1,0 +1,28 @@
+{
+  "seed": 123,
+  "algorithm": "fednova",
+  "partition": "balanced_paired_7_clients",
+  "system_het_mode": "random_stragglers",
+  "round": 150,
+  "final_macro_f1": 0.028597076173377787,
+  "final_accuracy": 0.11122194513715711,
+  "final_balanced_accuracy": 0.14285714285714285,
+  "final_per_class_f1": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.2001795332136445,
+    0.0,
+    0.0
+  ],
+  "final_val_macro_f1": 0.028468838163631698,
+  "best_macro_f1": 0.19095492742551565,
+  "best_round": 12,
+  "collapse_round": null,
+  "collapse_threshold": 0.2,
+  "tau_clip_min": 0,
+  "server_momentum": 0.9,
+  "server_lr": 1.0,
+  "num_rounds": 150
+}
