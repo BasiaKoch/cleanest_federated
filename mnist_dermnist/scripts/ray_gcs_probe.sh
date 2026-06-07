@@ -10,14 +10,14 @@
 #SBATCH --output=/home/bk489/federated_clean/cleanest_federated/mnist_dermnist/logs/ray_probe_%j.out
 #SBATCH --error=/home/bk489/federated_clean/cleanest_federated/mnist_dermnist/logs/ray_probe_%j.err
 #
-# Deep GCS-startup probe. The existing ray_diagnostic.sh deletes RAY_TMPDIR on
-# exit (so the GCS logs vanish) and globs the wrong session path. This probe:
-#   - reports /tmp + /dev/shm free space and key ulimits,
-#   - ldd's the gcs_server binary to catch a MISSING SYSTEM LIBRARY (the prime
-#     suspect when the same venv worked weeks ago but now fails on every node),
-#   - runs a minimal ray.init() and, on failure, dumps gcs_server.{out,err} and
-#     raylet.err from the CORRECT path, and copies the session to logs/ before
-#     cleanup so the evidence survives.
+# Deep GCS-startup probe v2. v1 confirmed: /tmp & /dev/shm healthy, no missing
+# libs, ray 2.31.0, ulimit -n = 1024 (LOW). v2 tests the two remaining
+# hypotheses and CAPTURES the real gcs_server error (v1 globbed the wrong
+# session path — with _temp_dir Ray uses <tmp>/session_*, no ray/ level — and
+# deleted it):
+#   (1) FD limit: raise `ulimit -n` and retry ray.init().
+#   (2) libstdc++/env: report LD_LIBRARY_PATH / CONDA + GLIBCXX provided-vs-needed.
+# The session dir is copied to logs/ BEFORE cleanup so gcs_server.err survives.
 set -uo pipefail
 
 REPO_ROOT=/home/bk489/federated_clean/cleanest_federated
@@ -25,39 +25,36 @@ VENV_DIR=/home/bk489/federated_clean/.venv
 cd "$REPO_ROOT"
 source "$VENV_DIR/bin/activate"
 
-echo "=================== ray_gcs_probe ==================="
-echo "host:  $(hostname)"
-echo "date:  $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo "job:   ${SLURM_JOB_ID:-none}"
+echo "=================== ray_gcs_probe v2 ==================="
+echo "host: $(hostname)   job: ${SLURM_JOB_ID:-none}   date: $(date -u +%FT%TZ)"
 echo ""
-echo "== disk: /tmp and /dev/shm =="
-df -h /tmp /dev/shm 2>&1
+echo "== FD limits BEFORE =="
+echo "  soft nofile: $(ulimit -Sn)   hard nofile: $(ulimit -Hn)"
+echo "  /proc/sys/fs/file-max: $(cat /proc/sys/fs/file-max 2>/dev/null)"
+# (1) Raise the soft open-files limit as high as the hard limit allows.
+NEWLIM=$(ulimit -Hn)
+[ "$NEWLIM" = "unlimited" ] && NEWLIM=1048576
+ulimit -n "$NEWLIM" 2>/dev/null || true
+echo "== FD limits AFTER raise =="
+echo "  soft nofile: $(ulimit -Sn)"
 echo ""
-echo "== inodes: /tmp =="
-df -i /tmp 2>&1
+echo "== environment (lib-conflict hypothesis) =="
+echo "  CONDA_DEFAULT_ENV: ${CONDA_DEFAULT_ENV:-unset}"
+echo "  CONDA_PREFIX:      ${CONDA_PREFIX:-unset}"
+echo "  LD_LIBRARY_PATH:   ${LD_LIBRARY_PATH:-unset}"
+echo "  which python:      $(which python)"
 echo ""
-echo "== ulimits =="
-ulimit -a 2>&1 | grep -Ei "open files|max memory|address space|processes|locked" || ulimit -a
-echo ""
-echo "== python / ray =="
-which python; python --version
-python -c "import ray, os; print('ray', ray.__version__); print('ray_dir', os.path.dirname(ray.__file__))"
-RAY_DIR=$(python -c "import ray, os; print(os.path.dirname(ray.__file__))")
-GCS=$(find "$RAY_DIR" -type f -name gcs_server 2>/dev/null | head -1)
-echo "gcs_server binary: ${GCS:-NOT FOUND}"
-echo ""
-echo "== ldd gcs_server (MISSING libs are the smoking gun) =="
-if [ -n "${GCS:-}" ]; then
-    ldd "$GCS" 2>&1 | grep -i "not found" && echo "  ^^^ MISSING LIBRARIES ABOVE ^^^" || echo "  (no 'not found' libraries)"
-    echo "  --- full ldd (head) ---"; ldd "$GCS" 2>&1 | head -25
-else
-    echo "  (binary not found — cannot ldd)"
-fi
+echo "== GLIBCXX: needed by gcs_server vs provided by the resolved libstdc++ =="
+GCS="$VENV_DIR/lib/python3.9/site-packages/ray/core/src/ray/gcs/gcs_server"
+LIBSTDCXX=$(ldd "$GCS" 2>/dev/null | awk '/libstdc\+\+/{print $3}')
+echo "  resolved libstdc++: $LIBSTDCXX"
+echo "  gcs_server needs (max): $(strings -a "$GCS" 2>/dev/null | grep -oE 'GLIBCXX_[0-9.]+' | sort -V | tail -3 | tr '\n' ' ')"
+echo "  libstdc++ provides (max): $(strings -a "$LIBSTDCXX" 2>/dev/null | grep -oE 'GLIBCXX_[0-9.]+' | sort -V | tail -3 | tr '\n' ' ')"
 echo ""
 
 PROBE_TMP="/tmp/raygcsprobe-${SLURM_JOB_ID:-$$}"
 mkdir -p "$PROBE_TMP"
-echo "== minimal ray.init() at $PROBE_TMP (NO cleanup until logs captured) =="
+echo "== ray.init() AFTER raising FD limit, temp_dir=$PROBE_TMP =="
 set +e
 python - "$PROBE_TMP" <<'PY'
 import sys, ray
@@ -70,19 +67,25 @@ except Exception as e:
 PY
 rc=$?
 set -e
-echo "ray.init exit: $rc"
+echo "ray.init python exit: $rc"
 echo ""
-echo "== gcs_server.out =="; tail -40 "$PROBE_TMP"/ray/session_*/logs/gcs_server.out 2>/dev/null || echo "  (none)"
-echo "== gcs_server.err =="; tail -40 "$PROBE_TMP"/ray/session_*/logs/gcs_server.err 2>/dev/null || echo "  (none)"
-echo "== raylet.err =="; tail -40 "$PROBE_TMP"/ray/session_*/logs/raylet.err 2>/dev/null || echo "  (none)"
-echo "== any session log mentioning error/fail/fatal/bind/space =="
-grep -rilE "error|fail|fatal|abort|core|no space|bind|cannot|Check failed" \
-    "$PROBE_TMP"/ray/session_*/logs/ 2>/dev/null | while read -r f; do
-        echo "  -- $f --"; tail -12 "$f"
-    done
-
-# Preserve the session for offline inspection, then clean up.
-cp -r "$PROBE_TMP"/ray "$REPO_ROOT/mnist_dermnist/logs/ray_probe_session_${SLURM_JOB_ID:-$$}" 2>/dev/null || true
+# Copy the WHOLE temp tree to logs/ before anything is removed (handles both
+# <tmp>/session_* and <tmp>/ray/session_* layouts).
+DEST="$REPO_ROOT/mnist_dermnist/logs/ray_probe_session_${SLURM_JOB_ID:-$$}"
+mkdir -p "$DEST"
+cp -r "$PROBE_TMP"/. "$DEST"/ 2>/dev/null || true
+echo "== gcs_server.err (correct path) =="
+find "$PROBE_TMP" -path '*logs/gcs_server.err' -exec tail -40 {} \; 2>/dev/null || echo "  (none)"
+echo "== gcs_server.out =="
+find "$PROBE_TMP" -path '*logs/gcs_server.out' -exec tail -40 {} \; 2>/dev/null || echo "  (none)"
+echo "== raylet.err =="
+find "$PROBE_TMP" -path '*logs/raylet.err' -exec tail -40 {} \; 2>/dev/null || echo "  (none)"
+echo "== any session log mentioning error/fail/fatal/bind/Check failed =="
+find "$PROBE_TMP" -path '*logs/*' -type f 2>/dev/null | while read -r f; do
+    if grep -qiE "error|fail|fatal|abort|core|no space|bind|cannot|Check failed|GLIBCXX|symbol" "$f" 2>/dev/null; then
+        echo "  -- $f --"; grep -iE "error|fail|fatal|abort|core|no space|bind|cannot|Check failed|GLIBCXX|symbol" "$f" | tail -12
+    fi
+done
 rm -rf "$PROBE_TMP"
-echo "=================== end probe (rc=$rc) ==================="
+echo "=================== end probe v2 (rc=$rc); session copied to $DEST ==================="
 exit "$rc"
