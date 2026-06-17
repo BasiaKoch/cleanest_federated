@@ -1,0 +1,241 @@
+# Federated Learning on DermaMNIST under Heterogeneity — Thesis Repository
+
+This repository contains the code, experiments, training artefacts, and LaTeX
+source for a thesis on **federated learning for imbalanced medical image
+classification** (DermaMNIST, 7 skin-lesion classes). The contribution is a
+**regime map** of when **FedAvg**, **FedProx**, and **FedNova** preserve or
+destroy rare-class signal under statistical and system heterogeneity. Primary
+metric: **test macro-F1 at the best-validation checkpoint**.
+
+> **Where is the thesis?** `FULL_THESIS.tex` (root) is the canonical compile
+> root. Chapter 5 (Results) is complete; the editable per-section source is in
+> `mnist_dermnist/results/thesis_ready/writing/5_1…5_9*.tex`. See
+> `docs/repo_audit_submission_cleanup/` for the full submission audit.
+
+---
+
+## 1. Where are the training files?  (the short answer)
+
+| You want… | It lives in |
+|---|---|
+| **Training code** (the loops that train models) | `mnist_dermnist/experiments/run_*.py` (entrypoints) + `mnist_dermnist/fl/` (pure-PyTorch core) + `mnist_dermnist/fl_flower/` (Flower runtime) |
+| **Model / data / partition code** | `mnist_dermnist/models/`, `mnist_dermnist/data/` |
+| **Training launchers** (one job → one sweep) | `mnist_dermnist/scripts/submit_*.sh`, `slurm_template_*.sh` |
+| **Training outputs / artefacts** (the actual results) | `mnist_dermnist/results/<experiment_name>/` |
+| **Analysis → thesis tables & figures** | `mnist_dermnist/results/thesis_ready/scripts/` → `…/data/` + `…/figures/` |
+| **Dataset** | `dermamnist_64.npz` (root; git-ignored, ~100 MB, re-downloadable) |
+| **How to run anything locally** | `mnist_dermnist/scripts/commands.sh <step>` |
+
+There is **one directory per experiment** under `mnist_dermnist/results/`. Each
+training run writes a fixed set of artefacts into its experiment directory (see
+§4). **There is no `config.yaml`** — every run's full configuration is embedded
+inside its `test_at_best_*.json`, and the filename encodes method/μ/epochs/seed.
+
+---
+
+## 2. Quickstart
+
+```bash
+cd /path/to/cleanest_federated
+python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+# (place dermamnist_64.npz at repo root — see data/load.py)
+
+# sanity: FedProx(μ=0) ≡ FedAvg + proximal-term + provenance unit tests
+bash mnist_dermnist/scripts/commands.sh sanity
+
+# one training run (engineered partition, seed 42, 20 local epochs, 150 rounds)
+bash mnist_dermnist/scripts/commands.sh flower-fedprox     # Flower runtime
+bash mnist_dermnist/scripts/commands.sh purepy-fedavg      # pure-PyTorch runtime
+
+# regenerate thesis tables + figures from existing results
+bash mnist_dermnist/scripts/commands.sh analyse
+
+# show per-experiment completion status
+bash mnist_dermnist/scripts/commands.sh status
+```
+
+Full hyperparameter sweeps were run on HPC via the `submit_*.sh` launchers
+(§5); `commands.sh` exposes single-seed local smoke versions.
+
+---
+
+## 3. Training code — entrypoints and what each trains
+
+All entrypoints are run as modules from the repo root with `PYTHONPATH=.`
+(`python -m mnist_dermnist.experiments.<name>`), default output dir shown.
+
+| Entrypoint | Trains | Default `--out-dir` | Used by |
+|---|---|---|---|
+| `experiments/run_one.py` | **Pure-PyTorch** FL (FedAvg/FedProx) — reference loop | `results/headline` | engineered headline, iid, dirichlet |
+| `experiments/run_one_flower.py` | **Flower** FL (FedAvg/FedProx) — simulation runtime; supports stragglers, partial participation, loss-type, per-client lr/μ | `results/headline_flower` | most experiments |
+| `experiments/run_one_fednova_flower.py` | **FedNova** arm (Flower) — normalised averaging, server-momentum/lr, τ-clip | (per launcher) | FedNova comparators |
+| `experiments/run_centralised.py` | Centralised (non-federated) reference | `results/centralised` | performance ceiling |
+| `experiments/run_local_only.py` | Single-client local-only training (no federation) | `results/small_hospital_local_only` | small-hospital case study |
+| `experiments/run_finetune.py` | Fine-tune a saved global checkpoint (`best_state_*.pt`) on one client | `results/small_hospital_finetune` | small-hospital case study |
+| `experiments/verify_flower_equivalence.py` | μ=0 pure-PyTorch ↔ Flower smoke check | — | runtime equivalence |
+| `experiments/compare_equivalence_full_scale.py` | Full cross-runtime equivalence audit | — | runtime equivalence |
+
+**Training core (imported by the entrypoints):**
+`fl/server_loop.py` (paired-fair FL run), `fl/local_train.py` (CE + gated FedProx
+proximal term — μ=0 ⇒ FedAvg), `fl/aggregation.py` (size-weighted averaging),
+`fl/evaluation.py` (macro-F1 / balanced-acc / per-class F1), `fl/system_het.py`
+(straggler schedules), `fl/class_imbalance.py` (CE / weighted-CE / focal),
+`fl/seeding.py`, `fl/provenance.py`, `fl/runtime_provenance.py`;
+`fl_flower/client.py`, `client_fednova.py`, `strategy_fednova.py`,
+`strategy_straggler_dropping.py`; `models/dermmnist_cnn.py` (+`_bn.py` ablation);
+`data/load.py`, `data/partition.py`.
+
+> For deeper per-module detail and the spec-compliance cross-reference, see
+> **`mnist_dermnist/README.md`**.
+
+---
+
+## 4. Training outputs — artefact schema (per run)
+
+Every federated training run writes these into its experiment directory, with
+`<stem>` = e.g. `fedprox_mu0.01_E20_s42`:
+
+| File | Contents |
+|---|---|
+| `test_at_best_<stem>.json` | **Primary**: test macro-F1 + per-class F1 at best-val checkpoint, **plus the full run config** (method, μ, lr, rounds, epochs, partition, seed, fraction-fit, dataset path, git commit) |
+| `history_<stem>.csv` | Per-round train/val trajectories (centralised runs use `history_centralised_seed*.json`) |
+| `test_predictions_<stem>.npz` | Saved test predictions (for confusion / rare→mel-nevi misrouting) |
+| `client_update_norms_<stem>.csv` | Per-round per-client ‖Δw‖ (mechanism diagnostics; only when `--log-update-norms`) |
+| `best_state_<stem>.pt` | Best global model weights (only ladder + two-client dirs; consumed by `run_finetune.py`) |
+| `analysis/` | Per-experiment derived summaries (`*_summary.csv`, `paired_stats.json`, …) |
+
+---
+
+## 5. Experiment map — directory ⇄ launcher ⇄ entrypoint ⇄ role
+
+All result dirs are under `mnist_dermnist/results/`. Launchers are under
+`mnist_dermnist/scripts/`. **Role**: M=reported in main Results (Ch.5),
+A=appendix/diagnostic, X=archived/not in thesis. Default hyperparameters
+(unless a launcher overrides): R=150, E=20, lr=0.01, bs=32, mom=0.9, μ=0.01,
+CE loss, seeds `{42,123,456,789,999,2024,31337,8675309,161803,271828}`
+(mechanism/L4 use the first 3).
+
+### Statistical heterogeneity (§5.2)
+| Directory | Launcher | Entrypoint | Role |
+|---|---|---|---|
+| `headline/` | `submit_headline.sh` | run_one (pure-PyTorch) | M — engineered headline |
+| `flower_C0_baseline/` | `submit_flower_C0_baseline.sh` | run_one_flower | M — **primary** engineered headline |
+| `iid/`, `flower_C0_iid_baseline/` | `submit_robustness.sh`, `submit_flower_C0_iid_baseline.sh` | run_one / run_one_flower | M — IID negative control |
+| `dirichlet_a01/` | `submit_robustness.sh`, `runpod_addendum_provenance.sh` | run_one | M — Dirichlet α=0.1 robustness |
+| `specialist_partition/` | `submit_specialist_partition.sh` | run_one_flower | M — specialist 1-of-7 robustness |
+| `node_pinned_L4/` | `submit_node_pinned_L4.sh` | run_one_flower | M — variance control |
+| `centralised/` | `slurm_centralised.sh` | run_centralised | M — performance ceiling |
+
+### μ sensitivity (§5.3)
+| `mu_sensitivity_flower/` | `submit_mu_sensitivity_clean.sh` | run_one_flower | M — inverted-U, μ∈{0,0.001,0.01,0.1,1.0} |
+| `mu_sweep_ladder/` | `submit_mu_sweep_ladder.sh` | run_one_flower | A — μ × ladder rung |
+
+### Li-style straggler decomposition (§5.4, centrepiece)
+| `li2020_asymmetric_L4/` | `submit_li2020_asymmetric_L4.sh` | run_one_flower | M — 4-condition decomposition |
+| `li2020_asymmetric_L1/` | `submit_li2020_quantity_skew_L1.sh` | run_one_flower | M — L1 negative control |
+| `fedprox_perfect_storm_L4/` | `submit_fedprox_perfect_storm_L4.sh` | run_one_flower | M — stress demo (μ=1.0, bs=10, straggler 0.9) |
+| `two_client_90_10_rare_stress/` | `submit_two_client_90_10_rare_stress.sh` | run_one_flower | A — L4 deep dive (+`.pt`) |
+
+### LR asymmetry & FedNova regime-dependence (§5.5)
+| `asymmetric_lr_L4/` | `submit_asymmetric_lr_L4.sh` + `…_fednova_only.sh` + `submit_fednova_lr_envelope_L4.sh` | run_one_flower / run_one_fednova_flower | M — ratios 1:1…50:1 |
+| `system_het_random_fednova/` | `submit_fednova_system_het.sh`, `hpc_addendum_fednova_c2.sh` | run_one_fednova_flower | M — random-τ collapse |
+| `system_het_random_fednova_{baseline,mom0,serverlr03,servmom,tauclip320}/` | `submit_fednova_mechanism_fork_pilot.sh`, `submit_fednova_stage3_expand.sh` | run_one_fednova_flower | A — collapse-mechanism probes (**WIP**) |
+
+### Rare-class collapse & loss-side correction (§5.6)
+| `fedprox_weighted_ce_L4/` | `submit_fedprox_weighted_ce_L4.sh` + `submit_fedprox_focal_loss_L4.sh` | run_one_flower | M — CE / weighted-CE / focal |
+
+### System heterogeneity & mechanism (§5.4/5.7, App C–E)
+| `system_het_{fixed,random,iid_fixed,iid_random}/` | `submit_system_het.sh`, `submit_system_het_iid.sh` | run_one_flower | M — stat × system interaction |
+| `system_het_partial_C0.5/` | `submit_partial_participation.sh` | run_one_flower | A — C=0.5 partial participation |
+| `asymmetric_mu_L4/` | `submit_asymmetric_mu_L4.sh` | run_one_flower | A — per-client μ (Yao test) |
+| `fednova_unequal_E/` | `submit_fednova_unequal_E.sh` | run_one_fednova_flower | A — unequal-E |
+| `extended_rounds_L3/` | `submit_extended_rounds_L3.sh` | run_one_flower | A — R=250 convergence check |
+| `heterogeneity_ladder/` | `submit_ladder_pilot.sh` | run_one_flower | A — L0→L4 pilot (+`.pt`) |
+| `e_sweep/`, `e_sweep_dirichlet_a01/` | `submit_e_sweep.sh`, `submit_e_sweep_dirichlet_a01.sh` | run_one_flower | A — local-epoch sweep |
+| `small_hospital_local_only/`, `small_hospital_finetune/` | `submit_small_hospital_baselines.sh` | run_local_only, run_finetune | A — clinical case study (App D) |
+| `partitions/` | (generated by `data/partition.py`) | — | partition definitions |
+| `arch_ablation_bn/` | `hpc_arch_ablation_bn.sh`, `runpod_arch_ablation_bn.sh` | run_one_flower | X — **archived, not in thesis** |
+
+> **Known doc wrinkles** (see `docs/repo_audit_submission_cleanup/09_…md`):
+> the older matrix in `mnist_dermnist/README.md` lists `mu_sweep/` and
+> `system_het_random_asymmetric/`, which are **not present on disk** (superseded
+> / HPC-only). The launcher rescue/fix/twin variants (`resubmit_*`, `runpod_*`,
+> `*_rescue`, `*_fix`) are retained as run provenance.
+
+---
+
+## 6. Data flow
+
+```
+dermamnist_64.npz
+   │  data/load.py + data/partition.py
+   ▼
+experiments/run_*.py  ──(uses)──>  fl/ , fl_flower/ , models/
+   │   (launched at scale by scripts/submit_*.sh)
+   ▼
+mnist_dermnist/results/<experiment>/        ← raw training artefacts (§4)
+   │   results/thesis_ready/scripts/analyse_*.py , plot_*.py
+   ▼
+results/thesis_ready/data/*.csv|json   +   results/thesis_ready/figures/F_*.pdf
+   │   \input / \includegraphics
+   ▼
+FULL_THESIS.tex  →  thesis PDF
+```
+
+---
+
+## 7. Repository top-level map
+
+```
+cleanest_federated/
+├── README.md                      ← you are here (repo map + training-file guide)
+├── FULL_THESIS.tex                ← canonical thesis (Ch.5 complete; others scaffolded)
+├── RESULTS_CHAPTER.tex            ← standalone Results-only alternate (not canonical)
+├── condensed_results.tex          ← trimmed Results alternate (not canonical)
+├── METHODS_BUILD_GUIDE.md         ← Ch.4 drafting brief
+├── THESIS_BUILD_GUIDE.md          ← build + verification checklist
+├── requirements.txt
+├── dermamnist_64.npz              ← dataset (git-ignored)
+├── docs/
+│   ├── VERIFICATION_SHEET.txt     ← 76 numerical claims ⇄ source artefacts
+│   ├── RESULTS_SKELETON.txt , IMPLEMENTATION_PLAN.txt , runpod_log_*.txt
+│   └── repo_audit_submission_cleanup/   ← full submission audit (00–09)
+└── mnist_dermnist/
+    ├── README.md                  ← detailed package + spec-compliance doc
+    ├── configs/  data/  models/  fl/  fl_flower/   ← training code
+    ├── experiments/               ← training entrypoints (run_*.py)
+    ├── scripts/                   ← launchers (submit_*.sh) + commands.sh + analyse_all.sh
+    ├── tests/                     ← μ=0≡FedAvg, proximal-term, provenance guards
+    ├── results/                   ← one dir per experiment (raw artefacts) + thesis_ready/
+    └── logs/                      ← SLURM job logs (.out/.err, git-ignored)
+```
+
+---
+
+## 8. Organization & conventions
+
+- **One experiment ⇒ one directory** under `mnist_dermnist/results/`, named for
+  the experiment (not the method); methods/seeds are distinguished by filename.
+- **Filenames are self-describing**: `<method>_mu<μ>_E<epochs>_s<seed>` (e.g.
+  `fedprox_mu0.01_E20_s42`); `mu0.0` ⇒ FedAvg.
+- **Config travels with the result** (inside `test_at_best_*.json`) — there is
+  no separate config file to lose.
+- **`thesis_ready/` is the curated bundle**: `writing/` (tex + bib),
+  `figures/` (the 15 referenced `F_*.pdf`), `data/` (aggregate tables), and
+  `scripts/` (analysers that regenerate them). The thesis `\graphicspath`
+  points at `thesis_ready/figures/`.
+- **Paths are hardcoded** in the launchers, entrypoint defaults, and the thesis
+  `\graphicspath`. Result directories were therefore **not** relocated during
+  cleanup — moving them would break reproduction and figure resolution. If a
+  physical reorganization is wanted, it must update those references in lockstep.
+
+## 9. Reproducing & verifying
+- Implementation guards: `bash mnist_dermnist/scripts/commands.sh sanity` (run before trusting any claim).
+- Pre-submission preflight: `bash mnist_dermnist/scripts/pre_submission_check.sh`.
+- Claim verification ledger: `docs/VERIFICATION_SHEET.txt` (note the two flagged mismatches: node-pinned-L4 sign, FedProx update-norm magnitude).
+- Full provenance / cleanup audit: `docs/repo_audit_submission_cleanup/`.
+
+> Note: `commands.sh` and `mnist_dermnist/README.md` reference a
+> `mnist_dermnist/results/PROVENANCE_AUDIT.md` that is **not present**; its role
+> is currently served by `docs/VERIFICATION_SHEET.txt` and
+> `docs/repo_audit_submission_cleanup/02_RESULT_TRACEABILITY_MATRIX.csv`.
