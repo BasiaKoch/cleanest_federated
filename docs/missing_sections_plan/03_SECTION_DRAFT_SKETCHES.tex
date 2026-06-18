@@ -1,0 +1,232 @@
+%% =============================================================================
+%% 03_SECTION_DRAFT_SKETCHES.tex  --  SAMPLE SKETCHES ONLY. DO NOT INSERT.
+%% =============================================================================
+%% Purpose: show the intended TONE, STRUCTURE and FLOW (modelled on the
+%% high-scoring example report) for each missing section, using THIS thesis's
+%% real content. These are opening-paragraph sketches plus bullet notes, NOT
+%% finished sections and NOT to be pasted into OVERLEAF_FLAT_BUNDLE/main.tex.
+%%
+%% Rules honoured here:
+%%   - no invented numbers (illustrative numbers are the verified ones from
+%%     Chapter 5 / docs/VERIFICATION_SHEET.txt);
+%%   - \citep keys used are ALREADY in references.bib (no new references added);
+%%   - no universal-ranking claim; caveats kept adjacent; "motivated, not
+%%     validated" clinical framing.
+%% Wording is original; the example report is a structural model only.
+%% =============================================================================
+
+
+%% ----------------------------------------------------------------------------
+%% ABSTRACT  (shape sketch -- one paragraph, ~250-350 words in final form)
+%% ----------------------------------------------------------------------------
+% Sentence-order template (fill to final length later):
+%   [1 problem] Federated learning lets hospitals train a shared model without
+%     pooling patient data, but clinical image datasets are severely
+%     class-imbalanced and real federations are heterogeneous in both data and
+%     compute.
+%   [2 approach] This thesis compares FedAvg, FedProx and FedNova on DermaMNIST,
+%     a seven-class dermatology benchmark, across controlled statistical- and
+%     system-heterogeneity regimes, reporting test macro-F1 at the
+%     best-validation checkpoint.
+%   [3 headline numbers] Under Li-style straggler asymmetry the FedProx advantage
+%     (+0.115 macro-F1) is mediated almost entirely by gamma-inexact
+%     partial-update handling (+0.111) rather than the proximal term (+0.004) ...
+%   [4 second result] ... and FedNova is robust under deterministic
+%     learning-rate asymmetry yet collapses under random-tau stragglers.
+%   [5 framing + caveat in one breath] The contribution is a regime map of when
+%     each method preserves or loses rare-class signal -- not a universal ranking
+%     -- established on a single low-resolution dataset with simulated stragglers
+%     and n=3 mechanism probes.
+% NOTE: write the Abstract LAST.
+
+
+%% ----------------------------------------------------------------------------
+\section*{1 Introduction (opening sketch)}
+% Model opening paragraph:
+Training accurate diagnostic models increasingly depends on data that cannot
+leave the institution that holds it. Federated learning addresses this by keeping
+patient images on-site and sharing only model updates, but it inherits two
+difficulties that are especially acute in medicine: the data held by different
+hospitals is not identically distributed, and the institutions that hold the
+rarest, most clinically important cases are not guaranteed to contribute equally
+to the shared model. On a severely imbalanced benchmark such as DermaMNIST, a
+model can post high overall accuracy while quietly failing on exactly the rare
+lesions that matter, so both the optimiser used to combine client updates and the
+metric used to judge them are decisions with clinical consequences.
+% Rest of section should cover:
+%  - why optimiser choice (not just architecture) is the lever under study;
+%  - the gap: comparisons rarely isolate *why* an optimiser wins under a given
+%    heterogeneity, and rarely use a rare-class-sensitive metric on a medical task;
+%  - a forward pointer to the regime-map contribution.
+% Transition into Motivation:
+%  "We begin by setting out why each of these pressures -- privacy, imbalance,
+%   and heterogeneity -- bears on the choice of federated optimiser."
+
+
+%% ----------------------------------------------------------------------------
+\subsection*{1.1 Motivation (opening sketch)}
+Medical image collections are fragmented across hospitals by privacy regulation
+and governance, and pooling them centrally is often impossible; federated
+learning is the standard response \citep{rieke2020future,sheller2020medicalfl}.
+Two properties of real federations make this harder than the centralised case.
+First, class prevalence varies sharply between sites, and the dermatology data
+studied here is dominated by a single benign class while the diagnostically
+urgent lesions are rare. Second, sites differ in compute and availability, so
+some clients return only partial work in a given round. Both pressures act on the
+same vulnerable quantity -- the contribution of whichever client holds the rare
+classes -- which motivates studying the optimiser as the lever that either
+protects or discards that contribution.
+% Rest: clinical stakes of rare classes (melanoma); why accuracy is the wrong
+%   metric here; one sentence each, no results.
+% Transition: "These pressures raise four concrete questions."
+
+
+%% ----------------------------------------------------------------------------
+\subsection*{1.3 Research questions (sketch)}
+% Short framing sentence then enumerated list (answers deferred):
+This thesis asks, for imbalanced medical federated learning, \emph{when} the
+choice of optimiser and protocol preserves rare-class performance:
+\begin{itemize}
+  \item \textbf{RQ1.} Does statistical heterogeneity alone separate FedAvg and
+        FedProx?
+  \item \textbf{RQ2.} Under straggler asymmetry, is FedProx's advantage carried
+        by the proximal term or by gamma-inexact partial-update handling?
+  \item \textbf{RQ3.} Is FedNova's robustness regime-dependent -- holding under
+        deterministic learning-rate asymmetry but not under random-$\tau$
+        stragglers?
+  \item \textbf{RQ4.} Is the FedProx advantage a disguised class-imbalance
+        correction, or a distinct drift/protocol intervention?
+\end{itemize}
+% Transition: "Chapter 5 answers each in turn; we state our contributions next."
+
+
+%% ----------------------------------------------------------------------------
+\subsection*{1.4 Contributions (sketch)}
+% Lead sentence + enumerated, evidence-tied, hedged:
+The thesis delivers a regime map rather than a ranking. Concretely, it
+\begin{enumerate}
+  \item maps when FedAvg, FedProx and FedNova preserve or lose rare-class signal
+        on an imbalanced medical benchmark;
+  \item decomposes the FedProx straggler-regime advantage into a proximal-term
+        and a gamma-inexact partial-update component, with a matched negative
+        control that fixes when the effect can appear;
+  \item identifies FedNova's regime-dependence across deterministic and random
+        system heterogeneity;
+  \item unifies the experiments under a single rare-client signal-flow rule and
+        identifies rare-to-mel-nevi collapse as the shared clinical failure mode;
+  \item falsifies the reading of FedProx as a mere class-imbalance corrector via
+        a loss-side comparator.
+\end{enumerate}
+% Transition: "Section 1.5 previews how the remaining chapters develop these."
+
+
+%% ----------------------------------------------------------------------------
+\section*{2 Background and Related Work (opening sketch)}
+Federated optimisation begins with FedAvg \citep{mcmahan2017fedavg}, which
+averages client models in proportion to their data, and the methods studied here
+are best understood as responses to its known weaknesses under heterogeneity.
+This chapter introduces those weaknesses in the order the thesis later probes
+them: statistical heterogeneity in how classes are distributed across clients,
+system heterogeneity in how much work each client contributes, and the
+optimiser- and loss-level mechanisms proposed to cope with each. Throughout, we
+keep the proximal term of FedProx and its gamma-inexact handling of partial
+updates conceptually distinct, because separating them is central to the thesis.
+% Rest: the 2.1-2.10 sections per the writing plan; each ends by naming what
+%   prior work leaves unresolved.
+% Transition into the gap paragraph below.
+
+
+%% ----------------------------------------------------------------------------
+\subsection*{2.10 Gap in prior work (model gap paragraph)}
+Three questions remain underexplored in this literature. First, FedProx is
+typically evaluated as a single method, so it is rarely established whether its
+benefit under stragglers comes from the proximal regulariser or from accepting
+partial updates -- two mechanisms the original formulation bundles together
+\citep{li2020fedprox}. Second, FedNova's normalisation is analysed under the
+assumption that per-client work is stable \citep{wang2020fednova}, leaving its
+behaviour under randomly varying work largely uncharacterised on imbalanced
+medical data. Third, optimiser-level and loss-level responses to imbalance are
+seldom compared on the same medical benchmark with a rare-class-sensitive metric.
+This thesis addresses the three together by mapping the regimes in which each
+choice preserves rare-class signal.
+% Transition: "We formalise this setting in Chapter 3."
+
+
+%% ----------------------------------------------------------------------------
+\section*{3 Problem Formulation (opening sketch)}
+We consider a federation of $K$ clients, each holding a private training set
+drawn from its own class distribution, that cooperate over $R$ rounds to learn a
+single global model without exchanging data. In each round the server broadcasts
+the current model, every participating client takes some number of local
+optimisation steps, and the server combines the returned updates. The three
+optimisers studied differ only in how the local objective is formed and how the
+returned updates are combined; the heterogeneity we impose differs only in which
+clients hold which classes and in how much local work each client completes. The
+remainder of this chapter defines these quantities precisely and names the single
+concept -- rare-client signal flow -- around which the results are organised.
+% Rest: 3.1-3.6 per writing plan; introduce notation at point of use; may \ref
+%   the L1/L4 schematic (fig:l1-l4-schematic) in 3.4 (also fixes the unreferenced
+%   figure).
+% Transition: "Chapter 4 instantiates this formulation as concrete experiments."
+
+
+%% ----------------------------------------------------------------------------
+\section*{6 Discussion (opening sketch)}
+The results in Chapter~5 are best read not as a contest between three optimisers
+but as a map of the conditions under which each one keeps rare-class signal alive
+in the global model. Where the client holding the rare classes continues to
+contribute to aggregation, rare-class performance is preserved; where that
+contribution is dropped, under-weighted, or drowned in noise, it collapses --
+and the same failure surfaces clinically as rare lesions being routed into the
+dominant mel-nevi class. This chapter develops that reading, relates it to the
+FedAvg, FedProx and FedNova literature, draws cautious implications for
+cross-hospital deployment, and states plainly what the evidence does not support.
+% Rest: 6.1-6.8 per writing plan; NO new numbers; hedge comparisons.
+% Transition between 6.2 and 6.3: "If signal flow is the operative variable, the
+%   practical question becomes which heterogeneity a given deployment expects."
+
+
+%% ----------------------------------------------------------------------------
+\subsection*{6.8 Threats to validity (opening sketch)}
+Several limitations bound these conclusions, and we state them as consequences of
+the design rather than as afterthoughts. Internally, the mechanism probes use
+three matched seeds and report directional effects without significance tests;
+stragglers are simulated through local-step counts rather than wall-clock
+deadlines; and the two runtimes used disagree in magnitude on the engineered
+partition, so only the direction of that effect is treated as robust.
+Externally, the study uses a single low-resolution dataset and mixes two
+federation sizes, so no cross-scale or cross-dataset generalisation is claimed.
+At the construct level, the rare-class set includes mid-support melanoma on
+clinical grounds, which is a deliberate choice rather than a purely statistical
+one.
+% Rest: end with an explicit "what cannot be concluded" sentence (no universal
+%   ranking; no clinical validation).
+% Transition: "We summarise and answer the research questions in Chapter 7."
+
+
+%% ----------------------------------------------------------------------------
+\section*{7 Conclusion (opening sketch)}
+This thesis set out to determine when, rather than whether, a federated optimiser
+preserves rare-class performance on imbalanced medical data. Across statistical
+heterogeneity, straggler asymmetry, learning-rate asymmetry and loss-side
+correction, the results converge on one rule: rare-class performance is retained
+precisely when the rare-client update continues to reach the global model. The
+optimisers earn their place not as universal winners but as instruments that, in
+specific regimes, protect or forfeit that signal.
+% Rest: 7.2 answers RQ1-RQ4 in order; 7.3 restates contributions; 7.4
+%   recommendations by regime; 7.5 future work.
+
+
+%% ----------------------------------------------------------------------------
+\subsection*{7.5 Future work (model paragraph)}
+Several extensions follow naturally. Broadening the optimiser set to variance-
+reduced and adaptive methods such as SCAFFOLD \citep{karimireddy2020scaffold} and
+adaptive federated optimisers \citep{reddi2021adaptive} would test whether the
+signal-flow account generalises beyond the three methods studied here.
+Replicating the regime map on higher-resolution and additional medical benchmarks
+would address the single-dataset limitation, and replacing simulated stragglers
+with wall-clock deadlines would strengthen the system-heterogeneity claims.
+Finally, the two interventions that act at different pipeline stages --
+gamma-inexact aggregation and a weighted-CE local objective -- were tested only
+separately; combining them is a concrete next step.
+% Transition: closes the thesis.

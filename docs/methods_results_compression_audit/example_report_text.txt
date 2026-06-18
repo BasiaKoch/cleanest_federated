@@ -1,0 +1,2027 @@
+          Fostering Gravitational Wave
+          Multi-messenger Astronomy
+Machine Learning for the Detection of Gravitational Wave Signals from
+                   Binary Neutron Star Mergers
+
+
+
+
+                             A REPORT PRESENTED
+                                       BY
+
+                              S TEVEN D ILLMANN
+
+
+
+
+                                  Departments
+            Department of Applied Mathematics and Theoretical Physics
+                  Department of Physics (Cavendish Laboratory)
+                             Institute of Astronomy
+
+                                   Degree
+                          MPhil Data Intensive Science
+
+                                   Supervision
+                         Dr Priscilla Canizares Martinez
+                              Dr Michalis Agathos
+
+
+
+
+                               S T J OHN ’ S C OLLEGE
+                           U NIVERSITY OF C AMBRIDGE
+                                  13 TH J ULY 2024
+                                              Abstract
+The first detection of gravitational waves (GWs) from a binary neutron star (BNS) merger marked
+the beginning of the multi-messenger era in astronomy. Traditionally, matched filtering (MF) has
+been used to identify quiet GW signals buried in detector noise. The high computational cost of
+MF-based algorithms impose a constraint on real-time GW searches, where a prompt alert is crucial
+for follow-up searches of electromagnetic counterparts. The authors of [1] introduce a novel deep
+learning (DL) algorithm that is optimised to detect GW signals from BNS mergers in long time
+series strain data from a detector network. Based on the reproduction study presented in this
+work, the neural network (NN) achieves a sensitive distance of 135 Mpc at a false alarm rate of 1 per
+month for the Advanced LIGO design sensitivity. Compared to another competing NN, we achieve
+a higher sensitivity at fixed false alarm rates. While the presented NN lacks the sensitivity of MF-
+based search pipelines, it offers a superior latency of 10.2 seconds. We identified several challenges
+with the original network architecture and training strategy, likely diminishing sensitivity and
+increasing computational costs. To address these issues, we present a new NN with a simplified
+architecture and training strategy and recommend training the NN with real detector noise and a
+larger training set.
+List of Figures
+ 1    4096-second long test file with 18 waveform injections buried within simulated noise. 4
+ 2    32-second long test file chunk with one waveform projected onto the H1 and L1
+      detectors. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+ 3    Example of a waveform projected onto the H1 and L1 detectors around the peak
+      amplitude. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   5
+ 4    Analytic PSD model aLIGOZeroDetHighPower from the LALSuite library with
+      a lower frequency cutoff of 20 Hz applied. . . . . . . . . . . . . . . . . . . . . . . . .         6
+ 5    Multi-rate sampling intervals in the time-domain (upper panel) and frequency-domain
+      (lower panel). The height of the boxes in the lower panel are the Nyquist-frequencies
+      of the sample rates [1]. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   7
+ 6    Upper panel: 4096-second long test file with 18 waveform injections buried within
+      simulated noise. Middle panel: SNR output of the neural network with a ranking
+      statistic threshold of SNR = 6 applied. The red crosses represent the true positives
+      and the black dots represent the false positives. Lower panel: p-score output of the
+      neural network with a ranking statistic threshold of p-score = 0.2 applied. The blue
+      crosses represent the true positives and the black dots represent the false positives. . 10
+ 7    An overview of the deep learning architecture presented in [1]. More details on each
+      block are presented in [2]. The network takes 7 signal and noise inputs according to
+      the multi-rate sampling approach introduced in Section 2.1.3. The first layer adds
+      the noise and signal inputs for the 7 different interval segments. The next layer is a
+      temporal convolutional network used for signal amplification, which is followed by
+      Inception modules. The output of two adjacent interval segments are concatenated
+      and again used as input to Inception modules. This is repeated until there is only one
+      stack left, which is then transformed by a post-processing block. The main output of
+      the network are the SNR and p-score predictions. There are also 13 auxiliary outputs
+      that are used for training only, hence they are not shown. . . . . . . . . . . . . . . . 12
+ 8    An overview of the new deep learning architecture proposed in this work. The net-
+      work takes 7 signal and noise inputs according to the multi-rate sampling approach
+      introduced in Section 2.1.3. The first layer adds the noise and signal inputs for the
+      7 different interval segments and then concatenates the invididual segments. The
+      next layer is a temporal convolutional network used for signal amplification, which
+      is followed by a CNN block and a LSTM block. The role of the pre- and postprocess-
+      ing blocks are similar to the ones in the original network. The output of the network
+      is the SNR prediction. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+
+ 9    The estimated FAR as a function of the network output ranking statistic thresholds.
+      Left panel: The FAR of the SNR output, where the vertical dashed line highlights
+      the lowest SNR of the training set. Right panel: The FAR of the p-score output in
+      a logarithmic scale as explained in [1], where the vertical dashed line highlights a
+      p-score of 0.5. This figure corresponds to Figure 3 in the original work [1]. . . . . . .        16
+ 10   The sensitivity as a function of the FAR for both SNR (red) and p-score (blue). Left
+      panel: The sensitivity (or recall) as commonly defined in data science, i.e. without
+      taking into account the astrophysical distribution of the injected signals (Equation
+      7). Right panel: The sensitive distance corresponding to the sensitive volume (Equa-
+      tion 5), defined as a more informative measure of sensitivity in the context of GW
+      searches. The sensitive distance results for PyCBC Live (green) are obtained from
+      [3]. This figure corresponds to Figure 4 in the original work [1]. . . . . . . . . . . . .       17
+ 11   True positive rate at a fixed FAR of 8500 per month for the results in [4] compared
+      to the results in this work. The x-axis represents bins of the injected network SNR
+      with a bin size of 4. The shaded area represents the range of injected SNRs used in
+      the training set. This figure corresponds to Figure 5 in the original work [1]. . . . . .        18
+
+
+                                                  i
+LIST OF FIGURES                                                                    LIST OF FIGURES
+
+
+  12   Predicted SNR against the optimal injected SNR of the test set. Left panel: The green
+       crosses represent the injections detected by both network outputs. The red triangles
+       represent the injections detected by the SNR output only. There are no injections
+       detected by the p-score only. The black dots represent the injections missed by both
+       network outputs. This figure corresponds to Figure 6 in the original work [1].Right
+       panel: The missed and detected injections are colour-coded by their distance. . . . .         19
+  13   Classification performance metrics as a function of the false alarm rate. Left panel:
+       Recall and precision for the SNR and p-score outputs. Left panel: F0.5, F1 and F2
+       scores for the SNR and p-score outputs. . . . . . . . . . . . . . . . . . . . . . . . . . .   20
+
+
+
+
+                                                 ii
+List of Tables
+ 1   Injection parameter distributions used to generate the different datasets used in this
+     work. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    4
+ 2   Multi-rate sampling intervals and their sampling rates. . . . . . . . . . . . . . . . . .            7
+ 3   Comparison of the clustering and detection criteria between the original and this
+     work. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     9
+
+ 4   Comparison of the resolved FARs and the corresponding sensitive distance between
+     the original work and this work. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         16
+ 5   Comparison of the sensitive distance at different FARs between the neural network
+     based search algorithm in this work and the matched filtering based search pipeline
+     PyCBC Live. The results for PyCBC Live at the FARs of 5 and 10 are estimated
+     with a linear extrapolation of the green curve in Figure 10. . . . . . . . . . . . . . . .           17
+ 6   Comparison of the ranking statistic thresholds corresponding to an FAR of 8500 per
+     month between the original work and this work. . . . . . . . . . . . . . . . . . . . .               18
+ 7   Maximum missed injected SNRs for different ranking statistic thresholds used in
+     this work compared to the original work and the alternative neural network by
+     Krastev et al. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   18
+ 8   Comparison of the mean squared error (MSE) of the SNR predictions between the
+     original work and this work. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .       19
+
+
+
+
+                                                  iii
+Contents
+List of Figures                                                                                             ii
+
+List of Tables                                                                                             iii
+
+1   Introduction                                                                                            1
+
+2   Methods                                                                                                 3
+    2.1 Data Processing . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     3
+        2.1.1 Test Dataset . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      3
+        2.1.2 Training and Validation Dataset . . . . . . . . . . . . . . . . . . . . . . . . . .           5
+        2.1.3 Input Data Representation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         6
+    2.2 Gravitational Wave Search Metrics . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         7
+        2.2.1 Matched Filtering Searches . . . . . . . . . . . . . . . . . . . . . . . . . . . . .          7
+        2.2.2 Deep Learning Searches . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .          8
+    2.3 Matched Filtering Searches . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .       11
+        2.3.1 Matched Filtering Theory . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         11
+        2.3.2 PyCBC Live . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .       11
+    2.4 Deep Learning Searches . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .       12
+        2.4.1 Original Deep Neural Network . . . . . . . . . . . . . . . . . . . . . . . . . . .           12
+        2.4.2 New Deep Neural Network . . . . . . . . . . . . . . . . . . . . . . . . . . . . .            13
+
+3   Results                                                                                                16
+    3.1 False Alarm Rate and Sensitivity . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .       16
+    3.2 Comparison to PyCBC Live . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         17
+    3.3 Comparison to an Alternative Deep Learning Algorithm . . . . . . . . . . . . . . . .               17
+    3.4 Other Performance Results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      19
+
+4   Discussion & Conclusion                                                                                21
+    4.1 Discussion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   21
+    4.2 Conclusion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   21
+
+A README.md file                                                                                           28
+
+B Use of auto-generation tools                                                                             29
+  B.1 Co-Pilot . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   29
+  B.2 ChatGPT . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      29
+
+
+
+
+Total LATEX Word Count: 6998/7000 (excluding Contents, Figures, Tables, Bibliography and
+Appendix)
+
+
+                                                     iv
+1      Introduction
+The first detection of gravitational waves from the binary black hole (BBH) merger GW150914
+in 2015 [5] with the Advanced Laser Interferometer Gravitational-wave Observatory (LIGO) [6]
+was a groundbreaking event in the field of astronomy leading to the 2017 Nobel Prize in Physics.
+Gravitational wave (GW) astronomy witnessed a series of subsequent detections originating from
+BBH mergers [7, 8], with the event GW170814 [9] being the first detected by two LIGO detectors in
+conjunction with the Advanced Virgo detector [10].
+
+Multi-messenger Astronomy
+The multi-messenger era in astronomy started with the detection of both GW signals and electro-
+magnetic (EM) counterparts from the binary neutron star (BNS) merger event GW170817 [11, 12].
+The short gamma-ray burst GRB 170817A [13, 14] was detected by NASA’s Fermi Telescope [15]
+and ESA’s INTEGRAL [16] only seconds after the associated GW signal detection by LIGO and
+Virgo. Optical and infrared counterparts were detected hours later by the Swope Supernova Sur-
+vey 2017a and Hubble Space Telescope [17, 18, 19]. Weeks later, the Chandra X-ray Observatory
+[20] detected the X-ray afterglow [21] of the GW event and several radio telescopes identified
+a radio counterpart [22]. The simultaneous detection and analysis of GW signals and their EM
+counterparts, known as kilonovae [23], provides a more comprehensive understanding of the as-
+trophysical context of compact object mergers [24, 25, 26] and enables their precise localisation in
+the sky [27]. Upon a positive GW detection, an automated alert system can be triggered to rapidly
+notify observational telescopes worldwide to search for the EM counterpart. The success of detect-
+ing EM counterparts is heavily dependent on the latency of the response. Ongoing improvements
+in LIGO’s and Virgo’s sensitivity and KAGRA [28, 29] joining the GW detector network will con-
+tinue to increase the detection rate of GW events [30]. In the future, GW astronomy will benefit
+from a worldwide network of interferometers increasing the potential to extract further informa-
+tion about the physics of compact object mergers with follow-up studies of EM counterparts with
+current and upcoming astronomical facilities like the Vera C. Rubin Observatory [31].
+
+Matched Filtering
+Currently used algorithms in search pipelines like PyCBC Live [32, 33, 3, 34] use matched filter-
+ing (MF) [35] to identify GW transients. These MF methods [34, 36, 37, 38, 39] use a template bank
+which includes waveforms [40, 41, 42, 43, 44, 45, 46] each with different model parameters. As these
+parameters are not known a priori, these template banks cover a large parameter space currently
+available to GW detectors. The full 9-dimensional parameter space includes the binary component
+masses m1 and m2 , two 3-dimensional spin vectors s1 and s2 and the orbital eccentricity e [47].
+Moreover, parameter estimations studies in GW astronomy require an even larger, 15-dimensional
+space [48]. As our understanding of compact binary mergers deepens, the development of more ac-
+curate waveform models increases, leading to a growth in the number of models within template
+banks. However, the computational costs of MF-based searches directly scale with the template
+bank size. Low-latency GW searches with MF currently only sample from a 4-dimensional param-
+eter space (m1 , m2 , s1z , s2z ), i.e. spin-aligned binary masses on circular orbits [49]. This is because
+the extension of these algorithms to the full parameter space is unfeasible given their computa-
+tional cost [50]. MF-based searches targeting the aforementioned 4-dimensional parameter space
+may miss GW events from BNS mergers or BH-NS mergers [4], where a prompt alert is crucial for
+the observation of their EM counterpart. Therefore, there is a rising need to tackle the computa-
+tional limitations of current GW detection pipelines. Additionally, reducing the number of false
+alarms is crucial due to the high cost associated with the observing time needed to search for EM
+counterparts [1].
+
+
+
+
+                                                    1
+1. INTRODUCTION
+
+
+Deep Learning
+To harness the full potential of multi-messenger astronomy, it is crucial to deploy algorithms capa-
+ble of detecting and analysing GW events in real-time [51] and in the full parameter space of ex-
+isting and upcoming GW detectors [4]. Deep learning (DL) [52] approaches have recently gained
+attention in GW science [53, 54, 55]. DL is a branch of machine learning (ML) that uses neural
+networks (NNs) with multiple layers to model complex patterns in data. Each layer consists of
+neurons that are associated with learnable weights that help the model learn relationships between
+input data and the desired output. During training, these algorithms adjust the weights to min-
+imise the loss function, which measures the discrepancy between the predicted and actual results
+in the case of supervised learning. Once the deep NN is trained, it can be used as a predictive tool
+for various tasks such as regression or classification. Convolutional neural networks (CNNs) [56]
+were proposed to search for GW signals from BBH mergers [57, 58, 59]. Similar DL models were
+used to extend this concept to the detection of GW signals from BNS mergers [4]. A more com-
+plex architecture involving inception modules [60] and temporal convolutional networks (TCNs)
+[61] was designed to further improve BNS searches with ML [1]. Other ML applications to GW
+science include glitch classification [62], [63], the search for continuous GW signals [63, 64], the
+detection and classification of supernova GW signals [65, 66], denoising of BBH merger signals
+[64] and GW parameter estimation [67, 68, 69]. NNs allocate most of the computational cost to
+the training phase, prior to the actual prediction stage [70]. Once trained, their high evaluation
+efficiency makes them attractive candidates for real-time GW searches from BNS mergers.
+
+State-of-the-art Benchmarks
+Existing low-latency searches with MF have a latency of O (10) seconds and a sensitive distance
+of 250 Mpc at ∼1 false alarms per month [71, 72, 73]. For an alternative search algorithm to be
+competitive, it must meet or surpass these performance criteria [1]. At high false alarm rates (FARs)
+and signal-to-noise ratios (SNRs), CNNs designed for BBH merger searches [57, 59] show similar
+sensitivity performance to MF methods at a significantly lower computational cost. These NNs are
+designed to detect signals from BBH mergers only. In the context of multi-messenger astronomy,
+rapid notifications to other observatories are most useful and relevant for GW signals from BNS
+mergers. Signals from BNS mergers are much more challenging to detect using DL than signals
+from BBH mergers. The NN presented in [4] was tested at an estimated FAR of ∼8500 per month.
+The sensitivity results of the search algorithm for BNS merger signals in [1] were obtained at FARs
+down to ∼10 per month, and its latency is estimated to be 10.2 s. However, in order for these NNs
+to be considered superior to existing methods, they must undergo further testing with real detector
+data at the required FAR of ∼1 per month.
+
+Objectives
+The primary objective of this work is to reproduce the results presented in [1], hereafter referred to
+as the original work. However, this work extends the original work by (i) including a number of
+new performance metrics, (ii) optimising search hyperparameters, (iii) testing the existing network
+at lower FARs and (iv) proposing an improved network architecture and training strategy.
+
+Structure of Thesis
+The structure of the report is as follows: Chapter 1 serves as an introduction to existing literature
+on GW searches with MF and DL. Chapter 2 details the methods used in this work. This includes
+the data processing, data representation, GW search metrics and GW search algorithms. Chapter
+3 presents the performance results based on the previously introduced GW search metrics. In
+Chapter 4, we discuss these results in the context of GW science, multi-messenger astronomy and
+DL. Finally, we provide conclusive remarks and identify areas of future work.
+
+
+
+
+                                                  2
+2       Methods
+2.1     Data Processing
+GW detectors have two kilometer-long arms forming an L-shape. When a GW from a BNS merger
+passes through Earth, it stretches one arm and compresses the other. This minuscule change in
+the relative arm lengths is measured using laser interferometry. A laser beam hits a beam splitter,
+sending light down each arm to mirrors that reflect it back. These mirrors reflect the beams back to
+the beam splitter, where they interfere with each other. If the arm lengths are unchanged, the light
+waves cancel each other out, while a change of the path lengths leads to an interference pattern
+registered by the detector. The small change in arm length, called strain, is measured over time,
+resulting in a strain time series as the primary data product. In addition to GW signals, detectors
+record arm length changes due to noise, which dominates the amplitude output [74]. The resulting
+time-domain signal s(t) consists of the GW strain component h(t) and the noise component n(t):
+
+                                            s ( t ) = h ( t ) + n ( t ).                                  (1)
+
+2.1.1    Test Dataset
+The performance of a GW signal search algorithm is best evaluated on long stretches of continuous
+strain time series data. With only two detected GW signals from BNS mergers to date, we need to
+simulate test data containing numerous GW signal injections buried in noise. Following a proce-
+dure similar to [1], we generate a test set equivalent to one month of data (31 days), in contrast to
+the three-month dataset in the original work [1]. Each day includes 21 simulated files, each 4096 s
+long, resulting in 651 files. Each file is independently generated by using different random seeds.
+A summary of this procedure is detailed below:
+    1. We generate noise from the analytic estimate of the power spectral density (PSD) of the Ad-
+       vanced LIGO design sensitivity [30] with the aLIGOZeroDetHighPower model in the soft-
+       ware library LALSuite [75]. While real detector data contains non-Gaussian transient noise
+       or blip glitches [76, 77], the simulated noise is stationary and Gaussian.
+    2. Next, we generate a list of GW signal injection timestamps within the full duration of one file
+       with the condition that the temporal separation of two consecutive injections is chosen from
+       a uniform distribution within the interval (180, 220) s. To avoid incomplete waveforms, we
+       discard injections within the first or last 256 s of each file. This results in 18 injections per file
+       and 11,718 injections in total. For each of these timestamps, we generate a waveform using
+       the inspiral-only waveform model TaylorF2 [42, 44, 78]. The lower frequency cutoff is set
+       to 25 Hz, while the model parameters are drawn from the distributions specified in Table 1.
+       These distributions are chosen to represent non-spinning BNS mergers with an isotropic sky
+       distribution.
+    3. While previous works only used data from a single detector [57, 59], we follow the approach
+       in [1] and use data from two detectors. The waveforms are projected onto the operational
+       frame of the LIGO-Hanford (H1) and LIGO-Livingston (L1) detectors [79] and added into
+       the noise so that maximum amplitude of the GW signal aligns with the injection timestamps.
+Figure 1 shows a 4096 s test file, while Figure 2 zooms in on a 32 s chunk showing one waveform.
+During the application of the search algorithm on the test dataset, the data is also whitened as
+detailed in Section 2.1.3.
+
+
+
+
+                                                         3
+2. METHODS                                                                            2.1. Data Processing
+
+
+  Table 1: Injection parameter distributions used to generate the different datasets used in this work.
+
+                         Parameter                     Uniform distribution
+                         First component mass          m1 ∈ (1.2, 1.6) M⊙
+                         Second component mass         m2 ∈ (1.2, 1.6) M⊙
+                         Spins                         -
+                         Coalescence phase             Φc ∈ (0, 2π )
+                         Polarisation                  Ψ ∈ (0, 2π )
+                         Inclination                   cos ι ∈ (−1, 1)
+                         Right ascension               α ∈ (−π, π )
+                         Declination                   sin δ ∈ (−1, 1)
+                         Luminosity distance           d2 ∈ (02 , 4002 ) Mpc2
+
+
+
+
+    Figure 1: 4096-second long test file with 18 waveform injections buried within simulated noise.
+
+
+
+
+  Figure 2: 32-second long test file chunk with one waveform projected onto the H1 and L1 detectors.
+
+
+
+
+                                                   4
+2. METHODS                                                                          2.1. Data Processing
+
+
+2.1.2    Training and Validation Dataset
+To optimise a DL-based search algorithm in a supervised manner, additional training and valida-
+tion datasets are required. The data generation process from the original work [1] is summarised
+below. The datasets are generated using noise from the analytic PSD estimate aLIGOZeroDetHighPower,
+and signals with the waveform model TaylorF2 in the LALSuite library. We simulate 800,000
+‘signal+noise’ and 80,000 ‘noise-only’ samples, creating a training set of 880,000 samples with a
+10:1 split between signals and noise. For the validation set, we generate 24,000 ‘signal+noise’ and
+8,000 ‘noise-only’ samples, totalling in 32,000 validation samples with a 3:1 split between signals
+and noise. Below, we explain the generation of signal and noise data.
+
+Signal Generation
+The signal generation process is summarised below [1]:
+  1. The waveform parameters are drawn from Table 1 except for the distance parameter d, which
+     is determined from a target network SNR ρopt uniformly distributed within the interval (8, 15)
+     [1]. The waveform is first calculated at 1 Mpc with a lower frequency cutoff of f min = 20 Hz,
+     resulting in a ∼500 s long waveform. This waveform is then projected onto the operational
+     frame of the LIGO-Hanford and LIGO-Livingston detectors [79] and trimmed to a duration
+     of 96 s [1]. The maximum amplitudes of the waveforms in the 96 s time series are uniformly
+     distributed within the 0.5 s interval (91.25, 91.75) s.
+  2. The network SNR ρnet at a distance 1 Mpc is calculated using the following formula [80]:
+                                                  v
+                                                  uN
+                                                  u d
+                                           ρnet = t ∑ ρ2i ,                                   (2)
+                                                             i =1
+
+        where Nd is the number of detectors (Nd = 2 in our case) and ρi are the individual SNRs at a
+        distance 1 Mpc. These are given by the formula:
+                                                     Z ∞
+                                                           | Hi ( f )|2
+                                           ρ2i = 4                      df,                          (3)
+                                                      f min Sh ( f )
+
+        where Hi ( f ) is the waveform projected onto the i-th detector and Sh ( f ) is the analytic PSD
+        estimate aLIGOZeroDetHighPower. The waveform amplitude is then scaled to achieve the
+                                                                   ρ
+        target network SNR ρopt by multiplying the waveform by ρopt  net
+                                                                         .
+  3. Finally, we whiten the data, discard the first and last 4 s to avoid filtering edge effects [59],
+     and use the last 32 s of the remaining time series for the input data representation detailed in
+     Section 2.1.3. Figure 3 shows a waveform signal around the peak amplitude.
+
+
+
+
+  Figure 3: Example of a waveform projected onto the H1 and L1 detectors around the peak amplitude.
+
+
+
+
+                                                      5
+2. METHODS                                                                        2.1. Data Processing
+
+
+Noise Generation
+The noise samples are generated with the analytic PSD aLIGOZeroDetHighPower shown in Fig-
+ure 4, then whitened and finally resampled as explained in the next Section 2.1.3.
+
+
+
+
+Figure 4: Analytic PSD model aLIGOZeroDetHighPower from the LALSuite library with a lower fre-
+quency cutoff of 20 Hz applied.
+
+Labels
+We assign the network SNR ρopt and a binary classification label, named p-score, to the ‘sig-
+nal+noise’ and ‘noise-only’ samples, where 0 refers to ‘noise-only’ and 1 refers to ‘signal+noise’.
+
+2.1.3    Input Data Representation
+Unlike BBH signals, BNS signals last O(102 ) s in the detectors’ sensitive band [11]. Training a NN
+with such large inputs sizes poses computational and optimisation challenges, making it practi-
+cally infeasible to use the raw data as input to a DL algorithm [1]. Thus, it is necessary to find an
+appropriate input data representation of the strain time series. The CNN in [4] takes the last 10 s
+as an input to detect BNS-powered GW signals. However, this approach reduces the SNR within
+the data, leading to a decreased search sensitivity. To reduce the input dimension of the NN while
+preserving a high SNR, we adapt the multi-rate sampling approach from [1]:
+  1. We whiten the data with the analytical PSD aLIGOZeroDetHighPower before resampling.
+     Whitening in signal processing is a technique to transform a signal to have a flat spectrum,
+     where each frequency component has equal power. It does this by reweighting each fre-
+     quency bin with the average power of the background noise in that bin [1]. Note that the
+     noise and signal samples are whitened individually during training and then added together.
+     This is not possible for the test dataset, where we instead whiten the total strain with the same
+     analytic PSD estimate used for the training and validation data [1].
+  2. When applying the network to long data-segments, we use a sliding window approach as
+     detailed in Section 2.2.2. After whitening, the final 32 s of the window are sampled at different
+     rates depending on the strain evolution. Lower frequencies in the initial inspiral phase are
+     sampled at lower rates, while higher frequencies in later phases are sampled at higher rates.
+     TThe multi-rate sampling intervals and rates are detailed in Table 2 and visualised in Figure
+     5. This gives 7 interval segments, each containing 2048 samples.
+
+
+
+
+                                                 6
+2. METHODS                                                         2.2. Gravitational Wave Search Metrics
+
+
+                     Table 2: Multi-rate sampling intervals and their sampling rates.
+
+                      Interval        Interval Length [s]    Sampling Rate [Hz]
+                      0.0 - 16.0 s           16.0                     128
+                      16.0 - 24.0 s           8.0                     256
+                      24.0 - 28.0 s           4.0                     512
+                      28.0 - 30.0 s           2.0                    1024
+                      30.0 - 31.0 s           1.0                    2048
+                      31.0 - 31.5 s           0.5                    4096
+                      31.5 - 32.0 s           0.5                    4096
+
+
+
+
+Figure 5: Multi-rate sampling intervals in the time-domain (upper panel) and frequency-domain (lower
+panel). The height of the boxes in the lower panel are the Nyquist-frequencies of the sample rates [1].
+
+
+2.2     Gravitational Wave Search Metrics
+In realistic scenarios, GW search algorithms process continuous strain time series containing de-
+tector noise and potential GW signals. Adapting performance metrics for DL search algorithms,
+which are trained and tested on discrete data, is challenging [53]. We present a strategy to address
+this discrepancy for improved performance evaluations and comparisons.
+
+2.2.1   Matched Filtering Searches
+In the context of traditional MF-based search algorithms, there are two key metrics to be consid-
+ered: (i) the false alarm rate (FAR) and (ii) the associated sensitivity [32].
+
+False Alarm Rate
+The FAR F of a search algorithm refers to the number of false alarms per time. For a list of ranking
+statistic R values [1] indicating the likelihood of a continuous strain time series of duration Ttotal
+containing a signal at each point, F is given by the following formula:
+
+                                                NFP (Rthresh )
+                                          F=                   ,                                      (4)
+                                                   Ttotal
+
+where NFP (Rthresh ) represents the number of false alarms. These are determined by the candidate
+events within the time series with R > Rthresh , where Rthresh is a given threshold. The classification
+
+                                                    7
+2. METHODS                                                           2.2. Gravitational Wave Search Metrics
+
+
+of a detection as either false positive or true positive is determined based on the simulated test
+dataset containing known injections of GW signals with known parameters. The FAR F indicates
+the level of confidence in the detection of an alarm produced by a search algorithm. The ranking
+statistic R is the SNR, which is the output of MF-based searches as detailed in Section 2.3.
+
+Sensitivity
+The sensitivity S of a search algorithm is its ability to correctly detect true positive signals, defined
+as the ratio of predicted true positives to actual true positives. For GW signals in the simulated
+test set, this ratio is influenced by the parameter distribution of the injected signals [1]. Specific
+orientations and greater distances reduce the amplitude and SNR of GW signals, making the de-
+tection more challenging. A more informative measure of S is the sensitive volume V (Fthresh ) of
+the search algorithm. If the GW signal injection distribution matches the expected sky distribution,
+this metric can be approximated with:
+                                                             NTP (Fthresh )
+                       S = V (Fthresh ) ≈ V (dmax )                                   ,                 (5)
+                                                      NTP (Fthresh ) + NFN (Fthresh )
+
+where dmax is the maximum distance of the injected GW signals, V (dmax ) is the volume of a sphere
+with radius dmax , NTP (Fthresh ) is the number of true positives and NFN (Fthresh ) is the number of
+false negatives. As in the original work [1], we use the PyCBC function volume montecarlo [32]
+to estimate V (dmax ). Both NTP (Fthresh ) and NFN (Fthresh ) represent detected and missed injections
+with F ≤ Fthresh , where Fthresh is the desired FAR threshold.
+
+2.2.2   Deep Learning Searches
+Previously suggested NNs for GW searches were evaluated using a discrete test set of noise and
+signal samples, matching the duration and sample rate of the training set [4, 57, 59].
+
+Deep Learning Classification Metrics
+Instead of FARs and sensitivities, these works calculated a false positive rate FPR and true positive
+rate TPR, also called Recall, with the following formulae:
+
+                                                       NFP
+                                           FPR =              ,                                         (6)
+                                                    NFP + NTN
+
+                                                             NTP
+                                       TPR = Recall =               ,                                   (7)
+                                                          NTP + NFN
+where NFP is the number of false positives (noise samples classified as signal samples), NTN is the
+number of true negatives (noise samples classified as noise samples), NTP is the number of true
+positives (signal samples classified as signal samples) and NFN is the number of false negatives
+(signal samples classified as noise samples). The overall performance of a search algorithm can
+then be evaluated by constructing the receiver operator characteristic (ROC) curves, which are
+curves of the TPR versus the FPR. Another commonly used performance metric in ML is the
+Precision given by the following formula:
+
+                                                          NTP
+                                         Precision =             .                                      (8)
+                                                       NTP + NFP
+Recall and Precision are often combined into an Fβ - Score given by:
+
+                                                     Precision · Recall
+                                 Fβ = (1 + β2 )                           ,                             (9)
+                                                  β2 · Precision + Recall
+
+where β = 1 gives equal weight to Precision and Recall, β < 1 gives more weight to Precision and
+β > 1 gives more weight to Recall.
+
+                                                      8
+2. METHODS                                                                  2.2. Gravitational Wave Search Metrics
+
+
+Performance Evaluation Challenges
+This performance evaluation approach presents a number of challenges discussed in [1, 53]. The
+primary issues are summarised below:
+   1. The maximum amplitude of GW signals in the training set are placed within a narrow range
+      for efficient NN training, which may not reflect real data accurately. Thus, performance
+      evaluations on such test sets may not be representative of real-world performance.
+   2. GW search algorithms are applied to long, continuous time series of variable durations, while
+      NNs require fixed-duration inputs. To handle longer time series, the NN can be applied
+      by sliding over the time series with a fixed-size window and step size, as described in the
+      following subsection. This approach may predict a signal at multiple successive positions,
+      cause oscillations of signal predictions across consecutive positions, or capture only part of a
+      signal. The notion of a true or false positive signal detection becomes unclear in this case.
+To compute values for F and S for our NN, we use the test set from Section 2.1.1. This set contains
+much longer data-segments than the training set, providing a more suitable basis for evaluation.
+
+Sliding Window Approach
+We apply the trained NN with a 72 s sliding window over the test time series as in [1]. To en-
+sure signal sensitivity, the step size must be no larger than half the 0.5 s interval in which the
+maximum waveform amplitudes are placed in the training set [1]. The step size is set to the up-
+per bound of 0.25 s to balance sensitivity and computational efficiency, ensuring the network cap-
+tures true signals without redundancy. Each window is whitened with the analytical PSD estimate
+aLIGOZeroDetHighPower, as described in Section 2.1.3. The initial and final 4 s are excluded [1],
+and the final 32 s of the remaining data are resampled, as detailed in Section 2.1.3.
+
+Ranking Statistic
+Instead of designing a NN with the binary outputs ’noise+signal’ and ’noise-only’, adopting a
+continuous output enables us to use it as a ranking statistic R. For a specified ranking statistic
+threshold Rthresh , we can find timestamps in the time series for which the NN predicts values of R
+exceeding Rthresh , indicating the presence of a signal. The NN introduced in Section 2.4 predicts
+the SNR and a p-score for the input time series, which can both be used as a ranking statistic R.
+
+Clustering of Signal Candidate Events
+In the original work [1], it is assumed that two signal candidate events occurring within 1 s of
+each other belong to the same GW signal. However, this assumption is relatively arbitrary and we
+choose an optimised value of 3.5 s for the clustering criterion1 , see Table 3. We cluster timestamps
+for which R > Rthresh and define a signal candidate event in the following way:
+   1. Flag the timestamps for which R > Rthresh .
+   2. Cluster the flagged timestamps by (i) defining the neighbourhood of a flagged timestamp as
+      within ±3.5 s of its occurrence, (ii) grouping all flagged timestamps within this neighborhood
+      into the same cluster, and (iii) merging clusters based on overlapping neighborhoods.
+   3. Each cluster represents a GW signal candidate event and is assigned the time and ranking
+      statistic corresponding to the maximum R value within the cluster.
+
+     Table 3: Comparison of the clustering and detection criteria between the original and this work.
+
+                                                          Original Work         This Work
+                          Clustering Criterion [s]                1.0               3.5
+                          Detection Criterion [s]                 3.0               3.0
+
+  1 We optimise these criteria by maximising the sensitive distance at a FAR of 10 in Figure 10 in Section 3.
+
+
+
+
+                                                           9
+2. METHODS                                                         2.2. Gravitational Wave Search Metrics
+
+
+False Alarm Rate and Sensitivity
+We define a true positive event if an actual signal injection falls within ±3 s of the reported time.
+This value was found to work well in the original work [1] and was independently confirmed in
+this work1 , see Table 3. We can calculate the number of false positives NFP as a function of Rthresh .
+Considering the duration Ttotal of the long test data-segment, we compute the FAR F of the NN
+with Equation 4. Determining the number of true positives NTP for various Rthresh values, we can
+obtain the FAR threshold Fthresh as a function of Rthresh as in Figure 9 in Section 3.1. This allows
+us to obtain the sensitivity S of a DL-based search algorithm with Equation 5. Figure 6 shows the
+SNR and p-score time series output of the NN in this work described in Section 2.4, with example
+thresholds applied and the true/false positives visualised according to the clustering and detection
+criteria.
+
+
+
+
+Figure 6: Upper panel: 4096-second long test file with 18 waveform injections buried within simulated
+noise. Middle panel: SNR output of the neural network with a ranking statistic threshold of SNR = 6 applied.
+The red crosses represent the true positives and the black dots represent the false positives. Lower panel:
+p-score output of the neural network with a ranking statistic threshold of p-score = 0.2 applied. The blue
+crosses represent the true positives and the black dots represent the false positives.
+
+
+
+
+                                                    10
+2. METHODS                                                                                 2.3. Matched Filtering Searches
+
+
+2.3     Matched Filtering Searches
+The detection pipeline PyCBC Live [3] was used during the second and third observing runs from
+the data acquired by LIGO and Virgo [81, 82].
+
+2.3.1   Matched Filtering Theory
+In what follows, we give an overview of MF, which PyCBC Live is based on. As previously
+mentioned, GW data time series data s(t) contains a signal h(t) submerged in noise n(t):
+
+                                             s ( t ) = h ( t ) + n ( t ).                                            (10)
+
+MF is a technique used to detect and extract GW signals from noisy data, where |h(t)| << |n(t)|. A
+bank of waveform templates, each representing specific signal parameters the algorithm is search-
+ing for, is required. MF works by constructing a matched filter SNR ρ for a given waveform tem-
+plate h and the data s with [83]:
+
+                                                                            Z ∞
+                           ∥⟨s|h⟩∥2                                                ã( f )b̃∗ ( f )
+                    ρ2 =                    where           ⟨ a|b⟩ = 4                              df,              (11)
+                            ⟨h|h⟩                                            f min    Sn ( f )
+
+and Sn ( f ) is the estimated one-sided PSD. The SNR indicates how likely a given template h is
+contained within the data s. The SNR must be calculated for the entire template bank to detect
+GWs. An event is declared by setting a fixed SNR threshold.
+
+2.3.2   PyCBC Live
+In what follows, we summarise the PyCBC Live detection pipeline search presented in [73]. The
+PyCBC Live template bank contains O(105 ) waveforms for the MF search. For every detector
+and template, the SNR time series ρ(t) is computed with the expression:
+
+                                                    Z ∞
+                                              4             s̃( f )ĥ∗ ( f ) 2πi f t
+                               ρ2 ( t ) =                                   e        df,                             (12)
+                                            ⟨h|h⟩     f min    Sn ( f )
+
+where h is the waveform template, s is the detector data and Sn ( f ) is the PSD. The input is down-
+sampled to 2048 Hz to manage the continuous data-stream and for high-passed single precision
+computations [2]. Additionally, the workload can be efficiently parallelised across multiple com-
+pute nodes to increase the processing speed [2]. This is repeated every 8 s on strain time series
+data-segments, which range in duration from 32 s to 256 s. For more data-processing details, refer
+to [73]. For each detector, a peak SNR threshold is applied. This value was chosen to be 5.5 in the
+second observation run [3]. Event triggers are combined into a network SNR by considering only
+those occurring in all detectors within 15 ms. For the H1 and L1 detectors, the remaining event
+pairs are combined into a network SNR, ρnet , given by:
+
+                                                      q
+                                            ρnet =        ρ2H1 + ρ2L1 ,                                              (13)
+
+where ρ H1 and ρ L1 are the individual SNRs. The pipeline introduces a latency of ∼16 s.
+
+
+
+
+                                                         11
+2. METHODS                                                                      2.4. Deep Learning Searches
+
+
+2.4     Deep Learning Searches
+DL presents a great opportunity to facilitate real-time detection of GWs from BNS mergers. We
+summarise the NN architecture presented in [1] and propose an improved architecture and train-
+ing strategy.
+
+2.4.1   Original Deep Neural Network
+Figure 7 shows a high-level overview of the architecture and is taken from [1].
+
+
+
+
+Figure 7: An overview of the deep learning architecture presented in [1]. More details on each block are
+presented in [2]. The network takes 7 signal and noise inputs according to the multi-rate sampling approach
+introduced in Section 2.1.3. The first layer adds the noise and signal inputs for the 7 different interval
+segments. The next layer is a temporal convolutional network used for signal amplification, which is followed
+by Inception modules. The output of two adjacent interval segments are concatenated and again used as
+input to Inception modules. This is repeated until there is only one stack left, which is then transformed by
+a post-processing block. The main output of the network are the SNR and p-score predictions. There are
+also 13 auxiliary outputs that are used for training only, hence they are not shown.
+
+Input Layer
+The input to the NN are the 7 different interval segments based on the input data representation
+described in Section 2.1.3. Due to computational efficiency, the first layer of the network simply
+adds the separate noise and signal inputs for each interval segment, as described in Section 2.1.3.
+
+Temporal Convolutional Network
+The next layer uses a temporal convolutional network (TCN) for denoising and signal amplifica-
+tion [64, 61] for each interval segment. This works by (i) the TCN trying to recover the pure signal
+and (ii) the output being added back to the input of the TCN to amplify potential signals [1].
+
+
+
+
+                                                     12
+2. METHODS                                                                      2.4. Deep Learning Searches
+
+
+Inception Modules
+After the amplified data is preprocessed by convolutional layers, an Inception block (lower left
+block in Figure 7) is applied, which consists of two Inception modules with very small kernel
+sizes, separated by a batch normalisation layer. The second inception module also uses a residual
+connection. Inception modules are the building blocks of the deep CNN ‘Inception’ developed by
+Google [84, 60]. Two adjacent outputs from the different interval segments are concatenated and
+used as input to another Inception block. This concatenation process continues until only a single
+stack remains.
+
+Output Layer
+This single stack is then post-processed into the desired output format by applying dense layers.
+This post-processing block ensures that the output dimension of the network is reduced to the
+required 2 outputs, i.e. the SNR estimate, the associated p-score, and 13 auxiliary outputs used in
+the loss function to train the network. Both main outputs are then used as ranking statistics for
+further analysis. More details on the network architecture and evolution are provided in [1, 2].
+
+Training
+The loss function is a weighted sum of the individual losses associated with the different network
+                                                                 1
+outputs. The auxiliary output losses are assigned a weight of 10   , the p-score loss a weight of 12
+and the SNR loss a weight of 1. The weigths are chosen based on the importance of the individual
+outputs. The network is trained with the following loss function [1]:
+
+
+                           L(ytrue , ypred ) = MSE(SNRtarget , SNRpred )
+                                                1
+                                              + σ(p-scoretarget , p-scorepred )
+                                                2
+                                                 1 13
+                                                10 i∑
+                                              +        MSE(yi,target , yi,pred ),                      (14)
+                                                    =1
+
+
+where MSE( a, b) = ( a − b)2 is the mean squared error, σ( a, b) = −2 ∑2i=1 ai log bi is the categorical
+cross-entropy. The target values (labels) are indicated by the subscript ‘target’ and the subscript
+‘pred’ refers to the output values predicted by the network. The yi values refer to the auxiliary
+outputs. The network is trained with the Adam optimiser [85] with a learning rate of 0.001 for 21
+epochs. During training, overfitting issues were encountered in the original work [1], which are
+addressed in Section 2.4.2.
+
+2.4.2   New Deep Neural Network
+The complex design of the original architecture in Figure 7 and training strategy results in in-
+creased computational costs and overfitting issues [1]. Therefore, we propose an alternative, sim-
+pler network architecture design and training strategy.
+
+Architecture
+Below, we list a number of identified challenges associated with the complex architecture design
+of the original network:
+   1. Multiple Stack Network: The multi-rate sampling approach detailed in Section 2.1.3 is an
+      innovative data representation we plan to adopt for the improved NN. However, the un-
+      conventional method of handling different sampling intervals - analyzing each interval as
+      a single stack and only concatenating later - may result in the loss of temporal continuity.
+      Important temporal dependencies spanning interval boundaries might be missed, and tem-
+      poral evolution patterns over longer spans, such as long GWs from BNS mergers, are not
+      effectively captured when each interval is analysed in isolation. Additionally, this increases
+      computational costs as each stack requires its own model layers and processing blocks.
+
+                                                    13
+2. METHODS                                                                 2.4. Deep Learning Searches
+
+
+  2. Redundant and Auxiliary Outputs: The performance outcomes in the original work [1] and
+     this study demonstrate that using the SNR estimate as a ranking statistic yields substantially
+     better results than the p-score output [1]. For example, the p-score output is not able resolve a
+     FAR of ∼1 per month, which is required to present a competitive alternative to MF. Moreover,
+     these network outputs are highly correlated and redundant. This could adversely impact the
+     optimisation of the network during training. The potential issues include more complex loss
+     landscapes, inefficient and unstable training, and overfitting. Additionally, the numerous
+     auxiliary outputs complicate the loss function and training of the network. More details on
+     this problem are given in the alternative training strategy discussion.
+  3. Complex Architecture Design: In addition to the points above, the use of Inception mod-
+     ules also contributes to an overly complex architecture. Inception modules are designed to
+     capture spatial relationships among pixels in images. However, our time series data is se-
+     quential and temporal in nature, where the relationship between data points depends on
+     their order and timing rather than spatial proximity. Adapting multiple Inception modules
+     for time series inputs is not ideal. A simpler architecture could improve the latency and make
+     the network more attractive for real-time searches.
+Based on the identified challenges, we propose the following improvement suggestions for the
+network architecture with an overview of the new NN shown in Figure 8:
+  1. Single Stack Network: We propose to concatenate the interval segments after the first layer
+     and then process the resulting stack as a whole in order to capture temporal and sequential
+     dependencies more effectively and efficiently.
+  2. Single SNR Output: Finally, we propose to only use the SNR as a ranking statistic and main
+     network output in order to reduce overfitting issues and improve the optimisation of the
+     network during training. This also aids in simplifying the network’s architecture and allows
+     the search algorithm to be better comparable to the output of MF-based searches.
+  3. Simplified Architecture Design: We adapt the TCN part of the network for denoising and
+     signal amplification. Instead of Inception modules, we use a CNN block consisting of 1D
+     custom convolutional layers to extract lower-dimensional features from the denoised input
+     data. The CNN block is then followed by a recurrent neural network (RNN) block [86].
+     RNNs are neural networks capable of processing sequential data like time series. Specifically,
+     we propose a special type of RNN called Long Short-Term Memory (LSTM) [87], which is
+     designed to handle long-term dependencies more effectively. Once the CNN layers extract
+     features from the input, the RNN layers’ function is to capture the temporal dependencies in
+     the sequence of extracted features. The proposed changes result in a simplified architecture.
+
+Training
+Below, we list a number of identified challenges with the training strategy of the original network:
+  1. Training and Validation Split: The current training and validation set has a split of approxi-
+     mately 96:4, which is rather unusual. With such a small validation set, less reliable feedback
+     can be provided during the training process. This leads to ineffective parameter updates
+     during training and a model that does not generalise well to unseen data.
+  2. Unbalanced Training Set: The training set has 10:1 split between signal and noise samples.
+     This unbalanced training set could bias the model toward the majority class leading to inef-
+     fective learning from the minority class, higher FARs and skewed performance metrics.
+  3. Loss Function and Overfitting: The authors of the original work [1] report strong overfitting
+     issues during the training process. While the training loss fell by 25% from the first to last
+     epoch, the validation loss grows throughout the training process by 75% from the first to last
+     epoch. Moreover, they monitor the sensitivity of the model during training and find that the
+     sensitivity is at best loosely correlated with the validation loss [1]. Both of these findings are
+     highly counterintuitive and indicate that the proposed loss function is not well suited for the
+
+
+                                                 14
+2. METHODS                                                                                                                      2.4. Deep Learning Searches
+
+
+       problem. The loss function includes the previously mentioned redundant p-score output and
+       additional 13 auxiliary outputs, making the loss function overly complex.
+Based on the identified training issues, we propose the following improvement suggestions for the
+training strategy:
+   1. Training and Validation Split: We propose a more commonly used split of 80:20 for training
+      and validation. This improvement provides a more balanced feedback during training and
+      should help improve performance estimation, parameter tuning and generalisation.
+   2. Balanced Training Set: We propose a balanced split between signal and noise samples to
+      avoid biases, improve performance metric calculations and reduce overfitting.
+   3. Simplified Loss Function: Because we reduce the network output to a single SNR prediction,
+      we propose the following simplified loss function:
+
+                                                      L(ytrue , ypred ) = MSE(SNRtarget , SNRpred ).                                                                       (15)
+
+       This will resolve the strong overfitting issues of the current training strategy, likely leading to
+       less complex loss landscapes, more efficient and effective training, improved generalisation
+       and superior network performance and sensitivity.
+   4. Curriculum Learning: Additionally, we propose to train the network with curriculum learn-
+      ing [88], which has been shown to improve the performance of the CNNs developed to detect
+      signals from BBH mergers [57] and BNS mergers [4]. This training strategy involves training
+      the network with high SNR samples at the beginning, and then using lower and lower SNR
+      samples during later epochs. This approach has been shown to improve distinguishing low
+      SNR samples from noise, thus improving the sensitivity of the network.
+
+  Signal 1       Noise 1   Signal 2       Noise 2   Signal 3       Noise 3   Signal 4       Noise 4   Signal 5       Noise 5   Signal 6       Noise 6   Signal 7       Noise 7
+
+
+
+             +                        +                        +                        +                        +                        +                        +
+
+
+
+                                                                               Concatenate
+
+
+
+                                                                                               TCN
+
+
+                                                                                        +
+
+
+                                                                               Preprocessing
+
+
+
+                                                                                CNN Block
+
+
+
+                                                                             RNN (LSTM) Block
+
+
+
+                                                                              Postprocessing
+
+
+
+                                                                                    SNR
+
+
+Figure 8: An overview of the new deep learning architecture proposed in this work. The network takes
+7 signal and noise inputs according to the multi-rate sampling approach introduced in Section 2.1.3. The
+first layer adds the noise and signal inputs for the 7 different interval segments and then concatenates the
+invididual segments. The next layer is a temporal convolutional network used for signal amplification, which
+is followed by a CNN block and a LSTM block. The role of the pre- and postprocessing blocks are similar to
+the ones in the original network. The output of the network is the SNR prediction.
+
+
+
+
+                                                                                    15
+3      Results
+3.1    False Alarm Rate and Sensitivity
+The output of the network described in Section 2.4 are SNR and p-score ranking statistic time series
+as the one shown in Figure 6 in Section 2.2. By setting different ranking statistic thresholds, we can
+compute the FAR and sensitivity of our search algorithm on the test set.
+
+False Alarm Rate and Ranking Statistics
+In order to obtain the sensitivity of our search algorithm for a desired confidence level in terms of
+the FAR, we must first obtain the FAR as a function of our ranking statistic thresholds. Figure 9
+shows the FAR as a function of the threshold value for the SNR and p-value outputs of the network.
+The FAR for the SNR drops steeply until a FAR of O(1) and levels off afterwards. The FAR for the
+p-score levels off after an FAR of O(10).
+
+
+
+
+Figure 9: The estimated FAR as a function of the network output ranking statistic thresholds. Left panel:
+The FAR of the SNR output, where the vertical dashed line highlights the lowest SNR of the training set.
+Right panel: The FAR of the p-score output in a logarithmic scale as explained in [1], where the vertical
+dashed line highlights a p-score of 0.5. This figure corresponds to Figure 3 in the original work [1].
+
+Sensitivity
+Figure 10 shows one of the main results of this work, which is the sensitivity of the search al-
+gorithm for given FARs. At higher FARs, the sensitivity for the SNR and p-score outputs are
+essentially the same. However, at low FARs, the SNR output demonstrates a significantly higher
+sensitivity compared to the p-score output. Table 4 shows a comparison of the resolved FAR and
+the corresponding sensitive distance between the original work and this study.
+
+Table 4: Comparison of the resolved FARs and the corresponding sensitive distance between the original
+work and this work.
+
+                                                               Original Work     This Work
+              SNR: Resolved FAR [1/month]                           0.6             1.0
+              SNR: Sensitive Distance at res. FAR [Mpc]            ≈ 135           ≈ 130
+              p-score: Resolved FAR [1/month]                       12               4
+              p-score: Sensitive Distance at res. FAR [Mpc]        ≈ 120           ≈ 130
+
+
+
+
+                                                   16
+3. RESULTS                                                                   3.2. Comparison to PyCBC Live
+
+
+
+
+Figure 10: The sensitivity as a function of the FAR for both SNR (red) and p-score (blue). Left panel: The
+sensitivity (or recall) as commonly defined in data science, i.e. without taking into account the astrophysical
+distribution of the injected signals (Equation 7). Right panel: The sensitive distance corresponding to the
+sensitive volume (Equation 5), defined as a more informative measure of sensitivity in the context of GW
+searches. The sensitive distance results for PyCBC Live (green) are obtained from [3]. This figure corre-
+sponds to Figure 4 in the original work [1].
+
+
+3.2    Comparison to PyCBC Live
+We compare the performance of the NN to the MF-based search pipeline PyCBC Live [3, 82].
+The corresponding sensitivity results in Figure 10 are taken from Figure 4 in [1] and Figure 1 in
+[3]. Table 5 compares the sensitivity between the NN-based search algorithm and PyCBC Live at
+FARs of 1, 5 and 10 per month. At these FARs, the DL algorithm achieves a sensitive distance that
+is 50 − 60% of the sensitive distance achieved by PyCBC Live. In order to reach the PyCBC Live
+reference value of ∼250 Mpc at FAR of 1 per month, the NN would need to operate at an FAR of
+∼2·104 per month. In the original work [1], this value was found to be ∼3.5·104 per month. Despite
+the complex network architecture, the authors of the original work [1] estimate the latency of the
+network to be around 30% lower than the average latency of PyCBC Live under the conditions
+described in [1].
+
+Table 5: Comparison of the sensitive distance at different FARs between the neural network based search
+algorithm in this work and the matched filtering based search pipeline PyCBC Live. The results for PyCBC
+Live at the FARs of 5 and 10 are estimated with a linear extrapolation of the green curve in Figure 10.
+
+                                                           SNR        p-score      SNR (PyCBC Live)
+   Sensitive Distance at FAR 1 per month [Mpc]             ∼135    unresolved              ∼240
+   Sensitive Distance at FAR 5 per month [Mpc]             ∼140      ∼140                  ∼250
+   Sensitive Distance at FAR 10 per month [Mpc]            ∼145      ∼145                  ∼260
+
+
+3.3    Comparison to an Alternative Deep Learning Algorithm
+We also compare the performance of the DL model to an alternative NN proposed by [4], which
+is the first ML algorithm for the detection of GW signals from BNS mergers. This search is based
+on simple CNNs, similar to the algorithms previously proposed for BBH mergers [57, 59]. The
+network analyses 10 s long data-segments sampled at 4 kHz and classifies it into ‘noise only’, ‘BBH
+signal’, ‘BNS signal’. Unlike in our work, the network in [4]√ is defined as a one-detector setup,
+which is accounted for by multiplying the SNR in [4] by 2, which follows from Equation 2.
+Figure 11 shows the true positive rate TPR of the search algorithm of this work compared to the
+one in [4] at a FAR of 8500 per month, which is the estimated FAR at which the results in [4] are
+
+                                                      17
+3. RESULTS                                     3.3. Comparison to an Alternative Deep Learning Algorithm
+
+
+quoted. The corresponding ranking statistic thresholds at this FAR for this work are given in Table
+6, and are very similar to the original work [1]. Figure 11 shows the TPR for different bins of the
+injected SNR, i.e. the fraction of detected injections over all injections within the bin. Our search
+achieves 100% sensitivity above an injected SNR of 15.77 and 107.18 in the SNR and p-score output
+cases, respectively, as shown in Table 7. In comparison, the alternative network by [4] saturates
+at an injected SNR of ∼25 at a fixed FAR of 8500 per month. At this FAR, the original work’s NN
+is significantly more sensitive than the alternative network, especially in the training SNR range.
+Similar TPR performances are achieved when comparing the alternative network at an FAR of
+8500 per month (solid black line) compared to the original work’s network at an FAR of only 5 per
+month (dashed gold line). This again underlines the superior sensitivity of the original network
+compared to the alternative one. However, the latency and computational cost of the alternative
+network is likely significantly lower because of the simpler network architecture.
+
+
+
+
+Figure 11: True positive rate at a fixed FAR of 8500 per month for the results in [4] compared to the results
+in this work. The x-axis represents bins of the injected network SNR with a bin size of 4. The shaded area
+represents the range of injected SNRs used in the training set. This figure corresponds to Figure 5 in the
+original work [1].
+
+Table 6: Comparison of the ranking statistic thresholds corresponding to an FAR of 8500 per month between
+the original work and this work.
+
+                                                               Original Work     This Work
+              SNR Threshold (FAR 8500 per month)                     6.53            6.60
+              p-score Threshold (FAR 8500 per month)                0.185           0.190
+
+Table 7: Maximum missed injected SNRs for different ranking statistic thresholds used in this work com-
+pared to the original work and the alternative neural network by Krastev et al.
+
+                                                               Original Work     This Work      Krastev et al.
+ SNR: Max. missed inj. SNR (FAR 8500 per month)                     46.65           15.77           ≈ 25
+ SNR: Max. missed inj. SNR (FAR 5 per month)                        50.83           18.40           n/a
+ p-score: Max. missed inj. SNR (FAR 8500 per month)                 n/a             107.18           n/a
+ p-score: Max. missed inj. SNR (FAR 5 per month)                    ≈ 68            107.18           n/a
+
+
+
+
+                                                     18
+3. RESULTS                                                                  3.4. Other Performance Results
+
+
+3.4    Other Performance Results
+Below, we present additional performance visualisations commonly used in classification tasks
+with ML.
+
+Predicted vs Injected SNR
+Figure 12 shows the predicted SNR against the injected SNR at a fixed FAR of 5 per month. Missed
+injections are assigned the value of the predicted SNR time series that is nearest to the time of the
+waveform injection. The stronger and closer the injected signal, the more likely the network is
+going to detect it. The maximum missed injected SNR at this FAR is 18.40 for the SNR output and
+107.18 for the p-score output, as shown in Table 7. At an FAR of 5 per month, no waveform injec-
+tions were detected only by the p-score, likely because the p-score output operates as a mapping of
+the SNR output rather than as an independent output [1]. The mean squared error (MSE) between
+the predicted and injected SNR is 55.35, which is lower than the MSE in the original work reported
+in Table 8. The SNR prediction in this work is shown to be more informative, likely because the
+injected SNR was calculated differently. A more thorough analysis of the discrepancy cannot be
+provided due to the lack of explicit information from the original authors regarding the calcula-
+tion method for the injected SNR. The associated publication repository does not include a code
+implementation of this calculation either. Figure 12 also shows the missed and detected injections
+are colour-coded by their distance. Most missed injections have distances >300 Mpc.
+
+
+
+
+Figure 12: Predicted SNR against the optimal injected SNR of the test set. Left panel: The green crosses
+represent the injections detected by both network outputs. The red triangles represent the injections de-
+tected by the SNR output only. There are no injections detected by the p-score only. The black dots
+represent the injections missed by both network outputs. This figure corresponds to Figure 6 in the original
+work [1].Right panel: The missed and detected injections are colour-coded by their distance.
+
+Table 8: Comparison of the mean squared error (MSE) of the SNR predictions between the original work
+and this work.
+
+                                          Original Work      This Work
+                                  MSE          ≈ 181            55.35
+
+
+
+
+                                                    19
+3. RESULTS                                                                 3.4. Other Performance Results
+
+
+Recall, Precision and F-Scores
+Figure 13 shows the recall, precision and F-scores performance for both network outputs as a
+function of the FAR. These performance metrics, defined in Section 2.2.2, are commonly used for
+classification problems with NNs.
+
+
+
+
+Figure 13: Classification performance metrics as a function of the false alarm rate. Left panel: Recall and
+precision for the SNR and p-score outputs. Left panel: F0.5, F1 and F2 scores for the SNR and p-score
+outputs.
+
+
+
+
+                                                    20
+4      Discussion & Conclusion
+4.1    Discussion
+We discuss the findings of this work compared to the original work and the state-of-the art.
+
+Comparison to the Original Work
+The main methodological differences between this and the original work are:
+    • We used a test set worth of approximately 1 month of data compared to 3 months in the
+      original work. The waveform injections are also likely to be produces with different seeds.
+    • We use optimised clustering and detection criteria compared to the arbitrary choices in the
+      original work.
+    • The exact calculation of the injected SNR is not provided in the original work. Hence, the
+      implementation used in this work is likely different.
+These methodological differences contribute to varying results, although to different degrees. The
+main result, i.e., network sensitivity as a function of FAR in Figure 10, is very similar to the original
+work, achieving similar sensitive distances at different FARs. This indicates good generalisation
+across different test datasets, even smaller ones. Our optimised clustering and detection criteria
+yield slightly better sensitivity results. The true positive rate at different injected SNRs in Figure
+11 is higher in our work at fixed FARs. In the original work, the network only performs better than
+the competing network by [4] for SNRs in the training range. In our work, the network performs
+better than the competing network for higher SNRs, likely due to different implementations for the
+injected SNR calculation. The predicted vs injected SNR in Figure 12 achieves a significantly lower
+MSE than the one in the original work, again due to different SNR calculations. However, similar
+to the original work, the SNR output is more successful in detecting signals than the p-score.
+
+Comparison to the State-of-the-art
+At a FAR of down to 1 per month, the NN is not competitive with the MF-based pipeline PyCBC
+Live. This is likely due to insufficient variety of signal and noise combinations used during train-
+ing. The computational cost of the NN is not superior to the MF due to the complex architecture.
+However, the NN offers a superior latency of 10.2 s compared to an average latency of 16 s for
+PyCBC Live.
+
+
+4.2    Conclusion
+We reproduced the NN-based search results for BNS signals from [1]. The network’s sensitivity
+is superior to other ML algorithms for BNS signals, though it still not yet competitive with the
+MF-based PyCBC Live. However, it offers superior latency. DL will be crucial for developing
+real-time GW search pipelines to foster the full potential of multi-messenger astronomy. The com-
+putational cost of MF scales with the size of the template bank used. Extending search algorithms
+to the full parameter space will benefit from the lower computational costs and latency of NNs,
+because most of the computational cost could be allocated to the training phase. Our work ex-
+tends the original work by optimising the search hyperparameters, testing the network at lower
+FARs and suggesting an improved network architecture and training strategy. Future research can
+build on these findings to develop highly sensitive, low-latency pipelines for the data-driven dis-
+covery of GWs and the prompt detection of their EM counterparts. Future work involves training
+and applying the new network with the improved strategy on real detector noise and an expanded
+training set for greater signal and noise variety. These improvements should reduce computational
+costs and latency while increasing sensitivity closer to state-of-the-art levels. Another possible use
+of DL might be the use of a simple low-latency NN at high FARs, followed by a MF-based search.
+
+
+                                                   21
+Bibliography
+ [1] Marlin B Schäfer, Frank Ohme, and Alexander H Nitz. Detection of gravitational-wave signals
+     from binary neutron star mergers using machine learning. Physical Review D, 102(6):063015,
+     2020.
+ [2] Marlin B Schäfer. Analysis of gravitational-wave signals from binary neutron star mergers
+     using machine learning. 2019.
+ [3] Alexander H Nitz, Thomas Dent, Tito Dal Canton, Stephen Fairhurst, and Duncan A Brown.
+     Detecting binary compact-object mergers with gravitational waves: Understanding and im-
+     proving the sensitivity of the pycbc search. The Astrophysical Journal, 849(2):118, 2017.
+ [4] Plamen G Krastev. Real-time detection of gravitational waves from binary neutron stars using
+     artificial neural networks. Physics Letters B, 803:135330, 2020.
+ [5] Benjamin P Abbott, Richard Abbott, TDe Abbott, MR Abernathy, Fausto Acernese, Kendall
+     Ackley, Carl Adams, Thomas Adams, Paolo Addesso, RX Adhikari, et al. Observation of
+     gravitational waves from a binary black hole merger. Physical review letters, 116(6):061102,
+     2016.
+ [6] Junaid Aasi, BP Abbott, Richard Abbott, Thomas Abbott, MR Abernathy, Kendall Ackley, Carl
+     Adams, Thomas Adams, Paolo Addesso, RX Adhikari, et al. Advanced ligo. Classical and
+     quantum gravity, 32(7):074001, 2015.
+ [7] Benjamin P Abbott, R Abbott, TD Abbott, MR Abernathy, F Acernese, K Ackley, C Adams,
+     T Adams, P Addesso, RX Adhikari, et al. Gw151226: observation of gravitational waves from
+     a 22-solar-mass binary black hole coalescence. Physical review letters, 116(24):241103, 2016.
+ [8] LIGO Scientific, Benjamin P Abbott, R Abbott, TD Abbott, F Acernese, K Ackley, C Adams,
+     T Adams, P Addesso, RX Adhikari, et al. Gw170104: observation of a 50-solar-mass binary
+     black hole coalescence at redshift 0.2. Physical review letters, 118(22):221101, 2017.
+ [9] Benjamin P Abbott, Richard Abbott, TD Abbott, F Acernese, K Ackley, C Adams, T Adams,
+     P Addesso, Rana X Adhikari, Vaishali B Adya, et al. Gw170814: a three-detector observa-
+     tion of gravitational waves from a binary black hole coalescence. Physical review letters,
+     119(14):141101, 2017.
+[10] Fet al Acernese, M Agathos, K Agatsuma, Damiano Aisa, N Allemandou, Aea Allocca,
+     J Amarni, Pia Astone, G Balestri, G Ballardin, et al. Advanced virgo: a second-generation
+     interferometric gravitational wave detector. Classical and Quantum Gravity, 32(2):024001,
+     2014.
+[11] Benjamin P Abbott, Rich Abbott, TDea Abbott, Fausto Acernese, Kendall Ackley, Carl Adams,
+     Thomas Adams, Paolo Addesso, Rana X Adhikari, Vaishali B Adya, et al. Gw170817: obser-
+     vation of gravitational waves from a binary neutron star inspiral. Physical review letters,
+     119(16):161101, 2017.
+[12] Raffaella Margutti and Ryan Chornock. First multimessenger observations of a neutron star
+     merger. Annual Review of Astronomy and Astrophysics, 59:155–202, 2021.
+[13] Benjamin P Abbott et al. Gravitational waves and gamma-rays from a binary neutron star
+     merger: Gw170817 and grb 170817a. The Astrophysical Journal Letters, 848(2):L13, 2017.
+[14] Volodymyr Savchenko, C Ferrigno, E Kuulkers, ANGELA Bazzano, E Bozzo, S Brandt, J Ch-
+     enevez, TJ-L Courvoisier, R Diehl, A Domingo, et al. Integral detection of the first prompt
+     gamma-ray signal coincident with the gravitational-wave event gw170817. The Astrophysical
+     Journal Letters, 848(2):L15, 2017.
+
+
+
+
+                                               22
+BIBLIOGRAPHY                                                                       BIBLIOGRAPHY
+
+
+[15] WB Atwood, Aous A Abdo, Markus Ackermann, W Althouse, B Anderson, M Axelsson,
+     Luca Baldini, J Ballet, DL Band, Guido Barbiellini, et al. The large area telescope on the fermi
+     gamma-ray space telescope mission. The Astrophysical Journal, 697(2):1071, 2009.
+[16] Christoph Winkler, G Di Cocco, N Gehrels, A Giménez, S Grebenev, W Hermsen, JM Mas-
+     Hesse, F Lebrun, N Lund, GGC Palumbo, et al. The integral mission. Astronomy &
+     Astrophysics, 411(1):L1–L6, 2003.
+[17] DA Coulter, RJ Foley, CD Kilpatrick, MR Drout, AL Piro, BJ Shappee, MR Siebert, JD Simon,
+     N Ulloa, D Kasen, et al. Swope supernova survey 2017a (sss17a), the optical counterpart to a
+     gravitational wave source. Science, 358(6370):1556–1558, 2017.
+[18] Nial R Tanvir, Andrew J Levan, C González-Fernández, O Korobkin, Ilya Mandel, Stephan
+     Rosswog, Jens Hjorth, Paolo D’Avanzo, AS Fruchter, CL Fryer, et al. The emergence of
+     a lanthanide-rich kilonova following the merger of two neutron stars. The Astrophysical
+     Journal Letters, 848(2):L27, 2017.
+[19] Elena Pian, Paolo D’Avanzo, Stefano Benetti, M Branchesi, Enzo Brocato, Sergio Campana,
+     Enrico Cappellaro, Stefano Covino, V d’Elia, JPU Fynbo, et al. Spectroscopic identification of
+     r-process nucleosynthesis in a double neutron-star merger. Nature, 551(7678):67–70, 2017.
+[20] Martin C Weisskopf, Harvey D Tananbaum, Leon P Van Speybroeck, and Stephen L O’Dell.
+     Chandra x-ray observatory (cxo): overview. X-Ray Optics, Instruments, and Missions III,
+     4012:2–16, 2000.
+[21] Eleonora Troja, LUIGI Piro, H Van Eerten, RT Wollaeger, M Im, OD Fox, NR Butler, SB Cenko,
+     T Sakamoto, CL Fryer, et al. The x-ray counterpart to the gravitational-wave event gw170817.
+     Nature, 551(7678):71–74, 2017.
+[22] G Hallinan, Alessandra Corsi, KP Mooley, K Hotokezaka, E Nakar, MM Kasliwal, DL Kaplan,
+     DA Frail, ST Myers, T Murphy, et al. A radio counterpart to a neutron star merger. Science,
+     358(6370):1579–1583, 2017.
+[23] Brian D Metzger. Kilonovae. Living reviews in relativity, 20(1):3, 2017.
+[24] Brian D Metzger and Edo Berger. What is the most promising electromagnetic counterpart of
+     a neutron star binary merger? The Astrophysical Journal, 746(1):48, 2012.
+[25] E Sterl Phinney. Finding and using electromagnetic counterparts of gravitational wave
+     sources. arXiv preprint arXiv:0903.0098, 2009.
+[26] Ilya Mandel and Richard O’Shaughnessy. Compact binary coalescences in the band of
+     ground-based gravitational-wave detectors. Classical and Quantum Gravity, 27(11):114007,
+     2010.
+[27] Benjamin P Abbott. Multi-messenger observations of a binary neutron star merger. 2017.
+[28] Yoichi Aso, Yuta Michimura, Kentaro Somiya, Masaki Ando, Osamu Miyakawa, Takanori
+     Sekiguchi, Daisuke Tatsumi, Hiroaki Yamamoto, Kagra Collaboration, et al. Interferometer
+     design of the kagra gravitational wave detector. Physical Review D, 88(4):043007, 2013.
+[29] T Akutsu, M Ando, K Arai, Y Arai, S Araki, A Araya, N Aritomi, Y Aso, S Bae, Y Bae, et al.
+     Overview of kagra: Detector design and construction history. Progress of Theoretical and
+     Experimental Physics, 2021(5):05A101, 2021.
+[30] Benjamin P Abbott, R Abbott, TD Abbott, S Abraham, Fausto Acernese, K Ackley, C Adams,
+     VB Adya, C Affeldt, M Agathos, et al. Prospects for observing and localizing gravitational-
+     wave transients with advanced ligo, advanced virgo and kagra. Living reviews in relativity,
+     23:1–69, 2020.
+[31] Željko Ivezić, Steven M Kahn, J Anthony Tyson, Bob Abel, Emily Acosta, Robyn Allsman,
+     David Alonso, Yusra AlSayyad, Scott F Anderson, John Andrew, et al. Lsst: from sci-
+
+
+                                                 23
+BIBLIOGRAPHY                                                                   BIBLIOGRAPHY
+
+
+    ence drivers to reference design and anticipated data products. The Astrophysical Journal,
+    873(2):111, 2019.
+[32] Samantha A Usman, Alexander H Nitz, Ian W Harry, Christopher M Biwer, Duncan A Brown,
+     Miriam Cabero, Collin D Capano, Tito Dal Canton, Thomas Dent, Stephen Fairhurst, et al.
+     The pycbc search for gravitational waves from compact binary coalescence. Classical and
+     Quantum Gravity, 33(21):215004, 2016.
+[33] Kipp Cannon, Romain Cariou, Adrian Chapman, Mireia Crispin-Ortuzar, Nickolas Fo-
+     topoulos, Melissa Frei, Chad Hanna, Erin Kara, Drew Keppel, Laura Liao, et al. To-
+     ward early-warning detection of gravitational waves from compact binary coalescence. The
+     Astrophysical Journal, 748(2):136, 2012.
+[34] Tito Dal Canton, Alexander H Nitz, Andrew P Lundgren, Alex B Nielsen, Duncan A Brown,
+     Thomas Dent, Ian W Harry, Badri Krishnan, Andrew J Miller, Karl Wette, et al. Implement-
+     ing a search for aligned-spin neutron star-black hole systems with advanced ground based
+     gravitational wave detectors. Physical Review D, 90(8):082004, 2014.
+[35] George Turin. An introduction to matched filters. IRE transactions on Information theory,
+     6(3):311–329, 1960.
+[36] Duncan A Brown, Ian Harry, Andrew Lundgren, and Alexander H Nitz. Detecting binary
+     neutron star systems with spin in advanced gravitational-wave detectors. Physical Review D,
+     86(8):084017, 2012.
+[37] Tito Dal Canton and Ian W Harry. Designing a template bank to observe compact binary
+     coalescences in advanced ligo’s second observing run. arXiv preprint arXiv:1705.01845, 2017.
+[38] Ian W Harry, Bruce Allen, and BS Sathyaprakash. Stochastic template placement algorithm
+     for gravitational wave data analysis. Physical Review D, 80(10):104014, 2009.
+[39] P Ajith, N Fotopoulos, S Privitera, A Neunzert, N Mazumder, and AJ Weinstein. Effectual
+     template bank for the detection of gravitational waves from inspiralling compact binaries
+     with generic spins. Physical Review D, 89(8):084041, 2014.
+[40] Bangalore Suryanarayana Sathyaprakash and SV Dhurandhar. Choice of filters for the detec-
+     tion of gravitational waves from coalescing binaries. Physical Review D, 44(12):3819, 1991.
+[41] Benjamin P Abbott, Richard Abbott, Thomas D Abbott, MR Abernathy, Fausto Acernese,
+     K Ackley, C Adams, T Adams, Paolo Addesso, Rana X Adhikari, et al. Effects of wave-
+     form model systematics on the interpretation of gw150914. Classical and Quantum Gravity,
+     34(10):104002, 2017.
+[42] Luc Blanchet. Gravitational radiation from post-newtonian sources and inspiralling compact
+     binaries. Living reviews in relativity, 17:1–187, 2014.
+[43] Alexander H Nitz, Andrew Lundgren, Duncan A Brown, Evan Ochsner, Drew Keppel, and
+     Ian W Harry. Accuracy of gravitational waveform models for observing neutron-star–black-
+     hole binaries in advanced ligo. Physical Review D, 88(12):124039, 2013.
+[44] Guillaume Faye, Sylvain Marsat, Luc Blanchet, and Bala R Iyer. The third and a half-post-
+     newtonian gravitational wave quadrupole mode for quasi-circular inspiralling compact bina-
+     ries. Classical and Quantum Gravity, 29(17):175004, 2012.
+[45] Sascha Husa, Sebastian Khan, Mark Hannam, Michael Pürrer, Frank Ohme, Xisco Jiménez
+     Forteza, and Alejandro Bohé. Frequency-domain gravitational waves from nonprecessing
+     black-hole binaries. i. new numerical waveforms and anatomy of the signal. Physical Review
+     D, 93(4):044006, 2016.
+[46] Sebastian Khan, Sascha Husa, Mark Hannam, Frank Ohme, Michael Pürrer, Xisco Jiménez
+     Forteza, and Alejandro Bohé. Frequency-domain gravitational waves from nonprecessing
+
+
+                                               24
+BIBLIOGRAPHY                                                                    BIBLIOGRAPHY
+
+
+    black-hole binaries. ii. a phenomenological model for the advanced detector era. Physical
+    Review D, 93(4):044007, 2016.
+[47] Eliu Antonio Huerta, Gabrielle Allen, Igor Andreoni, Javier M Antelis, Etienne Bachelet,
+     G Bruce Berriman, Federica B Bianco, Rahul Biswas, Matias Carrasco Kind, Kyle Chard,
+     et al. Enabling real-time multi-messenger astrophysics discoveries with deep learning. Nature
+     Reviews Physics, 1(10):600–608, 2019.
+[48] Rory Smith, Scott E Field, Kent Blackburn, Carl-Johan Haster, Michael Pürrer, Vivien Ray-
+     mond, and Patricia Schmidt. Fast and accurate inference on gravitational waves from pre-
+     cessing compact binaries. Physical Review D, 94(4):044031, 2016.
+[49] EA Huerta, Prayush Kumar, Bhanu Agarwal, Daniel George, Hsi-Yu Schive, Harald P Pfeif-
+     fer, Roland Haas, Wei Ren, Tony Chu, Michael Boyle, et al. Complete waveform model for
+     compact binaries on eccentric orbits. Physical Review D, 95(2):024038, 2017.
+[50] Ian Harry, Stephen Privitera, Alejandro Bohé, and Alessandra Buonanno. Searching for gravi-
+     tational waves from compact binaries with precessing spins. Physical Review D, 94(2):024012,
+     2016.
+[51] Tyson B Littenberg, Ben Farr, Scott Coughlin, and Vicky Kalogera. Systematic errors in low-
+     latency gravitational wave parameter estimation impact electromagnetic follow-up observa-
+     tions. The Astrophysical Journal, 820(1):7, 2016.
+[52] Yann LeCun, Yoshua Bengio, and Geoffrey Hinton. Deep learning. nature, 521(7553):436–444,
+     2015.
+[53] Timothy D Gebhard, Niki Kilbertus, Ian Harry, and Bernhard Schölkopf. Convolutional
+     neural networks: A magic bullet for gravitational-wave detection? Physical Review D,
+     100(6):063015, 2019.
+[54] EA Huerta and Zhizhen Zhao. Advances in machine and deep learning for modeling and real-
+     time detection of multi-messenger sources. In Handbook of Gravitational Wave Astronomy,
+     pages 1793–1819. Springer, 2022.
+[55] Vincenzo Benedetto, Francesco Gissi, Gioele Ciaparrone, and Luigi Troiano. Ai in gravita-
+     tional wave analysis, an overview. Applied Sciences, 13(17):9886, 2023.
+[56] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner. Gradient-based learning ap-
+     plied to document recognition. Proceedings of the IEEE, 86(11):2278–2324, 1998.
+[57] Daniel George and Eliu Antonio Huerta. Deep learning for real-time gravitational wave detec-
+     tion and parameter estimation: Results with advanced ligo data. Physics Letters B, 778:64–70,
+     2018.
+[58] Daniel George and Eliu Antonio Huerta. Deep learning for real-time gravitational wave detec-
+     tion and parameter estimation: Results with advanced ligo data. Physics Letters B, 778:64–70,
+     2018.
+[59] Hunter Gabbard, Michael Williams, Fergus Hayes, and Chris Messenger. Matching matched
+     filtering with deep networks for gravitational-wave astronomy. Physical review letters,
+     120(14):141103, 2018.
+[60] Christian Szegedy, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed, Dragomir Anguelov,
+     Dumitru Erhan, Vincent Vanhoucke, and Andrew Rabinovich. Going deeper with convolu-
+     tions. In Proceedings of the IEEE conference on computer vision and pattern recognition,
+     pages 1–9, 2015.
+[61] Shaojie Bai, J Zico Kolter, and Vladlen Koltun. An empirical evaluation of generic convolu-
+     tional and recurrent networks for sequence modeling. arXiv preprint arXiv:1803.01271, 2018.
+
+
+
+
+                                               25
+BIBLIOGRAPHY                                                                      BIBLIOGRAPHY
+
+
+[62] Sara Bahaadini, Vahid Noroozi, Neda Rohani, Scott Coughlin, Michael Zevin, Joshua R Smith,
+     Vicky Kalogera, and Aggelos Katsaggelos. Machine learning for gravity spy: Glitch classifi-
+     cation and dataset. Information Sciences, 444:172–186, 2018.
+[63] Christoph Dreissigacker, Rahul Sharma, Chris Messenger, Ruining Zhao, and Reinhard Prix.
+     Deep-learning continuous gravitational waves. Physical Review D, 100(4):044009, 2019.
+[64] Wei Wei and EA Huerta. Gravitational wave denoising of binary black hole mergers with
+     deep learning. Physics Letters B, 800:135081, 2020.
+[65] Man Leong Chan, Ik Siong Heng, and Chris Messenger. Detection and classification of
+     supernova gravitational wave signals: A deep learning approach. Physical Review D,
+     102(4):043022, 2020.
+[66] Alberto Iess, Elena Cuoco, Filip Morawski, and Jade Powell. Core-collapse supernova
+     gravitational-wave search and deep learning classification. Machine Learning: Science and
+     Technology, 1(2):025014, 2020.
+[67] Stephen R Green, Christine Simpson, and Jonathan Gair. Gravitational-wave parameter esti-
+     mation with autoregressive neural network flows. Physical Review D, 102(10):104057, 2020.
+[68] Hunter Gabbard, Chris Messenger, Ik Siong Heng, Francesco Tonolini, and Roderick Murray-
+     Smith. Bayesian parameter estimation using conditional variational autoencoders for
+     gravitational-wave astronomy. Nature Physics, 18(1):112–117, 2022.
+[69] Juan Pablo Marulanda, Camilo Santa, and Antonio Enea Romano. Deep learning merger
+     masses estimation from gravitational waves signals in the frequency domain. Physics Letters
+     B, 810:135790, 2020.
+[70] Ian Goodfellow, Yoshua Bengio, and Aaron Courville. Deep learning. MIT press, 2016.
+[71] Surabhi Sachdev, Sarah Caudill, Heather Fong, Rico KL Lo, Cody Messick, Debnandini
+     Mukherjee, Ryan Magee, Leo Tsukada, Kent Blackburn, Patrick Brady, et al. The gstlal search
+     analysis methods for compact binary mergers in advanced ligo’s second and advanced virgo’s
+     first observing runs. arXiv preprint arXiv:1901.08580, 2019.
+[72] T Adams, D Buskulic, V Germain, GM Guidi, F Marion, Matteo Montani, B Mours, Francesco
+     Piergiovanni, and Gang Wang. Low-latency analysis pipeline for compact binary coales-
+     cences in the advanced gravitational wave detector era. Classical and Quantum Gravity,
+     33(17):175012, 2016.
+[73] Alexander H Nitz, Tito Dal Canton, Derek Davis, and Steven Reyes. Rapid detection of
+     gravitational waves from compact binary mergers with pycbc live. Physical Review D,
+     98(2):024050, 2018.
+[74] Michele Maggiore. Gravitational waves: Volume 1: Theory and experiments. OUP Oxford,
+     2007.
+[75] LIGO Scientific Collaboration, Virgo Collaboration, and KAGRA Collaboration. LVK Algo-
+     rithm Library - LALSuite. Free software (GPL), 2018.
+[76] LK Nuttall. Characterizing transient noise in the ligo detectors. Philosophical Transactions
+     of the Royal Society A: Mathematical, Physical and Engineering Sciences, 376(2120):20170286,
+     2018.
+[77] Miriam Cabero, Andrew Lundgren, Alex H Nitz, Thomas Dent, David Barker, Evan Goetz,
+     Jeff S Kissel, Laura K Nuttall, Paul Schale, Robert Schofield, et al. Blip glitches in advanced
+     ligo data. Classical and Quantum Gravity, 36(15):155010, 2019.
+[78] Serge Droz, Daniel J Knapp, Eric Poisson, and Benjamin J Owen. Gravitational waves from
+     inspiraling compact binaries: Validity of the stationary-phase approximation to the fourier
+     transform. Physical Review D, 59(12):124016, 1999.
+
+
+                                                26
+BIBLIOGRAPHY                                                                     BIBLIOGRAPHY
+
+
+[79] Bernard F Schutz. Networks of gravitational wave detectors and three figures of merit.
+     Classical and Quantum Gravity, 28(12):125023, 2011.
+[80] Lee Samuel Finn. Aperture synthesis for gravitational-wave data analysis: Deterministic
+     sources. Physical Review D, 63(10):102001, 2001.
+[81] Benjamin P Abbott, Richard Abbott, TDea Abbott, S Abraham, F Acernese, K Ackley,
+     C Adams, RX Adhikari, VB Adya, Christoph Affeldt, et al. Gwtc-1: a gravitational-wave
+     transient catalog of compact binary mergers observed by ligo and virgo during the first and
+     second observing runs. Physical Review X, 9(3):031040, 2019.
+[82] R Abbott, TD Abbott, S Abraham, F Acernese, K Ackley, C Adams, Rana X Adhikari,
+     VB Adya, Christoph Affeldt, M Agathos, et al. Gw190412: Observation of a binary-black-
+     hole coalescence with asymmetric masses. Physical Review D, 102(4):043015, 2020.
+[83] Bruce Allen, Warren G Anderson, Patrick R Brady, Duncan A Brown, and Jolien DE Creighton.
+     Findchirp: An algorithm for detection of gravitational waves from inspiraling compact bina-
+     ries. arXiv preprint gr-qc/0509116, 2005.
+[84] Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li, and Li Fei-Fei. Imagenet: A large-
+     scale hierarchical image database. In 2009 IEEE conference on computer vision and pattern
+     recognition, pages 248–255. Ieee, 2009.
+[85] Diederik P Kingma and Jimmy Ba. Adam: A method for stochastic optimization. arXiv
+     preprint arXiv:1412.6980, 2014.
+[86] Jeffrey L Elman. Finding structure in time. Cognitive science, 14(2):179–211, 1990.
+[87] Sepp Hochreiter and Jürgen Schmidhuber. Long short-term memory. Neural computation,
+     9(8):1735–1780, 1997.
+[88] Yoshua Bengio, Jérôme Louradour, Ronan Collobert, and Jason Weston. Curriculum learning.
+     In Proceedings of the 26th annual international conference on machine learning, pages 41–48,
+     2009.
+
+
+
+
+                                                27
+A      README.md file
+A copy of the README.md file is attached to this document and can be found on the next pages.
+
+
+
+
+                                              28
+B     Use of auto-generation tools
+B.1    Co-Pilot
+GitHub Co-Pilot assisted the author in producing all function docstrings present in the project
+repository and a number of descriptive comments in the code. No specific commands have been
+given, instead auto-completion suggestions have occasionally been accepted.
+
+
+B.2    ChatGPT
+ChatGPT assisted the author in a few code implementations, mostly related to plotting. The
+prompts given and the corresponding modifications are given in the “Note on the Use of auto-
+generation tools” section of the README.md file.
+
+
+
+
+                                              29
+Fostering Gravitational Wave Multi-
+messenger Astronomy: Machine Learning
+for the Detection of Gravitational Wave
+Signals from Binary Neutron Star Mergers
+License MIT
+
+
+
+
+Description
+This project is associated with the submission of the coursework for the Research Project as
+part of the MPhil in Data Intensive Science at the University of Cambridge. The coursework
+instructions can be found under Instructions.md. The associated project report can be found
+under Project Report. The associated executive summary can be founder under Executive
+Summary.
+
+The primary objective of this project is to reproduce the results presented in
+https://journals.aps.org/prd/pdf/10.1103/PhysRevD.102.063015. However, this work extends the
+original work by (i) including a number of new performance metrics, (ii) optimising search
+hyperparameters, (iii) testing the existing network at lower FARs and (iv) proposing suggestions
+for an improved network design and training strategy.
+
+
+Table of Contents
+     Data Availability
+     Installation
+     Usage
+     Features
+     Support
+     License
+     Documentation
+     Project Status
+     Authors and Acknowledgment
+
+
+Data Availability
+The data used for this project is found here: Research Project - Submission Data. It includes the
+following folders and files:
+
+      datasets : Includes the files of the test dataset. It is split into 31 days of data, where 1
+     day includes 21 of the following type of files: (i) strain data time series consisting of noise
+     and signal injections (4096s per file), (ii) a corresponding injection statistics for each
+     injection within the strain data file, (iii) the corresponding SNR output after the network is
+     applied to the time series, (iv) the corresponding p-score output after the network is applied
+     to the time series. It also includes combined files that are finally used to produce the project
+     results. Please make sure to include this folder into the sd2022 directory, if you want to
+     run the network on the test dataset used in this work and you do not want to regenerate it
+     from scratch.
+      results : Includes the final results data of the project. Please make sure to include this
+     folder into the sd2022 directory, if you do not plan to run the entire analysis from scratch
+     but are only interested in reproducing the final results.
+
+
+Installation
+To get started with the code base, follow these steps:
+
+
+Requirements
+
+     Python 3.9 or higher installed on your system.
+     Conda installed (for managing the Python environment).
+     Docker (if using containerisation for deployment).
+     PyCBC 2.4 (for gravitational wave data analysis)
+     Keras (TensorFlow) 2.12.0 (for neural network usage)
+
+We recommend simply setting up the same environment (see environment.yml) as the one used
+throughout this project. The instructions to set up this environment are shown in the Setup
+section. If you decide to use your own environment, it is highly recommended to install PyCBC
+with the following command:
+
+
+ pip install pycbc ligo-common --no-cache-dir
+Setup
+
+Local Setup (Without Docker)
+
+ 1. Clone the Repository:
+
+    Clone the repository to your local machine with the following command:
+
+
+     $ git clone https://gitlab.developers.cam.ac.uk/phy/data-intensive-science-mphil/pr
+
+
+    or simply download it from Research Project (sd2022).
+
+ 2. Navigate to the Project Directory:
+
+    On your local machine, navigate to the project directory with the following command:
+
+
+     $ cd /full/path/to/sd2022
+
+
+    and replace /full/path/to/ with the directory on your local machine where the
+    repository lives in.
+
+ 3. Setting up the Environment:
+
+    Set up and activate the environment with the following command:
+
+     $ conda env create -f environment.yml
+     $ conda activate ml4gw
+
+
+ 4. NOTEBOOKS ONLY: Install ipykernel:
+
+    To run the notebook cells with ml4gw , install the ipykernel package with the following
+    command:
+
+
+     python -m ipykernel install --user --name ml4gw --display-name "Python (ml4gw)"
+
+
+Using Docker (Recommended for Containerised Deployment)
+
+ 1. Clone the Repository:
+
+    Clone the repository to your local machine with the following command:
+
+
+     $ git clone https://gitlab.developers.cam.ac.uk/phy/data-intensive-science-mphil/pr
+   or simply download it from Research Project (sd2022).
+
+2. Navigate to the Project Directory:
+
+   On your local machine, navigate to the project directory with the following command:
+
+
+    $ cd /full/path/to/sd2022
+
+
+   and replace /full/path/to/ with the directory on your local machine where the
+   repository lives in.
+
+3. Install and Run Docker:
+
+   You can install Docker from the official webpage under Docker Download. Once installed,
+   make sure to run the Docker application.
+
+4. Build the Docker Image:
+
+   You can build a Docker image with the following command:
+
+    $ docker build -t [image] .
+
+
+   and replace [image] with the name of the image you want to build.
+
+5. Run Notebooks or Scripts:
+
+   For the notebooks, use the following command:
+
+    $ docker run -p 8888:8888 [image]
+
+
+   This command starts a container from the [image] image and maps port 8888 of the
+   container to port 8888 on your local machine. The Jupyter Notebook server within the
+   container will be accessible on JupyterLab at http://localhost:8888.
+
+   For the scripts, use the following command:
+
+    $ docker run -it --name=[container] [image]
+
+
+   and replace [container] with the container name and [image] with the image
+   name you created. And then simply run the scripts described in Usage.
+Usage
+
+Neural Network Model
+
+The repository includes the trained neural network in the sd2022/models directory:
+network.hdf.
+
+
+Notebooks
+
+The repository includes the following notebooks in the sd2022/src directory:
+
+ 1. Demonstration Notebook - a demonstration of the different analysis steps on a single test
+     file including visual aids: DEMO.py
+ 2. Results Notebook - a collection of results and the associated plots: RESULTS.py
+
+
+DEMO.py Notebook
+
+This notebook includes a demonstration on how to: - generate a test data file, i.e. a strain time
+series with waveform injections buried in noise - apply the neural network to the test file, i.e.
+predict the SNR and p-score time series - detect events based on ranking statistic (SNR/p-
+score) thresholds
+
+It produces a number of plots shown in the Methods section of the project report.
+
+RESULTS.py Notebook
+
+This notebook includes the following project results: - False alarm rate as a function of the
+ranking statistic thresholds - Sensitivity as a function of the false alarm rate - Predicted vs
+Injected SNR - True positive rate for different injected SNR bins
+
+It produces a number of plots shown in the Results section of the project report.
+
+NOTE: Please make sure the following files are included in the sd2022/results directory: -
+results1snr4.0:0.2:40.0cluster3.5tol3.0.csv - results1psc0.01:0.01:1.0cluster3.5tol3.0.csv -
+results2snr4.0:0.2:40.0cluster3.5tol3.0.csv - results2psc0.01:0.01:1.0cluster3.5tol3.0.csv
+
+They can be obtained from Research Project - Submission Data or by reproducing the entire
+project results from scratch by following the steps in the next section.
+
+
+Local Usage (Without Docker)
+Open the sd2022 directory with an integrated development environment (IDE), e.g. VSCode
+or PyCharm, select the kernel associated with the ml4gw environment and run the Jupyter
+Notebooks (located in the sd2022/src directory).
+
+
+Using Docker (Recommended for Containerised Deployment)
+
+After running the container in Step 5 in Installation, you'll see logs in the terminal containing a
+URL with a token. It will look similar to this:
+
+
+ http://127.0.0.1:8888/lab?token=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+Navigate to http://localhost:8888 and enter the token
+ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX . Once you accessed JupyterLab,
+run the Jupyter Notebooks(located in the sd2022/src directory) with an ipykernel
+(Python 3).
+
+NOTE: Make sure that no other Jupter Notebook Servers are running. Otherwise, you might
+encounter 'Invalid credentials' issues when entering the token. Close any running Jupter
+Notebook Servers. To stop a running server, use Ctrl + C in the terminal where you
+launched JupyterLab. Also make sure port 8888 is not occupied.
+
+
+Scripts
+
+The repository includes the following main scripts in the sd2022/src directory:
+
+ 1. Data Generation - generate test data: run_data_generation.py
+ 2. Network Prediction - apply the neural network to test data and predict the SNR and p-score:
+     run_ts_prediction.py
+ 3. File Manipulation - reconfigure and combine the prediction files: run_file_manipulation.py
+ 4. Event Detection & Performance Evaluation - detect events in the combined prediction file
+     based on different ranking statistic thresholds & evaluate the performance of the network
+     on the test data with several performance metrics: run_detect_evaluate.py
+
+
+Local Usage (Without Docker)
+
+Simply run the scripts described above within the sd2022/src directory.
+
+
+Using Docker (Recommended for Containerised Deployment)
+
+After running the container in Step 5 in Installation, simply run the scripts described above within
+the sd2022/src directory in the Docker container.
+Data Generation
+
+For the data generation, run the following command:
+
+
+ $ python run_data_generation.py [folder_path] [duration] [total_runs] [day]
+
+
+      [folder_path] : The path to the folder where the test data files will be saved.
+      [duration] : The duration of the test data files (in seconds).
+      [total_runs] : The total number of files to generate.
+      [day] : The day for which the files will be generated. Important to set different seeds for
+    each day.
+
+
+Network Prediction
+
+For the network prediction, run the following command:
+
+ $ python run_ts_prediction.py [folder_path] [model]
+
+
+      [folder_path] : The path to the folder where the test data files will be saved.
+      [model] : The duration of the test data files (in seconds).
+
+File Manipulation
+
+For the file manipulation, run the following command:
+
+ $ python run_file_manipulation.py [folder_path] [n_days] [files_per_day]
+
+
+      [folder_path] : The path to the main data folder containing the generated files.
+      [n_days] : The number of day folders within the main data folder for which the files
+    were generated.
+      [files_per_day] : The number of files generated per day.
+
+
+Event Detection & Performance Evaluation
+
+For the event detection and performance evaluation, run the following command:
+
+
+ $ python run_detect_evaluate.py [ranking_ts_path] [injection_stats_path] [threshold_st
+
+
+      [ranking_ts_path] : The path to the combined ranking time series file.
+      [injection_stats_path] : The path to the combined injection statistics file.
+      [threshold_start] : The starting ranking statistic threshold value.
+      [threshold_end] : The ending ranking statistic threshold value.
+      [threshold_step] : The ranking statistic threshold step value.
+      [cluster_criterion] : The cluster criterion value (in seconds).
+      [detection_criterion] : The detection criterion value (in seconds).
+
+
+Reproduce the Results from Scratch - Demonstration
+
+In order to reproduce the results from scratch, please run the following scripts:
+
+ 1. Data Generation:
+
+
+ $ python run_data_generation.py '../datasets/' 4096 21 [day]
+
+
+with [day] being 1, 2, ..., 31.
+
+
+
+
+ 1. Network Prediction:
+
+
+ $ python run_ts_prediction.py [folder_path] '../models/network.hdf'
+
+
+with [folder_path] being '../datasets/day1/', '../datasets/day2/', ..., '../datasets/day31/'.
+1. File Manipulation:
+
+$ python run_file_manipulation.py '../datasets/' 31 21
+1. Event Detection & Performance Evaluation:
+
+  For the SNR output:
+
+
+$ python run_detect_evaluate.py '../datasets/testdata_2666496s_month_FULL_snr.hdf' '..
+  For the p-score output:
+
+$ python run_detect_evaluate.py '../datasets/testdata_2666496s_month_FULL_psc.hdf' '..
+Support
+For any questions, feedback, or assistance, please feel free to reach out via email at
+sd2022@cam.ac.uk.
+
+
+License
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+
+Documentation
+A documentation of the code can be generated with Doxygen. Make sure you have Doxygen
+installed:
+
+
+ $ brew install doxygen # for Mac
+ Win/Linux: https://www.doxygen.nl/manual/install.html or https://www.doxygen.nl/downlo
+
+
+Navigate to the docs documentation folder with:
+ $ cd docs
+
+
+Then build the documentation with:
+
+ $ doxygen
+
+
+Navigate to the generated latex folder with:
+
+ $ cd latex
+
+
+The build the latex into a PDF document with:
+
+ $ make
+
+
+You can now view the generated documentation in PDF format under refman.pdf .
+
+
+Project Status
+The project is in a state ready for submission. All essential features have been implemented,
+and the codebase is stable. Future updates may focus on minor improvements, bug fixes, or
+optimisations.
+
+
+Note on the Use of auto-generation tools
+GitHub Co-Pilot assisted the author in producing all function docstrings present in the project
+repository. No specific commands have been given, instead auto-completion suggestions have
+occasionally been accepted.
+
+
+ChatGPT Prompt 1: How do I create a custom colour map in Python?
+
+    ChatGPT output:
+ import matplotlib.pyplot as plt
+ import matplotlib.colors as mcolors
+
+ # Define the colors for your colormap
+ colors = ["red", "green", "blue"]
+
+ # Create the colormap
+ cmap = mcolors.LinearSegmentedColormap.from_list("my_custom_cmap", colors)
+
+ # Use your colormap
+ plt.imshow([[0,1],[2,3]], cmap=cmap)
+ plt.colorbar()
+ plt.show()
+
+
+   Modification of the output:
+
+ sd2022_gold = '#cfbd62'
+ sd2022_silver = '#C0C0C0'
+ sd2022_bronze = '#b08d57'
+ cmap_gold = mcolors.LinearSegmentedColormap.from_list('my_colormap', ['black',sd2022_g
+ cmap_silver = mcolors.LinearSegmentedColormap.from_list('my_colormap', ['black',sd2022
+ cmap_bronze = mcolors.LinearSegmentedColormap.from_list('my_colormap', ['black',sd2022
+ cmap_bronze_r = mcolors.LinearSegmentedColormap.from_list('my_colormap', ['white',sd20
+
+
+ChatGPT Prompt 2: How do I flip the x-axis in Python?
+
+   ChatGPT output:
+
+
+ import matplotlib.pyplot as plt
+ import numpy as np
+
+ # Sample data
+ x = np.linspace(0, 10, 100)
+ y = np.sin(x)
+
+ plt.plot(x, y)
+ plt.gca().invert_xaxis() # Invert the x-axis
+ plt.xlabel('X-axis')
+ plt.ylabel('Y-axis')
+ plt.title('Inverted X-axis')
+ plt.show()
+
+
+   Modification of the output:
+ # TPR vs FAR
+ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+ ax1.plot(results1_snr.far[results1_snr.far >= far_resolved_snr], results1_snr.tpr[resu
+ ax1.plot(results1_psc.far[results1_psc.far >= far_resolved_psc], results1_psc.tpr[resu
+ ax1.set_xscale('log')
+ ax1.set_yscale('log')
+ ax1.set_xlim(1e-2, 1e6)
+ ax1.invert_xaxis()
+ ax1.set_ylabel('Recall')
+ ax1.set_xlabel('FAR [1/month]')
+ ax1.legend(loc='upper right')
+
+ # Sensitivity Distance vs FAR
+ ax2.plot(results1_snr.far[results1_snr.far >= far_resolved_snr], results1_snr.sd[resul
+ ax2.plot(results1_psc.far[results1_psc.far >= far_resolved_psc], results1_psc.sd[resul
+ ax2.plot(far_pycbc, sd_pycbc, color=sd2022_green, linestyle='-.', label='PyCBC Live')
+ ax2.set_xscale('log')
+ ax2.set_xlim(1e-4, 1e6)
+ ax2.invert_xaxis()
+ ax2.set_ylabel('Sensitive Distance [Mpc]')
+ ax2.set_xlabel('FAR [1/month]')
+ ax2.legend(loc='upper right')
+
+ plt.tight_layout()
+ plt.show()
+
+
+ChatGPT Prompt 3: How do I calculate the instantenous frequency of a
+signal?
+
+   ChatGPT output:
+ import numpy as np
+ import scipy.signal as signal
+ import matplotlib.pyplot as plt
+
+ # Sample signal
+ fs = 1000 # Sampling rate in Hz
+ t = np.linspace(0, 1, fs, endpoint=False)             # Time vector
+ f0 = 5 # Frequency of the signal in Hz
+ x = np.sin(2 * np.pi * f0 * t) # Signal
+
+ # Compute the analytic signal
+ analytic_signal = signal.hilbert(x)
+ instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+
+ # Compute the instantaneous frequency
+ instantaneous_frequency = np.diff(instantaneous_phase) / (2.0 * np.pi) * fs
+
+
+    Modification of the output:
+
+
+ # Calculate instantaneous frequency for both detectors
+ def instantaneous_frequency(signal, sample_rate):
+     analytic_signal = hilbert(signal)
+     instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+     instantaneous_frequency = np.diff(instantaneous_phase) / (2.0 * np.pi) * sample_ra
+     return instantaneous_frequency
+
+
+
+Authors and Acknowledgment
+This project is maintained by Steven Dillmann at the University of Cambridge.
+
+26th June 2024
+
