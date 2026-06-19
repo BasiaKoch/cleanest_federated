@@ -28,7 +28,7 @@ conditions = [
     # label_short (multi-line), FedAvg mean, FedAvg sd, FedProx mean, FedProx sd, n_seeds, fp_variant
     ("IID baseline\n(no heterogeneity)\n$\\mu = 0.01$",                       0.585, 0.020, 0.579, 0.019, 10, ""),
     ("L4 symmetric\n(stat. het. only)\n$\\mu = 0.01$",                        0.492, 0.019, 0.486, 0.019,  3, ""),
-    ("Li 2020 §5.2\n(+ straggler asym.)\nFP: $\\gamma$-inexact",              0.364, 0.009, 0.479, 0.010,  3, ""),
+    ("Four-condition L4\n(+ straggler asym.)\nFP: $\\gamma$-inexact",          0.364, 0.009, 0.479, 0.010,  3, ""),
     ("Perfect-storm L4\n(90% stragglers)\nFP: $\\mu{=}1.0$, $\\gamma$-inex.", 0.087, 0.049, 0.365, 0.023, 3, ""),
     ("Perfect-storm L4\n(90% stragglers)\nFP: $\\mu{=}0.01$, $\\gamma$-inex.", 0.087, 0.049, 0.491, 0.003, 3, ""),
 ]
@@ -101,7 +101,7 @@ axA.text((len(labels) - 1) / 2, 0.755,
 short_labels = [
     "IID",
     "L4 sym.",
-    "Li 2020 §5.2",
+    "Four-cond. L4",
     "P.-storm $\\mu{=}1.0$",
     "P.-storm $\\mu{=}0.01$",
 ]

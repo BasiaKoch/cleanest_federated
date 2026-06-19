@@ -147,18 +147,18 @@ plt.close(fig)
 print(f"Wrote {OUT_FIG/'F_l4_confusion_d1_5_1.pdf'}")
 
 # ----------------------------------------------------------------
-# Figure B: Li 2020 §5.2 — 4 conditions side by side
+# Figure B: Four-condition L4 — 4 conditions side by side
 # ----------------------------------------------------------------
 print()
 print("=" * 80)
-print("Figure B: Li 2020 §5.2 protocol confusion matrices")
+print("Figure B: Four-condition L4 protocol confusion matrices")
 print("=" * 80)
 
 LI_DIR = RESULTS / "li2020_asymmetric_L4"
 LI_CONDITIONS = [
-    ("FedAvg baseline (no straggler)", "fedavg",  "0.0",  ""),
-    ("FedAvg + drop + straggler (Li FA)", "fedavg",  "0.0",  "_sh-fixed_stragglers_drop"),
-    ("FedProx + γ-inexact + straggler (Li FP) ⭐", "fedprox", "0.01", "_sh-fixed_stragglers"),
+    ("FedAvg, no straggler", "fedavg",  "0.0",  ""),
+    ("FedAvg + drop", "fedavg",  "0.0",  "_sh-fixed_stragglers_drop"),
+    ("FedProx + γ-inexact", "fedprox", "0.01", "_sh-fixed_stragglers"),
     ("FedProx + drop (control)", "fedprox", "0.01", "_sh-fixed_stragglers_drop"),
 ]
 
@@ -201,8 +201,8 @@ for col, (label, algo, mu_str, tag) in enumerate(LI_CONDITIONS):
         ax.set_ylabel("True class", fontsize=9)
     ax.set_xlabel("Predicted class", fontsize=9)
 
-fig.suptitle("Li 2020 §5.2 protocol: how FedAvg+drop reroutes rare-class predictions, "
-             "and how FedProx+γ-inexact rescues them — yellow = rare classes",
+fig.suptitle("Four-condition L4: FedAvg+drop reroutes rare-class predictions into mel-nevi, "
+             "while FedProx+γ-inexact rescues them (rare classes outlined in yellow)",
              fontsize=11.5, fontweight="bold", y=1.04)
 for ext in ("pdf", "png"):
     fig.savefig(OUT_FIG / f"F_l4_confusion_li2020.{ext}")

@@ -78,7 +78,7 @@ axA.set_ylim(0.0, 0.62)
 axA.set_xticks([0, 25, 50, 75, 100, 125, 150])
 axA.grid(linestyle=":", alpha=0.4)
 axA.legend(loc="lower right", framealpha=0.95, fontsize=9.5)
-axA.set_title("(A) Li 2020 §5.2 — four-condition decomposition  ($\\Delta$ up to $+0.115$)",
+axA.set_title("(A) Four-condition decomposition at L4  ($\\Delta$ up to $+0.115$)",
               loc="left", fontweight="bold", fontsize=11, pad=8)
 
 # ----------------------------------------------------------------------

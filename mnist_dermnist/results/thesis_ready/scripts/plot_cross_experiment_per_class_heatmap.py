@@ -88,7 +88,7 @@ fa = df[df["condition"].str.contains("FedAvg \\+ drop", regex=True)][CLASS_COLS]
 fp = df[df["condition"].str.contains("FedProx \\+ γ-inexact", regex=True)][CLASS_COLS].mean()
 deltas = (fp - fa).values
 mac = (fp.mean() - fa.mean())
-rows.append(("system", "Li 2020 §5.2 (4-cond.)", "3 s", deltas, mac))
+rows.append(("system", "Four-condition L4", "3 s", deltas, mac))
 
 # 7. Perfect-storm L4 — FedAvg+drop vs FedProx μ=0.01 + γ-inexact (3 seeds)
 df = pd.read_csv(RESULTS / "fedprox_perfect_storm_L4" / "analysis" / "perfect_storm_L4_summary.csv")

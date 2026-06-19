@@ -280,21 +280,5 @@ WRITING ACTIONS REQUIRED BEFORE PROSE
      the guide's numbers without recomputation.
 
 ================================================================================
-FINAL-AUDIT RESOLUTION (2026-06-19) — the two MISMATCH flags re-checked vs source
-================================================================================
-  #47  Node-pinned L4 sign — RESOLVED, report correct. The report uses +0.005
-       (forest figure, Discussion, and the statistical-heterogeneity table),
-       matching node_pinned_L4_summary.csv. The -0.006 was a stale guide value;
-       no report change needed.
-  #62  FedProx update-norm magnitude — RESOLVED, report correct. Recomputed from
-       flower_C0_baseline/client_update_norms_*.csv: FedAvg mean ||dw|| = 1.523
-       (9,450 rows = 9 seeds x 7 clients x 150 rounds); FedProx (fedprox_mu0.01)
-       mean ||dw|| = 1.029 (8,400 rows = 8 seeds x 7 x 150) -> 32% reduction,
-       exactly the report's claim. The earlier "1.260 / 15,750 rows" value pooled
-       the wrong FedProx file set (15 files); the correct mu0.01 set has 8 seeds.
-       No report change needed.
-  Net: 0 outstanding mismatches; both prior flags were stale, not report errors.
-
-================================================================================
 END OF SHEET
 ================================================================================

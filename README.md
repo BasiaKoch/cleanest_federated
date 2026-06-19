@@ -7,10 +7,12 @@ classification** (DermaMNIST, 7 skin-lesion classes). The contribution is a
 destroy rare-class signal under statistical and system heterogeneity. Primary
 metric: **test macro-F1 at the best-validation checkpoint**.
 
-> **Where is the thesis?** `FULL_THESIS.tex` (root) is the canonical compile
-> root. Chapter 5 (Results) is complete; the editable per-section source is in
-> `mnist_dermnist/results/thesis_ready/writing/5_1…5_9*.tex`. See
-> `docs/repo_audit_submission_cleanup/` for the full submission audit.
+> **Where is the final report?** The submission report compiles from
+> **`OVERLEAF_FLAT_BUNDLE/`** (`main.tex`, pdfLaTeX + BibTeX) — a self-contained
+> four-chapter report (Introduction, Methods, Results, Discussion/Conclusion, plus
+> an Appendix) with its 15 figures and `references.bib`. `FULL_THESIS.tex` (root)
+> is the earlier full-source draft kept for history; `docs/repo_audit_submission_cleanup/`
+> holds the full submission audit. See §10 below for the assessor reproducibility path.
 
 ---
 
@@ -232,10 +234,76 @@ cleanest_federated/
 ## 9. Reproducing & verifying
 - Implementation guards: `bash mnist_dermnist/scripts/commands.sh sanity` (run before trusting any claim).
 - Pre-submission preflight: `bash mnist_dermnist/scripts/pre_submission_check.sh`.
-- Claim verification ledger: `docs/VERIFICATION_SHEET.txt` (note the two flagged mismatches: node-pinned-L4 sign, FedProx update-norm magnitude).
+- Claim verification ledger: `docs/VERIFICATION_SHEET.txt`. Its two historical ⚠ flags (node-pinned-L4 sign; FedProx update-norm magnitude) were re-verified in the final audit and **both resolve in the report's favour** — the report's `+0.005` and `1.029` (−32%) match the source CSVs; the sheet entries were stale (see the appended final-audit resolution).
 - Full provenance / cleanup audit: `docs/repo_audit_submission_cleanup/`.
 
 > Note: `commands.sh` and `mnist_dermnist/README.md` reference a
 > `mnist_dermnist/results/PROVENANCE_AUDIT.md` that is **not present**; its role
 > is currently served by `docs/VERIFICATION_SHEET.txt` and
 > `docs/repo_audit_submission_cleanup/02_RESULT_TRACEABILITY_MATRIX.csv`.
+
+---
+
+## 10. Reproducing the report figures & tables (assessor guide)
+
+The figures and tables in the report reproduce **from saved results without
+rerunning training** (full sweeps need HPC; see the seed/HPC note below).
+
+**Compile the report.** Upload the contents of `OVERLEAF_FLAT_BUNDLE/` to Overleaf
+(or compile locally): main document `main.tex`, compiler **pdfLaTeX**, then BibTeX.
+The bundle is flat and self-contained — `main.tex`, `references.bib`, and the 15
+`F_*.pdf` figures.
+
+**Regenerate the figures/tables from saved outputs** (CPU, minutes):
+
+```bash
+python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+# place dermamnist_64.npz at the repo root (see mnist_dermnist/data/load.py)
+bash mnist_dermnist/scripts/commands.sh sanity     # implementation guards (μ=0≡FedAvg, etc.)
+bash mnist_dermnist/scripts/commands.sh analyse    # rebuild thesis tables + figures from saved results
+```
+
+**Where things live:**
+
+| Artefact | Location |
+|---|---|
+| Final report (compile target) | `OVERLEAF_FLAT_BUNDLE/main.tex` |
+| Report figures (used by the PDF) | `OVERLEAF_FLAT_BUNDLE/F_*.pdf` — copies of `mnist_dermnist/results/thesis_ready/figures/` |
+| Figure/table generators | `mnist_dermnist/results/thesis_ready/scripts/` (`plot_*.py`, `analyse_*.py`) and `docs/whole_paper_example_audit/figure_generation/` (the three conceptual diagrams) |
+| Aggregated tables (CSV/JSON) | `mnist_dermnist/results/thesis_ready/data/` |
+| Raw per-run experiment outputs | `mnist_dermnist/results/<experiment>/` (schema in §4) |
+| Numerical claim ledger | `docs/VERIFICATION_SHEET.txt` |
+
+Saved per-run artefacts (`test_at_best_*.json`, `history_*.csv`, …) are provided so
+every reported number traces back to a source file and the figures/tables can be
+rebuilt without HPC.
+
+### Seed tiers & HPC note
+
+Seed counts differ across experiments because **HPC access was restricted**; the
+count is reported per experiment in the report (Table 2.6 and Limitations).
+
+- **n = 10 paired seeds** — headline comparisons (engineered statistical
+  heterogeneity, IID control, μ-sweep, FedNova random-τ). Reported with paired
+  wins / Wilcoxon where applicable.
+- **n = 3 matched seeds** — mechanism and asymmetry probes (four-condition L4,
+  perfect-storm, learning-rate asymmetry, weighted-CE, asymmetric-μ, node-pinned
+  L4). Interpreted **directionally; no significance testing** at this sample size.
+- **single-seed pilots** — the L0–L4 heterogeneity ladder; orientation only, never
+  a headline number.
+
+Full experiment reruns were performed on HPC via the `scripts/submit_*.sh`
+launchers and can be costly; the saved outputs above are the intended path for
+reproducing the report's figures and tables.
+
+---
+
+## 11. AI / code-assistance statement
+
+AI coding assistants / large language models may have been used during development
+for tasks such as debugging, refactoring, plotting and figure-generation
+assistance, documentation, and code/text editing. All experiments, numerical
+results, their interpretation, and the scientific claims in the report are the
+author's own work and remain the author's responsibility. Any code developed with
+such assistance was reviewed by the author. This statement should be read alongside,
+and adjusted to comply with, the relevant course policy on AI use.
