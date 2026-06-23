@@ -1,18 +1,46 @@
-# Federated Learning on DermaMNIST under Heterogeneity — Thesis Repository
+# Federated Learning on DermaMNIST under Heterogeneity
 
-This repository contains the code, experiments, training artefacts, and LaTeX
-source for a thesis on **federated learning for imbalanced medical image
-classification** (DermaMNIST, 7 skin-lesion classes). The contribution is a
-**regime map** of when **FedAvg**, **FedProx**, and **FedNova** preserve or
-destroy rare-class signal under statistical and system heterogeneity. Primary
-metric: **test macro-F1 at the best-validation checkpoint**.
+*A Master's thesis on **when** federated optimisers preserve or destroy rare-class signal in imbalanced medical image classification — and **why**.*
 
-> **Where is the final report?** The submission report compiles from
-> **`report/submission_bundle/`** (`main.tex`, pdfLaTeX + BibTeX) — a self-contained
-> four-chapter report (Introduction, Methods, Results, Discussion/Conclusion, plus
-> an Appendix) with its 15 figures and `references.bib`. `report/drafts/FULL_THESIS.tex`
-> is the earlier full-source draft kept for history; `docs/repo_audit_submission_cleanup/`
-> holds the full submission audit. See §10 below for the assessor reproducibility path.
+## What this project is about
+
+Federated learning (FL) lets multiple sites — think hospitals — train a shared model without pooling their data. In real medical settings that data is **non-IID** (each site sees a different mix of cases), **system-heterogeneous** (sites compute at different speeds and some drop out mid-round), and, most importantly, **severely class-imbalanced**: the clinically dangerous conditions are the rare ones.
+
+This project studies that setting on **DermaMNIST** — a 7-class dermatology image benchmark (28×28) where melanocytic nevi make up ≈67% of the data while dermatofibroma and vascular lesions are ≈1% each and melanoma ≈11%. The central question is not "which optimiser is best" but **under which conditions** the standard aggregator **FedAvg** and the heterogeneity-oriented methods **FedProx** and **FedNova** keep the rare classes alive versus let them collapse. The contribution is a **regime map**: federated optimiser performance here is **regime-dependent**, not universal.
+
+## Motivation
+
+- **Class imbalance is the clinical crux.** Accuracy is misleading when one class is two-thirds of the data — a model that ignores every rare class still scores ≈67%. So the project reports **macro-F1** and **per-class** behaviour, and tracks the dominant failure mode: **rare-class collapse into the majority** (dangerous lesions silently misrouted as benign nevi).
+- **Heterogeneity is unavoidable.** Sites differ in label distribution (*statistical* heterogeneity) and in compute/availability (stragglers, partial participation — *system* heterogeneity). FedProx and FedNova are proposed to cope, but the literature gives conflicting guidance on when they actually help.
+- **The gap this fills.** Prior work mostly reports aggregate accuracy on balanced benchmarks; it doesn't characterise *which regime* makes each method protect (or destroy) the rare, clinically-critical classes. This thesis answers that with controlled, mechanism-isolating experiments.
+
+## What it explores
+
+1. **Statistical heterogeneity** — does non-IID data alone separate the optimisers? (§3.1)
+2. **Proximal coefficient μ** — how sharply does FedProx depend on its tuning? (§3.2)
+3. **Straggler asymmetry (centrepiece)** — when stragglers drop partial work, is FedProx's advantage from the *proximal term* or from *protocol-level handling of partial updates* (γ-inexact acceptance vs dropping)? (§3.3)
+4. **Learning-rate asymmetry & FedNova** — how does FedNova's τ-normalisation help, and where does it break? (§3.4)
+5. **Rare-class collapse & loss-side fixes** — is FedProx an imbalance corrector, or a drift fix, compared to class-weighted / focal loss? (§3.5)
+6. **Mechanism & robustness** — what drives the effects (update norms), and do the conclusions survive analysis-choice changes? (§3.6)
+
+## Methods
+
+- **Task / data:** DermaMNIST (MedMNIST), 7 classes, 28×28, severe imbalance. **Primary metric: test macro-F1 at the best-validation checkpoint**; per-class F1 and rare→majority misrouting as clinical diagnostics.
+- **Optimisers:** **FedAvg**, **FedProx** (μ ∈ {0, 0.001, 0.01, 0.1, 1.0}; μ=0 ≡ FedAvg), **FedNova**. Baselines: centralised (ceiling), local-only, fine-tune. Loss variants: cross-entropy, class-weighted CE, focal.
+- **Heterogeneity by design:** an engineered balanced-paired 7-client partition (headline), a 2-client **L0→L4 "heterogeneity ladder"** isolating quantity- vs label-skew, Dirichlet(α=0.1), and a specialist partition; system-side: fixed/random stragglers, partial participation, unequal local epochs, and the **drop vs γ-inexact** partial-update protocols.
+- **Implementation:** two equivalence-checked runtimes (a pure-PyTorch reference loop and a Flower simulation for HPC), deterministic seeding with tiered replication (n=10 paired seeds for headline comparisons, n=3 for mechanism probes), and per-run provenance.
+
+## Key findings (the regime map)
+
+- **Heterogeneity is necessary:** under IID, FedProx − FedAvg ≈ **−0.007** (within noise).
+- **Statistical heterogeneity alone** yields only a small, runtime-sensitive FedProx edge, concentrated in the rare classes.
+- **μ is sharply tuned (inverted-U):** best near **μ=0.01**, **catastrophic at μ=1.0**, with the damage landing on rare classes.
+- **Centrepiece:** under straggler asymmetry, FedProx's gain is ≈**96% from γ-inexact partial-update acceptance, not the proximal term** — and a quantity-only control (L1) shows it only helps when the dropped client carries **informationally-unique rare-class signal**. Under a "perfect storm" of stressors the gap reaches **+0.404 macro-F1**.
+- **FedNova is regime-dependent both ways:** robust under persistent learning-rate asymmetry (its strongest single-axis gain) but **collapses under random-τ stragglers**.
+- **FedProx is not an imbalance corrector:** it acts at aggregation/drift — a loss-side fix (class-weighted CE on FedAvg) matches or beats it.
+- **Central claim:** *a protocol preserves rare-class F1 iff rare-client signal reaches the global model.*
+
+> **The report.** The submission compiles from **`report/submission_bundle/`** (`main.tex`, pdfLaTeX + BibTeX) — a self-contained four-chapter report (Introduction, Methods, Results, Discussion) plus an Appendix, with its figures and `references.bib`. `report/drafts/FULL_THESIS.tex` is the earlier full-source draft. The table below maps each report section/figure to the code, experiments, and results behind it.
 
 ---
 
