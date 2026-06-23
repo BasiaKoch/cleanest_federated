@@ -1,90 +1,125 @@
 #!/usr/bin/env python3
-"""
-F_federated_learning_workflow.pdf -- a compact, publication-style FL-loop diagram
-for reader orientation (conceptual, NOT quantitative, NOT a deployment claim).
-Pure matplotlib, black/grey academic styling (no colour).
+"""F_federated_learning_workflow.pdf -- polished, conceptual FL-loop schematic
+for the Methods chapter (reader orientation; NOT quantitative, NOT a deployment
+claim).
 
-Server (global model + aggregation) centred at top; K clients evenly spaced below.
-One round:  1 broadcast w^t  ->  2 local training on private D_i  ->
-            3 return update d_i (not raw data)  ->  4 aggregate w^{t+1}
-The whole loop repeats for R rounds. Private data never leaves the client.
+One communication round:
+  1. the server broadcasts the current global model  w_t
+  2. each client trains locally on its private data   D_i   (data never leaves)
+  3. clients return only the model update             Delta_i   (not raw data)
+  4. the server aggregates                            w_{t+1} = w_t + sum_i (n_i/N) Delta_i
+The loop repeats for R rounds.  Central message: only model updates are shared.
+
+Pure matplotlib (mathtext; no LaTeX). Restrained greyscale palette with a single
+teal accent reserved for the "model-update-only" return path and the takeaway.
 """
 import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+from matplotlib.patches import FancyBboxPatch, FancyArrowPatch, Arc
 
-# --- academic black/grey palette (no colour) --------------------------------
-EDGE   = "#222222"   # box outlines
-FILL   = "#F5F5F5"   # client fill
-SVFILL = "#E6E6E6"   # server fill (slightly darker to read as the coordinator)
-ARROW  = "#333333"   # all flow arrows
-TXT    = "#111111"   # primary text
-MUTE   = "#3A3A3A"   # step/annotation text
-WBOX   = dict(boxstyle="round,pad=0.18", fc="white", ec="none", alpha=0.92)
+plt.rcParams.update({
+    "font.family": "DejaVu Sans",
+    "mathtext.fontset": "dejavusans",
+    "pdf.fonttype": 42,   # embed TrueType — crisp, selectable text in the PDF
+})
 
-def box(ax, cx, cy, w, h, lines, fills, fs_list, weights, edge=EDGE, fill=FILL):
+# --- restrained palette: greyscale + ONE teal accent ("update only") ---------
+INK       = "#1b1b1b"   # primary text
+EDGE      = "#454b54"   # client outlines
+CLIENT_FC = "#f5f6f8"   # client fill
+SERVER_EC = "#33415c"   # server outline (slate — reads as the coordinator)
+SERVER_FC = "#eaeef4"   # server fill
+GREY      = "#7a828c"   # broadcast path (neutral)
+ACCENT    = "#11806a"   # return / model-update path (teal) — the central message
+DATA_EC   = "#9aa1a9"   # dashed private-data enclosure
+MUTE      = "#4d555e"   # secondary labels
+WBOX = dict(boxstyle="round,pad=0.16", fc="white", ec="none", alpha=0.95)
+
+
+def rbox(ax, cx, cy, w, h, ec, fc, lw=1.3, z=3, ls="-"):
     ax.add_patch(FancyBboxPatch((cx - w / 2, cy - h / 2), w, h,
-                 boxstyle="round,pad=0.02,rounding_size=0.09",
-                 lw=1.5, edgecolor=edge, facecolor=fill, zorder=3))
-    n = len(lines)
-    # stack lines vertically, centred
-    ys = [cy + h / 2 - h * (k + 0.5) / n for k in range(n)]
-    for y, ln, f, w_ in zip(ys, lines, fs_list, weights):
-        ax.text(cx, y, ln, ha="center", va="center", fontsize=f,
-                color=TXT, zorder=4, fontweight=w_)
+                 boxstyle="round,pad=0.02,rounding_size=0.10",
+                 lw=lw, edgecolor=ec, facecolor=fc, linestyle=ls, zorder=z))
 
-def arrow(ax, p0, p1, lw=1.6, ls="-", rad=0.0):
-    ax.add_patch(FancyArrowPatch(p0, p1, arrowstyle="-|>", mutation_scale=14,
-                 lw=lw, color=ARROW, linestyle=ls,
-                 connectionstyle=f"arc3,rad={rad}",
-                 shrinkA=2, shrinkB=2, zorder=2))
 
-fig, ax = plt.subplots(figsize=(7.0, 4.6))
-ax.set_xlim(0, 10); ax.set_ylim(0, 7); ax.axis("off")
-ax.set_aspect("equal")
+def arrow(ax, p0, p1, color, lw=1.1, ms=11, z=2):
+    ax.add_patch(FancyArrowPatch(p0, p1, arrowstyle="-|>", mutation_scale=ms,
+                 lw=lw, color=color, shrinkA=2, shrinkB=2, zorder=z))
 
-# --- server (top, centred): holds global model + does aggregation -----------
-SV_CY, SV_TOP, SV_BOT = 5.02, 5.55, 4.50
-box(ax, 5.0, SV_CY, 4.9, 1.05,
-    ["Server  $\\cdot$  global model $w^{t}$",
-     "4. aggregate:  $w^{t+1}=\\sum_i \\dfrac{n_i}{N}\\, w_i^{t+1}$"],
-    None, [12.5, 11.0], ["bold", "normal"], fill=SVFILL)
 
-# --- repeat loop: one clean arc bowing up over the server --------------------
-ax.add_patch(FancyArrowPatch((6.0, SV_TOP - 0.02), (4.0, SV_TOP - 0.02),
-             arrowstyle="-|>", mutation_scale=13, lw=1.6, color=ARROW,
-             connectionstyle="arc3,rad=0.6", shrinkA=1, shrinkB=1, zorder=6))
-ax.text(5.0, 6.42, "repeat for $R$ rounds", ha="center", va="center",
-        fontsize=11.0, color=MUTE, style="italic", zorder=6)
+def padlock(ax, cx, cy, s=0.17, color=DATA_EC):
+    """A small, subtle vector padlock = data is locked inside the client."""
+    ax.add_patch(FancyBboxPatch((cx - 0.6 * s, cy - 0.55 * s), 1.2 * s, 0.95 * s,
+                 boxstyle="round,pad=0,rounding_size=0.03",
+                 lw=1.0, edgecolor=color, facecolor="white", zorder=6))
+    ax.add_patch(Arc((cx, cy + 0.40 * s), 0.78 * s, 0.78 * s, theta1=0, theta2=180,
+                 lw=1.0, edgecolor=color, zorder=6))
 
-# --- clients (row, evenly spaced) -------------------------------------------
-cx     = [1.7, 5.0, 8.3]
-cname  = ["Client 1", "Client 2", "Client $K$"]
-cdata  = ["private data $D_1$", "private data $D_2$", "private data $D_K$"]
-CL_TOP, CL_CY = 2.36, 1.82
-for x, nm, dl in zip(cx, cname, cdata):
-    box(ax, x, CL_CY, 2.3, 1.08, [nm, dl], None, [12.0, 10.5],
-        ["bold", "normal"], fill=FILL)
 
-# --- broadcast (down) + return (up) arrows: symmetric, paired ----------------
-anc = [4.05, 5.0, 5.95]   # server-edge anchors aligned under the clients
-off = 0.17
-for x, a in zip(cx, anc):
-    arrow(ax, (a - off, SV_BOT), (x - off, CL_TOP))   # 1. broadcast  (down)
-    arrow(ax, (x + off, CL_TOP), (a + off, SV_BOT))   # 3. return     (up)
+fig, ax = plt.subplots(figsize=(7.3, 4.6))
+ax.set_xlim(0, 10); ax.set_ylim(0, 7); ax.axis("off"); ax.set_aspect("equal")
 
-# --- concise step labels (white-masked so they read over the arrows) ---------
-ax.text(3.32, 3.46, "1. broadcast $w^{t}$", ha="center", va="center",
-        fontsize=11.0, color=MUTE, bbox=WBOX, zorder=5)
-ax.text(6.68, 3.46, "3. return update $d_i$", ha="center", va="center",
-        fontsize=11.0, color=MUTE, bbox=WBOX, zorder=5)
-ax.text(5.0, 0.70, "2. local training ($E$ epochs) on $D_i$ — data stays on the client",
-        ha="center", va="center", fontsize=11.0, color=MUTE, style="italic", zorder=5)
+# --- server (top, centred) ---------------------------------------------------
+SV_CX, SV_CY, SV_W, SV_H = 5.0, 5.38, 5.6, 1.18
+SV_BOT, SV_TOP = SV_CY - SV_H / 2, SV_CY + SV_H / 2
+rbox(ax, SV_CX, SV_CY, SV_W, SV_H, SERVER_EC, SERVER_FC, lw=1.6)
+ax.text(SV_CX, SV_CY + 0.28, r"Server  $\cdot$  global model $w_t$", ha="center",
+        va="center", fontsize=12.5, color=INK, fontweight="bold", zorder=4)
+ax.text(SV_CX, SV_CY - 0.25,
+        r"4. aggregate:   $w_{t+1} = w_t + \sum_i \frac{n_i}{N}\,\Delta_i$",
+        ha="center", va="center", fontsize=11.5, color=INK, zorder=4)
+
+# repeat-loop arc bowing over the server
+ax.add_patch(FancyArrowPatch((SV_CX + 0.95, SV_TOP + 0.02), (SV_CX - 0.95, SV_TOP + 0.02),
+             arrowstyle="-|>", mutation_scale=11, lw=1.1, color=MUTE,
+             connectionstyle="arc3,rad=0.55", shrinkA=1, shrinkB=1, zorder=6))
+ax.text(SV_CX, SV_TOP + 0.80, r"repeat for $R$ rounds", ha="center", va="center",
+        fontsize=10.5, color=MUTE, style="italic", zorder=6)
+
+# --- clients (evenly spaced row) ---------------------------------------------
+CX = [1.8, 5.0, 8.2]
+CNAMES = ["Client 1", "Client 2", r"Client $K$"]
+DLAB = [r"$D_1$", r"$D_2$", r"$D_K$"]
+CL_CY, CL_W, CL_H = 1.60, 2.5, 1.44
+CL_TOP = CL_CY + CL_H / 2
+for x, nm, dl in zip(CX, CNAMES, DLAB):
+    rbox(ax, x, CL_CY, CL_W, CL_H, EDGE, CLIENT_FC, lw=1.3)
+    ax.text(x, CL_CY + 0.47, nm, ha="center", va="center", fontsize=11.5,
+            color=INK, fontweight="bold", zorder=4)
+    # dashed private-data enclosure: raw data stays inside the client
+    rbox(ax, x, CL_CY - 0.27, CL_W - 0.6, 0.74, DATA_EC, "white", lw=1.0, ls="--", z=4)
+    padlock(ax, x - 0.62, CL_CY - 0.27)
+    ax.text(x + 0.18, CL_CY - 0.27, dl + r"  (private)", ha="center", va="center",
+            fontsize=10.0, color=MUTE, zorder=5)
+
+# --- broadcast (down, neutral) + model-update return (up, teal accent) -------
+def sx(cx):  # server-edge anchor pulled toward the centre so arrows converge
+    return SV_CX + (cx - SV_CX) * 0.42
+
+OFF = 0.17
+for x in CX:
+    a = sx(x)
+    arrow(ax, (a - OFF, SV_BOT), (x - OFF, CL_TOP), GREY, lw=1.0)          # broadcast
+    arrow(ax, (x + OFF, CL_TOP), (a + OFF, SV_BOT), ACCENT, lw=1.4, z=3)   # update
+
+# --- minimal step labels (white-masked so they read over the arrows) ---------
+ax.text(2.45, 3.55, r"1. broadcast $w_t$", ha="center", va="center",
+        fontsize=10.8, color=MUTE, bbox=WBOX, zorder=7)
+ax.text(7.62, 3.55, r"3. return $\Delta_i$", ha="center", va="center",
+        fontsize=10.8, color=ACCENT, fontweight="bold", bbox=WBOX, zorder=7)
+ax.text(5.0, 3.04, r"2. local training ($E$ epochs)", ha="center", va="center",
+        fontsize=10.5, color=MUTE, style="italic", bbox=WBOX, zorder=7)
+
+# --- central takeaway --------------------------------------------------------
+ax.text(5.0, 0.30,
+        r"Only model updates ($\Delta_i$) are shared — raw data $D_i$ never leaves the client.",
+        ha="center", va="center", fontsize=10.8, color=ACCENT, fontweight="bold",
+        zorder=7)
 
 fig.subplots_adjust(left=0.005, right=0.995, top=0.995, bottom=0.005)
 HERE = os.path.dirname(os.path.abspath(__file__))
 out = os.path.join(HERE, "F_federated_learning_workflow.pdf")
-fig.savefig(out, format="pdf", bbox_inches="tight", pad_inches=0.03)
+fig.savefig(out, format="pdf", bbox_inches="tight", pad_inches=0.05)
 print("wrote", out)
