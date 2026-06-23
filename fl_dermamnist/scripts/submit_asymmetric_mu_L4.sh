@@ -168,7 +168,7 @@ echo "  - If 3 and 4 are statistically indistinguishable → the direction"
 echo "    of asymmetry does not matter on this task (negative finding)"
 echo ""
 echo "Analysis script:"
-echo "  python fl_dermamnist/results/thesis_ready/scripts/analyse_asymmetric_mu_L4.py"
+echo "  python fl_dermamnist/analysis/analyse_asymmetric_mu_L4.py"
 echo ""
 if [ ${#FAILED[@]} -ne 0 ]; then
     echo "WARNING: ${#FAILED[@]} submissions failed:"

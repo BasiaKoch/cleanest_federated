@@ -25,7 +25,7 @@ RESULTS="fl_dermamnist/results"
 
 # Every directory we know how to analyse with the legacy `analysis.tables`
 # entry point. Per-directory thesis-ready scripts live under
-# results/thesis_ready/scripts/ and are dispatched separately below.
+# fl_dermamnist/analysis/ and are dispatched separately below.
 SWEEPS=(
   "headline"
   "iid"
@@ -84,7 +84,7 @@ echo ""
 if is_populated "$RESULTS/headline" \
    && is_populated "$RESULTS/flower_C0_baseline"; then
   echo "→ Running analyse_statistical_heterogeneity.py..."
-  if PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/analyse_statistical_heterogeneity.py \
+  if PYTHONPATH=. python fl_dermamnist/analysis/analyse_statistical_heterogeneity.py \
        >"$RESULTS/thesis_ready_statistical_log.txt" 2>&1; then
     echo "  ✓ wrote results/thesis_ready/data/statistical_heterogeneity_summary.json"
     analysed+=("statistical_heterogeneity_pipeline")
@@ -140,19 +140,19 @@ echo "=== Headline extras (sign / Hodges-Lehmann / LOSO / Holm / per-class) ==="
 echo ""
 if is_populated "$RESULTS/headline"; then
   echo "→ Running analyse_extra_statistics on headline..."
-  PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/analyse_extra_statistics.py \
+  PYTHONPATH=. python fl_dermamnist/analysis/analyse_extra_statistics.py \
     --results-dir "$RESULTS/headline" \
     >"$RESULTS/headline_extra_stats_log.txt" 2>&1 \
     && echo "  ✓ wrote thesis_ready/data/extra_statistics.json" \
     || echo "  ✗ FAILED (see $RESULTS/headline_extra_stats_log.txt)"
   echo "→ Running plot_per_class_delta on headline..."
-  PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/plot_per_class_delta.py \
+  PYTHONPATH=. python fl_dermamnist/figures/plot_per_class_delta.py \
     --results-dir "$RESULTS/headline" \
     >"$RESULTS/headline_per_class_log.txt" 2>&1 \
     && echo "  ✓ wrote thesis_ready/figures/per_class_delta.{png,pdf}" \
     || echo "  ✗ FAILED (see $RESULTS/headline_per_class_log.txt)"
   echo "→ Running analyse_communication_metrics on headline..."
-  PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/analyse_communication_metrics.py \
+  PYTHONPATH=. python fl_dermamnist/analysis/analyse_communication_metrics.py \
     --results-dir "$RESULTS/headline" \
     >"$RESULTS/headline_comm_log.txt" 2>&1 \
     && echo "  ✓ wrote thesis_ready/data/communication_metrics.json" \

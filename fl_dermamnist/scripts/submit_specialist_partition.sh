@@ -57,7 +57,7 @@ echo "  - $PARTITION × 10 seeds × 2 algos = 20 jobs → $OUT_DIR"
 echo "  Total: ~25 GPU-hours on A100."
 echo ""
 echo "When complete, run:"
-echo "  PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/analyse_specialist_partition.py"
+echo "  PYTHONPATH=. python fl_dermamnist/analysis/analyse_specialist_partition.py"
 echo "Monitor with:  squeue -u \$USER"
 
 if [ ${#FAILED[@]} -ne 0 ]; then

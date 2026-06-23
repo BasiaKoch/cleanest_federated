@@ -210,7 +210,7 @@ echo "  Condition 3 (FedProx μ=0.01):      macro-F1 between (1) and (2)"
 echo "  → Headline gap (1 → 2) should be 0.10-0.20 macro-F1"
 echo ""
 echo "After all 9 jobs finish, on the Mac run:"
-echo "  python fl_dermamnist/results/thesis_ready/scripts/analyse_fedprox_perfect_storm_L4.py"
+echo "  python fl_dermamnist/analysis/analyse_fedprox_perfect_storm_L4.py"
 echo ""
 if [ ${#FAILED[@]} -ne 0 ]; then
     echo "WARNING: ${#FAILED[@]} submissions failed:"

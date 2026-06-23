@@ -59,7 +59,7 @@ echo "majority-class collapse (final-round macro-F1 toward the FedAvg band"
 echo "~0.49), implicating round-to-round τ-jitter as the failure mode."
 echo ""
 echo "When complete:"
-echo "  PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/peek_system_het_progress.py \\"
+echo "  PYTHONPATH=. python fl_dermamnist/analysis/peek_system_het_progress.py \\"
 echo "      --dir fl_dermamnist/results/system_het_random_fednova_servmom"
 echo "Monitor with:  squeue -u \$USER"
 

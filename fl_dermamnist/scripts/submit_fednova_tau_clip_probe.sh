@@ -68,7 +68,7 @@ echo "collapse (final-round macro-F1 toward the FedAvg band ~0.49, 0 trivial"
 echo "endpoints), implicating the 1/τ-amplification (direction) mechanism."
 echo ""
 echo "When complete:"
-echo "  PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/peek_system_het_progress.py \\"
+echo "  PYTHONPATH=. python fl_dermamnist/analysis/peek_system_het_progress.py \\"
 echo "      --dir fl_dermamnist/results/system_het_random_fednova_tauclip"
 echo "Monitor with:  squeue -u \$USER"
 
