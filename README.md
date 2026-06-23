@@ -20,12 +20,12 @@ metric: **test macro-F1 at the best-validation checkpoint**.
 
 Orientation for a reader coming from the report:
 
-- **`mnist_dermnist/`** is the importable source package (`python -m mnist_dermnist.…`). The name is **historical** — the thesis uses **DermaMNIST** only (there is no MNIST experiment).
-- **`mnist_dermnist/results/`** holds the raw/generated experiment artifacts (one directory per experiment).
-- **`mnist_dermnist/results/thesis_ready/figures/`** holds the **canonical thesis-ready figure PDFs**.
+- **`fl_dermamnist/`** is the importable source package (`python -m fl_dermamnist.…`). The name is **historical** — the thesis uses **DermaMNIST** only (there is no MNIST experiment).
+- **`fl_dermamnist/results/`** holds the raw/generated experiment artifacts (one directory per experiment).
+- **`fl_dermamnist/results/thesis_ready/figures/`** holds the **canonical thesis-ready figure PDFs**.
 - **`OVERLEAF_FLAT_BUNDLE/`** is the **frozen submission bundle** (the `main.tex` compile target; its figures are flat copies of the canonical ones).
 
-Path shorthands used in the table below: launchers live in `mnist_dermnist/scripts/`; result directories in `mnist_dermnist/results/`; data-figure + analysis scripts in `mnist_dermnist/results/thesis_ready/scripts/` (**`SCRIPTS/`**); conceptual-diagram scripts in `docs/whole_paper_example_audit/figure_generation/` (**`CONCEPTUAL/`**).
+Path shorthands used in the table below: launchers live in `fl_dermamnist/scripts/`; result directories in `fl_dermamnist/results/`; data-figure + analysis scripts in `fl_dermamnist/results/thesis_ready/scripts/` (**`SCRIPTS/`**); conceptual-diagram scripts in `docs/whole_paper_example_audit/figure_generation/` (**`CONCEPTUAL/`**).
 
 | Thesis item | What it explains | Main result directory | Launcher / run script | Analysis script | Figure script | Output figure/table |
 |---|---|---|---|---|---|---|
@@ -58,15 +58,15 @@ Path shorthands used in the table below: launchers live in `mnist_dermnist/scrip
 
 | You want… | It lives in |
 |---|---|
-| **Training code** (the loops that train models) | `mnist_dermnist/experiments/run_*.py` (entrypoints) + `mnist_dermnist/fl/` (pure-PyTorch core) + `mnist_dermnist/fl_flower/` (Flower runtime) |
-| **Model / data / partition code** | `mnist_dermnist/models/`, `mnist_dermnist/data/` |
-| **Training launchers** (one job → one sweep) | `mnist_dermnist/scripts/submit_*.sh`, `slurm_template_*.sh` |
-| **Training outputs / artefacts** (the actual results) | `mnist_dermnist/results/<experiment_name>/` |
-| **Analysis → thesis tables & figures** | `mnist_dermnist/results/thesis_ready/scripts/` → `…/data/` + `…/figures/` |
+| **Training code** (the loops that train models) | `fl_dermamnist/experiments/run_*.py` (entrypoints) + `fl_dermamnist/fl/` (pure-PyTorch core) + `fl_dermamnist/fl_flower/` (Flower runtime) |
+| **Model / data / partition code** | `fl_dermamnist/models/`, `fl_dermamnist/data/` |
+| **Training launchers** (one job → one sweep) | `fl_dermamnist/scripts/submit_*.sh`, `slurm_template_*.sh` |
+| **Training outputs / artefacts** (the actual results) | `fl_dermamnist/results/<experiment_name>/` |
+| **Analysis → thesis tables & figures** | `fl_dermamnist/results/thesis_ready/scripts/` → `…/data/` + `…/figures/` |
 | **Dataset** | `dermamnist_64.npz` (root; git-ignored, ~100 MB, re-downloadable) |
-| **How to run anything locally** | `mnist_dermnist/scripts/commands.sh <step>` |
+| **How to run anything locally** | `fl_dermamnist/scripts/commands.sh <step>` |
 
-There is **one directory per experiment** under `mnist_dermnist/results/`. Each
+There is **one directory per experiment** under `fl_dermamnist/results/`. Each
 training run writes a fixed set of artefacts into its experiment directory (see
 §4). **There is no `config.yaml`** — every run's full configuration is embedded
 inside its `test_at_best_*.json`, and the filename encodes method/μ/epochs/seed.
@@ -81,17 +81,17 @@ python -m venv .venv && source .venv/bin/activate && pip install -r requirements
 # (place dermamnist_64.npz at repo root — see data/load.py)
 
 # sanity: FedProx(μ=0) ≡ FedAvg + proximal-term + provenance unit tests
-bash mnist_dermnist/scripts/commands.sh sanity
+bash fl_dermamnist/scripts/commands.sh sanity
 
 # one training run (engineered partition, seed 42, 20 local epochs, 150 rounds)
-bash mnist_dermnist/scripts/commands.sh flower-fedprox     # Flower runtime
-bash mnist_dermnist/scripts/commands.sh purepy-fedavg      # pure-PyTorch runtime
+bash fl_dermamnist/scripts/commands.sh flower-fedprox     # Flower runtime
+bash fl_dermamnist/scripts/commands.sh purepy-fedavg      # pure-PyTorch runtime
 
 # regenerate thesis tables + figures from existing results
-bash mnist_dermnist/scripts/commands.sh analyse
+bash fl_dermamnist/scripts/commands.sh analyse
 
 # show per-experiment completion status
-bash mnist_dermnist/scripts/commands.sh status
+bash fl_dermamnist/scripts/commands.sh status
 ```
 
 Full hyperparameter sweeps were run on HPC via the `submit_*.sh` launchers
@@ -102,7 +102,7 @@ Full hyperparameter sweeps were run on HPC via the `submit_*.sh` launchers
 ## 3. Training code — entrypoints and what each trains
 
 All entrypoints are run as modules from the repo root with `PYTHONPATH=.`
-(`python -m mnist_dermnist.experiments.<name>`), default output dir shown.
+(`python -m fl_dermamnist.experiments.<name>`), default output dir shown.
 
 | Entrypoint | Trains | Default `--out-dir` | Used by |
 |---|---|---|---|
@@ -126,7 +126,7 @@ proximal term — μ=0 ⇒ FedAvg), `fl/aggregation.py` (size-weighted averaging
 `data/load.py`, `data/partition.py`.
 
 > For deeper per-module detail and the spec-compliance cross-reference, see
-> **`mnist_dermnist/README.md`**.
+> **`fl_dermamnist/README.md`**.
 
 ---
 
@@ -148,8 +148,8 @@ Every federated training run writes these into its experiment directory, with
 
 ## 5. Experiment map — directory ⇄ launcher ⇄ entrypoint ⇄ role
 
-All result dirs are under `mnist_dermnist/results/`. Launchers are under
-`mnist_dermnist/scripts/`. **Role**: M=reported in main Results (Ch.5),
+All result dirs are under `fl_dermamnist/results/`. Launchers are under
+`fl_dermamnist/scripts/`. **Role**: M=reported in main Results (Ch.5),
 A=appendix/diagnostic, X=archived/not in thesis. Default hyperparameters
 (unless a launcher overrides): R=150, E=20, lr=0.01, bs=32, mom=0.9, μ=0.01,
 CE loss, seeds `{42,123,456,789,999,2024,31337,8675309,161803,271828}`
@@ -197,7 +197,7 @@ CE loss, seeds `{42,123,456,789,999,2024,31337,8675309,161803,271828}`
 | `arch_ablation_bn/` | `hpc_arch_ablation_bn.sh`, `runpod_arch_ablation_bn.sh` | run_one_flower | X — **archived, not in thesis** |
 
 > **Known doc wrinkles** (see `docs/repo_audit_submission_cleanup/09_…md`):
-> the older matrix in `mnist_dermnist/README.md` lists `mu_sweep/` and
+> the older matrix in `fl_dermamnist/README.md` lists `mu_sweep/` and
 > `system_het_random_asymmetric/`, which are **not present on disk** (superseded
 > / HPC-only). The launcher rescue/fix/twin variants (`resubmit_*`, `runpod_*`,
 > `*_rescue`, `*_fix`) are retained as run provenance.
@@ -213,7 +213,7 @@ dermamnist_64.npz
 experiments/run_*.py  ──(uses)──>  fl/ , fl_flower/ , models/
    │   (launched at scale by scripts/submit_*.sh)
    ▼
-mnist_dermnist/results/<experiment>/        ← raw training artefacts (§4)
+fl_dermamnist/results/<experiment>/        ← raw training artefacts (§4)
    │   results/thesis_ready/scripts/analyse_*.py , plot_*.py
    ▼
 results/thesis_ready/data/*.csv|json   +   results/thesis_ready/figures/F_*.pdf
@@ -240,7 +240,7 @@ cleanest_federated/
 │   ├── VERIFICATION_SHEET.txt     ← 76 numerical claims ⇄ source artefacts
 │   ├── RESULTS_SKELETON.txt , IMPLEMENTATION_PLAN.txt , runpod_log_*.txt
 │   └── repo_audit_submission_cleanup/   ← full submission audit (00–09)
-└── mnist_dermnist/
+└── fl_dermamnist/
     ├── README.md                  ← detailed package + spec-compliance doc
     ├── configs/  data/  models/  fl/  fl_flower/   ← training code
     ├── experiments/               ← training entrypoints (run_*.py)
@@ -254,7 +254,7 @@ cleanest_federated/
 
 ## 8. Organization & conventions
 
-- **One experiment ⇒ one directory** under `mnist_dermnist/results/`, named for
+- **One experiment ⇒ one directory** under `fl_dermamnist/results/`, named for
   the experiment (not the method); methods/seeds are distinguished by filename.
 - **Filenames are self-describing**: `<method>_mu<μ>_E<epochs>_s<seed>` (e.g.
   `fedprox_mu0.01_E20_s42`); `mu0.0` ⇒ FedAvg.
@@ -270,13 +270,13 @@ cleanest_federated/
   physical reorganization is wanted, it must update those references in lockstep.
 
 ## 9. Reproducing & verifying
-- Implementation guards: `bash mnist_dermnist/scripts/commands.sh sanity` (run before trusting any claim).
-- Pre-submission preflight: `bash mnist_dermnist/scripts/pre_submission_check.sh`.
+- Implementation guards: `bash fl_dermamnist/scripts/commands.sh sanity` (run before trusting any claim).
+- Pre-submission preflight: `bash fl_dermamnist/scripts/pre_submission_check.sh`.
 - Claim verification ledger: `docs/VERIFICATION_SHEET.txt`. Its two historical ⚠ flags (node-pinned-L4 sign; FedProx update-norm magnitude) were re-verified in the final audit and **both resolve in the report's favour** — the report's `+0.005` and `1.029` (−32%) match the source CSVs; the sheet entries were stale (see the appended final-audit resolution).
 - Full provenance / cleanup audit: `docs/repo_audit_submission_cleanup/`.
 
-> Note: `commands.sh` and `mnist_dermnist/README.md` reference a
-> `mnist_dermnist/results/PROVENANCE_AUDIT.md` that is **not present**; its role
+> Note: `commands.sh` and `fl_dermamnist/README.md` reference a
+> `fl_dermamnist/results/PROVENANCE_AUDIT.md` that is **not present**; its role
 > is currently served by `docs/VERIFICATION_SHEET.txt` and
 > `docs/repo_audit_submission_cleanup/02_RESULT_TRACEABILITY_MATRIX.csv`.
 
@@ -296,9 +296,9 @@ The bundle is flat and self-contained — `main.tex`, `references.bib`, and the 
 
 ```bash
 python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
-# place dermamnist_64.npz at the repo root (see mnist_dermnist/data/load.py)
-bash mnist_dermnist/scripts/commands.sh sanity     # implementation guards (μ=0≡FedAvg, etc.)
-bash mnist_dermnist/scripts/commands.sh analyse    # rebuild thesis tables + figures from saved results
+# place dermamnist_64.npz at the repo root (see fl_dermamnist/data/load.py)
+bash fl_dermamnist/scripts/commands.sh sanity     # implementation guards (μ=0≡FedAvg, etc.)
+bash fl_dermamnist/scripts/commands.sh analyse    # rebuild thesis tables + figures from saved results
 ```
 
 **Where things live:**
@@ -306,10 +306,10 @@ bash mnist_dermnist/scripts/commands.sh analyse    # rebuild thesis tables + fig
 | Artefact | Location |
 |---|---|
 | Final report (compile target) | `OVERLEAF_FLAT_BUNDLE/main.tex` |
-| Report figures (used by the PDF) | `OVERLEAF_FLAT_BUNDLE/F_*.pdf` — copies of `mnist_dermnist/results/thesis_ready/figures/` |
-| Figure/table generators | `mnist_dermnist/results/thesis_ready/scripts/` (`plot_*.py`, `analyse_*.py`) and `docs/whole_paper_example_audit/figure_generation/` (the three conceptual diagrams) |
-| Aggregated tables (CSV/JSON) | `mnist_dermnist/results/thesis_ready/data/` |
-| Raw per-run experiment outputs | `mnist_dermnist/results/<experiment>/` (schema in §4) |
+| Report figures (used by the PDF) | `OVERLEAF_FLAT_BUNDLE/F_*.pdf` — copies of `fl_dermamnist/results/thesis_ready/figures/` |
+| Figure/table generators | `fl_dermamnist/results/thesis_ready/scripts/` (`plot_*.py`, `analyse_*.py`) and `docs/whole_paper_example_audit/figure_generation/` (the three conceptual diagrams) |
+| Aggregated tables (CSV/JSON) | `fl_dermamnist/results/thesis_ready/data/` |
+| Raw per-run experiment outputs | `fl_dermamnist/results/<experiment>/` (schema in §4) |
 | Numerical claim ledger | `docs/VERIFICATION_SHEET.txt` |
 
 Saved per-run artefacts (`test_at_best_*.json`, `history_*.csv`, …) are provided so

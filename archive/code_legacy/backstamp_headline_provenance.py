@@ -1,7 +1,7 @@
 """One-shot back-stamper for the headline JSONs (audit fix I1).
 
 The 20 headline `test_at_best_*.json` files in
-`mnist_dermnist/results/headline/` were produced by the pure-PyTorch
+`fl_dermamnist/results/headline/` were produced by the pure-PyTorch
 reference loop BEFORE the `extra_metadata` provenance fields were added
 to `fl.server_loop.save_run_outputs`. The methods section of the thesis
 claims these files are "fully self-documenting", which is true for runs
@@ -30,7 +30,7 @@ from datetime import date
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-HEADLINE  = REPO_ROOT / "mnist_dermnist" / "results" / "headline"
+HEADLINE  = REPO_ROOT / "fl_dermamnist" / "results" / "headline"
 NPZ_PATH  = str(REPO_ROOT / "dermamnist_64.npz")
 
 STAMP = {
