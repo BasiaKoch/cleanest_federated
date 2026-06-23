@@ -360,10 +360,9 @@ reproducing the report's figures and tables.
 
 ## 11. AI / code-assistance statement
 
-AI coding assistants / large language models may have been used during development
-for tasks such as debugging, refactoring, plotting and figure-generation
-assistance, documentation, and code/text editing. All experiments, numerical
-results, their interpretation, and the scientific claims in the report are the
-author's own work and remain the author's responsibility. Any code developed with
-such assistance was reviewed by the author. This statement should be read alongside,
+**Claude Code** (Anthropic's CLI), using the **Claude Opus 4.8** model, was used during
+this project for coding, debugging, experiments, and repository organization. All
+experiments, numerical results, their interpretation, and the scientific claims in the
+report are the author's own work and remain the author's responsibility; AI-assisted
+code and outputs were reviewed by the author. This statement should be read alongside,
 and adjusted to comply with, the relevant course policy on AI use.
