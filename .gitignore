@@ -1,0 +1,46 @@
+# --- macOS metadata ---
+.DS_Store
+**/.DS_Store
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# --- Large data archives ---
+# DermaMNIST source data is downloaded separately, not versioned
+dermamnist*.npz
+*.npz.tmp
+
+# --- Job logs ---
+mnist_dermnist/logs/*.out
+mnist_dermnist/logs/*.err
+
+# --- Local editor scratch ---
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# --- Markdown notes (only README.md tracked) ---
+*.md
+!README.md
+!**/README.md
+
+# --- Agent-only files (not part of the thesis/codebase) ---
+# Claude Code / agent config + runtime (settings, locks). Negate a path below
+# if you later want to share e.g. .claude/settings.json with the team.
+.claude/
+# One-off analysis scratch scripts created by the agent (repo root only).
+/_gap_extract.py
+/_gap_extract2.py
+/_gap_amplif.py
+/_parse_lit.py
