@@ -8,9 +8,9 @@ destroy rare-class signal under statistical and system heterogeneity. Primary
 metric: **test macro-F1 at the best-validation checkpoint**.
 
 > **Where is the final report?** The submission report compiles from
-> **`OVERLEAF_FLAT_BUNDLE/`** (`main.tex`, pdfLaTeX + BibTeX) — a self-contained
+> **`report/submission_bundle/`** (`main.tex`, pdfLaTeX + BibTeX) — a self-contained
 > four-chapter report (Introduction, Methods, Results, Discussion/Conclusion, plus
-> an Appendix) with its 15 figures and `references.bib`. `FULL_THESIS.tex` (root)
+> an Appendix) with its 15 figures and `references.bib`. `report/drafts/FULL_THESIS.tex`
 > is the earlier full-source draft kept for history; `docs/repo_audit_submission_cleanup/`
 > holds the full submission audit. See §10 below for the assessor reproducibility path.
 
@@ -23,7 +23,7 @@ Orientation for a reader coming from the report:
 - **`fl_dermamnist/`** is the importable source package (`python -m fl_dermamnist.…`). The name is **historical** — the thesis uses **DermaMNIST** only (there is no MNIST experiment).
 - **`fl_dermamnist/results/`** holds the raw/generated experiment artifacts (one directory per experiment).
 - **`fl_dermamnist/results/thesis_ready/figures/`** holds the **canonical thesis-ready figure PDFs**.
-- **`OVERLEAF_FLAT_BUNDLE/`** is the **frozen submission bundle** (the `main.tex` compile target; its figures are flat copies of the canonical ones).
+- **`report/submission_bundle/`** is the **frozen submission bundle** (the `main.tex` compile target; its figures are flat copies of the canonical ones).
 
 Path shorthands used in the table below: launchers live in `fl_dermamnist/scripts/`; result directories in `fl_dermamnist/results/`; data-figure + analysis scripts in `fl_dermamnist/results/thesis_ready/scripts/` (**`SCRIPTS/`**); conceptual-diagram scripts in `docs/whole_paper_example_audit/figure_generation/` (**`CONCEPTUAL/`**).
 
@@ -47,7 +47,7 @@ Path shorthands used in the table below: launchers live in `fl_dermamnist/script
 | Fig 4.1 | regime map (synthesis) | — | — | — | `CONCEPTUAL/make_regime_map_summary.py` | `F_regime_map_summary.pdf`; Table `final-claims` |
 | Appendix | L4 confusion matrix | `li2020_asymmetric_L4` | — | `SCRIPTS/analyse_l4_confusion_matrices.py` | `SCRIPTS/analyse_l4_confusion_matrices.py` (same) | `F_l4_confusion_li2020.pdf` ⁴ |
 
-¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` is generated and used in the older `FULL_THESIS.tex` / `RESULTS_CHAPTER.tex` drafts, but is **not included in the final submission bundle** (`OVERLEAF_FLAT_BUNDLE/main.tex`).
+¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` is generated and used in the older `FULL_THESIS.tex` / `RESULTS_CHAPTER.tex` drafts, but is **not included in the final submission bundle** (`report/submission_bundle/main.tex`).
 ² `F_l4_four_condition_per_class_grid.pdf` exists in `…/thesis_ready/figures/` and the bundle, but **no current tracked script emits that exact filename** — verify its generator before regenerating. (`SCRIPTS/plot_validation_curves_l4_four_condition.py` emits the appendix single-panel `F_val_curves_l4_four_condition.pdf`, not this grid.)
 ³ `plot_heterogeneity_escalation.py` currently embeds its summary numbers as literals rather than reading them from a CSV.
 ⁴ `analyse_l4_confusion_matrices.py` writes `F_l4_confusion_li2020.pdf` (the four-condition mechanism); the submission bundle includes it **renamed to `F_l4_confusion_four_condition.pdf`**.
@@ -219,7 +219,7 @@ fl_dermamnist/results/<experiment>/        ← raw training artefacts (§4)
 results/thesis_ready/data/*.csv|json   +   results/thesis_ready/figures/F_*.pdf
    │   \input / \includegraphics
    ▼
-FULL_THESIS.tex  →  thesis PDF
+report/submission_bundle/main.tex  →  thesis PDF
 ```
 
 ---
@@ -228,26 +228,28 @@ FULL_THESIS.tex  →  thesis PDF
 
 ```
 cleanest_federated/
-├── README.md                      ← you are here (repo map + training-file guide)
-├── FULL_THESIS.tex                ← canonical thesis (Ch.5 complete; others scaffolded)
-├── RESULTS_CHAPTER.tex            ← standalone Results-only alternate (not canonical)
-├── condensed_results.tex          ← trimmed Results alternate (not canonical)
-├── METHODS_BUILD_GUIDE.md         ← Ch.4 drafting brief
-├── THESIS_BUILD_GUIDE.md          ← build + verification checklist
+├── README.md                      ← you are here (repo map + thesis→code navigation)
 ├── requirements.txt
-├── dermamnist_64.npz              ← dataset (git-ignored)
-├── docs/
-│   ├── VERIFICATION_SHEET.txt     ← 76 numerical claims ⇄ source artefacts
-│   ├── RESULTS_SKELETON.txt , IMPLEMENTATION_PLAN.txt , runpod_log_*.txt
-│   └── repo_audit_submission_cleanup/   ← full submission audit (00–09)
-└── fl_dermamnist/
-    ├── README.md                  ← detailed package + spec-compliance doc
-    ├── configs/  data/  models/  fl/  fl_flower/   ← training code
-    ├── experiments/               ← training entrypoints (run_*.py)
-    ├── scripts/                   ← launchers (submit_*.sh) + commands.sh + analyse_all.sh
-    ├── tests/                     ← μ=0≡FedAvg, proximal-term, provenance guards
-    ├── results/                   ← one dir per experiment (raw artefacts) + thesis_ready/
-    └── logs/                      ← SLURM job logs (.out/.err, git-ignored)
+├── pyproject.toml                 ← installable package (pip install -e .)
+├── dermamnist_64.npz              ← dataset (git-ignored, untracked, ~100 MB, re-downloadable)
+├── fl_dermamnist/                 ← the source package (Federated Learning on DermaMNIST)
+│   ├── README.md                  ← detailed package + spec-compliance doc
+│   ├── configs/  data/  models/  fl/  fl_flower/   ← training code
+│   ├── common/                    ← paths.py (repo/results/figure path resolver)
+│   ├── experiments/               ← training entrypoints (run_*.py)
+│   ├── scripts/                   ← launchers (submit_*.sh) + commands.sh + analyse_all.sh
+│   ├── tests/                     ← μ=0≡FedAvg, proximal-term, provenance guards
+│   └── results/                   ← one dir per experiment (raw artefacts)
+│       └── thesis_ready/          ← data/ + figures/ (canonical) + scripts/ (analysis/plot code*)
+├── report/                        ← all thesis text
+│   ├── submission_bundle/         ← the compiled report: main.tex + figures + references.bib
+│   ├── chapters/                  ← §5 section sources (5_*.tex) + bibliographies
+│   └── drafts/                    ← historical drafts (FULL_THESIS.tex, RESULTS_CHAPTER.tex, …)
+├── docs/                          ← verification sheet + audit notes
+└── archive/                       ← legacy code (code_legacy/) + old build guides (docs_legacy/)
+
+  *thesis_ready/scripts/ still holds the analysis/plot code; relocating it into
+   fl_dermamnist/analysis/ + fl_dermamnist/figures/ is the one remaining reorg step.
 ```
 
 ---
@@ -287,7 +289,7 @@ cleanest_federated/
 The figures and tables in the report reproduce **from saved results without
 rerunning training** (full sweeps need HPC; see the seed/HPC note below).
 
-**Compile the report.** Upload the contents of `OVERLEAF_FLAT_BUNDLE/` to Overleaf
+**Compile the report.** Upload the contents of `report/submission_bundle/` to Overleaf
 (or compile locally): main document `main.tex`, compiler **pdfLaTeX**, then BibTeX.
 The bundle is flat and self-contained — `main.tex`, `references.bib`, and the 15
 `F_*.pdf` figures.
@@ -305,8 +307,8 @@ bash fl_dermamnist/scripts/commands.sh analyse    # rebuild thesis tables + figu
 
 | Artefact | Location |
 |---|---|
-| Final report (compile target) | `OVERLEAF_FLAT_BUNDLE/main.tex` |
-| Report figures (used by the PDF) | `OVERLEAF_FLAT_BUNDLE/F_*.pdf` — copies of `fl_dermamnist/results/thesis_ready/figures/` |
+| Final report (compile target) | `report/submission_bundle/main.tex` |
+| Report figures (used by the PDF) | `report/submission_bundle/F_*.pdf` — copies of `fl_dermamnist/results/thesis_ready/figures/` |
 | Figure/table generators | `fl_dermamnist/results/thesis_ready/scripts/` (`plot_*.py`, `analyse_*.py`) and `docs/whole_paper_example_audit/figure_generation/` (the three conceptual diagrams) |
 | Aggregated tables (CSV/JSON) | `fl_dermamnist/results/thesis_ready/data/` |
 | Raw per-run experiment outputs | `fl_dermamnist/results/<experiment>/` (schema in §4) |
