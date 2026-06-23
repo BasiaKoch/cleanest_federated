@@ -19,9 +19,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-ROOT = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(ROOT))
+# Make the package importable when run directly, regardless of this file's
+# depth (walk up to the directory that contains the mnist_dermnist package).
+_HERE = Path(__file__).resolve()
+for _cand in _HERE.parents:
+    if (_cand / "mnist_dermnist" / "__init__.py").is_file():
+        if str(_cand) not in sys.path:
+            sys.path.insert(0, str(_cand))
+        break
 
+from mnist_dermnist.common.paths import repo_root, thesis_figures_dir
 from mnist_dermnist.data.partition import (
     two_client_90_10_rare_stress,
     two_client_86_14_quantity_only_stratified,
@@ -57,7 +64,7 @@ COLOURS = {
 # ----------------------------------------------------------------------
 # 1. Build allocation matrices from live partition
 # ----------------------------------------------------------------------
-ROOT_NPZ = ROOT / "dermamnist_64.npz"
+ROOT_NPZ = repo_root() / "dermamnist_64.npz"
 train, _, _ = load_dermmnist(str(ROOT_NPZ))
 trainy = np.asarray(train.labels)
 
@@ -140,7 +147,7 @@ fig.legend(handles, lbls, loc="center right",
            fontsize=8.5, frameon=True, framealpha=0.95,
            title="class\n($*$ = rare)", title_fontsize=8.5)
 
-OUT = ROOT / "mnist_dermnist" / "results" / "thesis_ready" / "figures"
+OUT = thesis_figures_dir()
 out_pdf = OUT / "F_l1_l4_partition_schematic.pdf"
 fig.savefig(out_pdf, bbox_inches="tight")
 print(f"wrote {out_pdf}")

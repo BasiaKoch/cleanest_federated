@@ -16,6 +16,44 @@ metric: **test macro-F1 at the best-validation checkpoint**.
 
 ---
 
+## Repository navigation: thesis section → code → results → figures
+
+Orientation for a reader coming from the report:
+
+- **`mnist_dermnist/`** is the importable source package (`python -m mnist_dermnist.…`). The name is **historical** — the thesis uses **DermaMNIST** only (there is no MNIST experiment).
+- **`mnist_dermnist/results/`** holds the raw/generated experiment artifacts (one directory per experiment).
+- **`mnist_dermnist/results/thesis_ready/figures/`** holds the **canonical thesis-ready figure PDFs**.
+- **`OVERLEAF_FLAT_BUNDLE/`** is the **frozen submission bundle** (the `main.tex` compile target; its figures are flat copies of the canonical ones).
+
+Path shorthands used in the table below: launchers live in `mnist_dermnist/scripts/`; result directories in `mnist_dermnist/results/`; data-figure + analysis scripts in `mnist_dermnist/results/thesis_ready/scripts/` (**`SCRIPTS/`**); conceptual-diagram scripts in `docs/whole_paper_example_audit/figure_generation/` (**`CONCEPTUAL/`**).
+
+| Thesis item | What it explains | Main result directory | Launcher / run script | Analysis script | Figure script | Output figure/table |
+|---|---|---|---|---|---|---|
+| Fig 2.1 | FL training loop (conceptual) | — | — | — | `CONCEPTUAL/make_fl_workflow.py` | `F_federated_learning_workflow.pdf` |
+| Fig 2.2 | DermaMNIST class imbalance | — | — | `data/load.py` | `SCRIPTS/plot_dataset_classes.py` | `F_dataset_classes.pdf` |
+| Fig 2.3 | engineered balanced-paired partition | `partitions/` | — | `data/partition.py` (`balanced_paired_7_clients`) | `SCRIPTS/plot_engineered_partition_heatmap.py` | `F_engineered_partition_heatmap.pdf` |
+| Fig 2.4 | L1/L4 mechanism partitions | `partitions/` | — | `data/partition.py` | `SCRIPTS/plot_l1_l4_partition_schematic.py` | `F_l1_l4_partition_schematic.pdf` |
+| Fig 2.5 | optimiser comparison (conceptual) | — | — | — | `CONCEPTUAL/make_optimizer_comparison.py` | `F_optimizer_comparison_triptych.pdf` |
+| Fig 2.6 | rare-client signal flow (conceptual) | — | — | — | `CONCEPTUAL/make_signal_flow_gamma_inexact.py` | `F_signal_flow_gamma_inexact.pdf` |
+| §3.1 / Fig 3.1 | statistical heterogeneity | `flower_C0_baseline` (primary), `headline`, `iid`, `dirichlet_a01`, `specialist_partition`, `node_pinned_L4` | `submit_flower_C0_baseline.sh` (+ `submit_headline.sh`, `submit_robustness.sh`, `submit_specialist_partition.sh`, `submit_node_pinned_L4.sh`) | `SCRIPTS/analyse_statistical_heterogeneity.py` | `SCRIPTS/plot_engineered_per_class.py` | `F_engineered_per_class.pdf`; Table `stat-het-headline` ¹ |
+| §3.2 / Fig 3.2 | μ (proximal) sensitivity | `mu_sensitivity_flower` | `submit_mu_sensitivity_clean.sh` | `SCRIPTS/analyse_mu_sensitivity.py` | `SCRIPTS/analyse_mu_sensitivity.py` (same; analyse+plot) | `F_mu_sensitivity_outcome_and_convergence.pdf`; Table `mu-sweep` |
+| §3.3 / Figs 3.3–3.4 | L4 four-condition decomposition | `li2020_asymmetric_L4`, `li2020_asymmetric_L1` (control) | `submit_li2020_asymmetric_L4.sh`, `submit_li2020_quantity_skew_L1.sh` | `SCRIPTS/analyse_li2020_asymmetric_L4.py` | Fig 3.3 `SCRIPTS/plot_validation_curves_extreme_gaps.py`; Fig 3.4 ² | `F_val_curves_extreme_gaps.pdf`; `F_l4_four_condition_per_class_grid.pdf`; Tables `li-decomp-l4`/`-l1` |
+| §3.3 (Fig 3.3 panel B) | perfect-storm L4 | `fedprox_perfect_storm_L4` | `submit_fedprox_perfect_storm_L4.sh` | `SCRIPTS/analyse_li2020_asymmetric_L4.py` | (panel of Fig 3.3) | in `F_val_curves_extreme_gaps.pdf` |
+| §3.4 / Fig 3.5 | LR-asymmetry envelope | `asymmetric_lr_L4` | `submit_asymmetric_lr_L4.sh` (+ `_fednova_only.sh`, `submit_fednova_lr_envelope_L4.sh`) | `SCRIPTS/analyse_asymmetric_lr_L4.py` | `SCRIPTS/analyse_asymmetric_lr_L4.py` (same; analyse+plot) | `F_asymmetric_lr_L4.pdf`; Table `lr-envelope` |
+| §3.4 / Fig 3.6 + table | FedNova random-τ stress | `system_het_random_fednova` | `submit_fednova_system_het.sh` | `SCRIPTS/analyse_system_heterogeneity.py` | `SCRIPTS/plot_heterogeneity_escalation.py` ³ | `F_heterogeneity_escalation.pdf`; Table `fednova-regime` |
+| §3.5 / Fig 3.7 | rare-class collapse (per-class) | pools `li2020_*`, `fedprox_*`, `asymmetric_lr_L4`, `node_pinned_L4`, `mu_sensitivity_flower` | — | (per-class analysers) | `SCRIPTS/plot_cross_experiment_per_class_heatmap.py` | `F_cross_experiment_per_class.pdf`; Table `collapse-cells` |
+| §3.5 / table | weighted-CE / focal loss | `fedprox_weighted_ce_L4` | `submit_fedprox_weighted_ce_L4.sh`, `submit_fedprox_focal_loss_L4.sh` | `SCRIPTS/analyse_fedprox_weighted_ce_L4.py` | — (table only) | Table `loss-side` |
+| §3.6 / Fig 3.8 | update-norm diagnostics | `flower_C0_baseline` (run with `--log-update-norms`) | (re-run of §3.1) | `SCRIPTS/analyse_d1_mechanism.py` | `SCRIPTS/plot_update_norms.py` | `F_update_norms.pdf` |
+| Fig 4.1 | regime map (synthesis) | — | — | — | `CONCEPTUAL/make_regime_map_summary.py` | `F_regime_map_summary.pdf`; Table `final-claims` |
+| Appendix | L4 confusion matrix | `li2020_asymmetric_L4` | — | `SCRIPTS/analyse_l4_confusion_matrices.py` | `SCRIPTS/analyse_l4_confusion_matrices.py` (same) | `F_l4_confusion_li2020.pdf` ⁴ |
+
+¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` is generated and used in the older `FULL_THESIS.tex` / `RESULTS_CHAPTER.tex` drafts, but is **not included in the final submission bundle** (`OVERLEAF_FLAT_BUNDLE/main.tex`).
+² `F_l4_four_condition_per_class_grid.pdf` exists in `…/thesis_ready/figures/` and the bundle, but **no current tracked script emits that exact filename** — verify its generator before regenerating. (`SCRIPTS/plot_validation_curves_l4_four_condition.py` emits the appendix single-panel `F_val_curves_l4_four_condition.pdf`, not this grid.)
+³ `plot_heterogeneity_escalation.py` currently embeds its summary numbers as literals rather than reading them from a CSV.
+⁴ `analyse_l4_confusion_matrices.py` writes `F_l4_confusion_li2020.pdf` (the four-condition mechanism); the submission bundle includes it **renamed to `F_l4_confusion_four_condition.pdf`**.
+
+---
+
 ## 1. Where are the training files?  (the short answer)
 
 | You want… | It lives in |

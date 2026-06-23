@@ -92,9 +92,21 @@ CLASS_PREVALENCE = [0.0327, 0.0513, 0.1097, 0.0115, 0.1111, 0.6705, 0.0141]
 
 # --- Path discovery (works from anywhere via __file__) ----------------------
 
-THIS = Path(__file__).resolve()
-REPO_ROOT = THIS.parents[4]   # …/mnist_dermnist/results/thesis_ready/scripts/THIS
-RESULTS = REPO_ROOT / "mnist_dermnist" / "results"
+import sys  # noqa: E402
+
+# Resolve paths through the shared module so this script survives being moved
+# to a different directory depth. Bootstrap: walk up to the package root so the
+# import works even when run as a bare ``python <path>`` invocation.
+_HERE = Path(__file__).resolve()
+for _cand in _HERE.parents:
+    if (_cand / "mnist_dermnist" / "__init__.py").is_file():
+        if str(_cand) not in sys.path:
+            sys.path.insert(0, str(_cand))
+        break
+
+from mnist_dermnist.common.paths import results_root  # noqa: E402
+
+RESULTS = results_root()
 OUT_TABLES = RESULTS / "thesis_ready" / "tables"
 OUT_DATA = RESULTS / "thesis_ready" / "data"
 OUT_TABLES.mkdir(parents=True, exist_ok=True)

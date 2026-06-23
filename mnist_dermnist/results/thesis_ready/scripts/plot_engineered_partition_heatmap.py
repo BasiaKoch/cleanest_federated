@@ -17,9 +17,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
-ROOT = Path(__file__).resolve().parents[4]   # repo root (cleanest_federated)
-sys.path.insert(0, str(ROOT))
+# Make the package importable when run directly, regardless of this file's
+# depth (walk up to the directory that contains the mnist_dermnist package).
+_HERE = Path(__file__).resolve()
+for _cand in _HERE.parents:
+    if (_cand / "mnist_dermnist" / "__init__.py").is_file():
+        if str(_cand) not in sys.path:
+            sys.path.insert(0, str(_cand))
+        break
 
+from mnist_dermnist.common.paths import repo_root, thesis_figures_dir
 from mnist_dermnist.data.partition import (
     BALANCED_PAIRED_7_CLIENTS_SPEC,
     balanced_paired_7_clients,
@@ -50,7 +57,7 @@ for entry in BALANCED_PAIRED_7_CLIENTS_SPEC:
 per_client_total = M.sum(axis=0)
 
 # Cross-check against the live partition
-ROOT_NPZ = ROOT / "dermamnist_64.npz"
+ROOT_NPZ = repo_root() / "dermamnist_64.npz"
 if ROOT_NPZ.exists():
     train, _, _ = load_dermmnist(str(ROOT_NPZ))
     clients_idx, _ = balanced_paired_7_clients(train.labels, seed=42)
@@ -129,7 +136,7 @@ ax.set_title(
     fontsize=10.5, pad=8,
 )
 
-OUT = ROOT / "mnist_dermnist" / "results" / "thesis_ready" / "figures"
+OUT = thesis_figures_dir()
 out_pdf = OUT / "F_engineered_partition_heatmap.pdf"
 fig.savefig(out_pdf, bbox_inches="tight")
 print(f"wrote {out_pdf}")
