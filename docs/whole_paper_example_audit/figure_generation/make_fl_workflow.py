@@ -62,13 +62,13 @@ fig, ax = plt.subplots(figsize=(7.3, 4.6))
 ax.set_xlim(0, 10); ax.set_ylim(0, 7); ax.axis("off"); ax.set_aspect("equal")
 
 # --- server (top, centred) ---------------------------------------------------
-SV_CX, SV_CY, SV_W, SV_H = 5.0, 5.38, 5.6, 1.18
+SV_CX, SV_CY, SV_W, SV_H = 5.0, 5.38, 6.4, 1.18
 SV_BOT, SV_TOP = SV_CY - SV_H / 2, SV_CY + SV_H / 2
 rbox(ax, SV_CX, SV_CY, SV_W, SV_H, SERVER_EC, SERVER_FC, lw=1.6)
 ax.text(SV_CX, SV_CY + 0.28, r"Server  $\cdot$  global model $w^{t}$", ha="center",
         va="center", fontsize=12.5, color=INK, fontweight="bold", zorder=4)
 ax.text(SV_CX, SV_CY - 0.25,
-        r"4. aggregate:   $w^{t+1} = \sum_i \frac{n_i}{N}\, w_i^{t+1}$",
+        r"4. aggregate (FedAvg):   $w^{t+1} = \sum_i \frac{n_i}{N}\, w_i^{t+1}$",
         ha="center", va="center", fontsize=11.5, color=INK, zorder=4)
 
 # repeat-loop arc bowing over the server
