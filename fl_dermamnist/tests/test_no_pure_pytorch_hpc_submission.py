@@ -30,7 +30,7 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPTS_DIR = REPO_ROOT / "fl_dermamnist" / "scripts"
+SCRIPTS_DIR = REPO_ROOT / "infra" / "slurm"  # HPC submitters + SLURM templates
 
 
 def _submit_scripts() -> list[Path]:

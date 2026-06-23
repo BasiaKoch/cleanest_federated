@@ -25,7 +25,7 @@ Orientation for a reader coming from the report:
 - **`fl_dermamnist/results/thesis_ready/figures/`** holds the **canonical thesis-ready figure PDFs**.
 - **`report/submission_bundle/`** is the **frozen submission bundle** (the `main.tex` compile target; its figures are flat copies of the canonical ones).
 
-Path shorthands used in the table below: launchers live in `fl_dermamnist/scripts/`; result directories in `fl_dermamnist/results/`; data-figure + analysis scripts in `fl_dermamnist/results/thesis_ready/scripts/` (**`SCRIPTS/`**); conceptual-diagram scripts in `docs/whole_paper_example_audit/figure_generation/` (**`CONCEPTUAL/`**).
+Path shorthands used in the table below: launchers live in `infra/slurm/`; result directories in `fl_dermamnist/results/`; data-figure + analysis scripts in `fl_dermamnist/results/thesis_ready/scripts/` (**`SCRIPTS/`**); conceptual-diagram scripts in `docs/whole_paper_example_audit/figure_generation/` (**`CONCEPTUAL/`**).
 
 | Thesis item | What it explains | Main result directory | Launcher / run script | Analysis script | Figure script | Output figure/table |
 |---|---|---|---|---|---|---|
@@ -60,11 +60,11 @@ Path shorthands used in the table below: launchers live in `fl_dermamnist/script
 |---|---|
 | **Training code** (the loops that train models) | `fl_dermamnist/experiments/run_*.py` (entrypoints) + `fl_dermamnist/fl/` (pure-PyTorch core) + `fl_dermamnist/fl_flower/` (Flower runtime) |
 | **Model / data / partition code** | `fl_dermamnist/models/`, `fl_dermamnist/data/` |
-| **Training launchers** (one job → one sweep) | `fl_dermamnist/scripts/submit_*.sh`, `slurm_template_*.sh` |
+| **Training launchers** (one job → one sweep) | `infra/slurm/submit_*.sh`, `slurm_template_*.sh` |
 | **Training outputs / artefacts** (the actual results) | `fl_dermamnist/results/<experiment_name>/` |
 | **Analysis → thesis tables & figures** | `fl_dermamnist/results/thesis_ready/scripts/` → `…/data/` + `…/figures/` |
 | **Dataset** | `dermamnist_64.npz` (root; git-ignored, ~100 MB, re-downloadable) |
-| **How to run anything locally** | `fl_dermamnist/scripts/commands.sh <step>` |
+| **How to run anything locally** | `infra/local/commands.sh <step>` |
 
 There is **one directory per experiment** under `fl_dermamnist/results/`. Each
 training run writes a fixed set of artefacts into its experiment directory (see
@@ -81,17 +81,17 @@ python -m venv .venv && source .venv/bin/activate && pip install -r requirements
 # (place dermamnist_64.npz at repo root — see data/load.py)
 
 # sanity: FedProx(μ=0) ≡ FedAvg + proximal-term + provenance unit tests
-bash fl_dermamnist/scripts/commands.sh sanity
+bash infra/local/commands.sh sanity
 
 # one training run (engineered partition, seed 42, 20 local epochs, 150 rounds)
-bash fl_dermamnist/scripts/commands.sh flower-fedprox     # Flower runtime
-bash fl_dermamnist/scripts/commands.sh purepy-fedavg      # pure-PyTorch runtime
+bash infra/local/commands.sh flower-fedprox     # Flower runtime
+bash infra/local/commands.sh purepy-fedavg      # pure-PyTorch runtime
 
 # regenerate thesis tables + figures from existing results
-bash fl_dermamnist/scripts/commands.sh analyse
+bash infra/local/commands.sh analyse
 
 # show per-experiment completion status
-bash fl_dermamnist/scripts/commands.sh status
+bash infra/local/commands.sh status
 ```
 
 Full hyperparameter sweeps were run on HPC via the `submit_*.sh` launchers
@@ -149,7 +149,7 @@ Every federated training run writes these into its experiment directory, with
 ## 5. Experiment map — directory ⇄ launcher ⇄ entrypoint ⇄ role
 
 All result dirs are under `fl_dermamnist/results/`. Launchers are under
-`fl_dermamnist/scripts/`. **Role**: M=reported in main Results (Ch.5),
+`infra/slurm/`. **Role**: M=reported in main Results (Ch.5),
 A=appendix/diagnostic, X=archived/not in thesis. Default hyperparameters
 (unless a launcher overrides): R=150, E=20, lr=0.01, bs=32, mom=0.9, μ=0.01,
 CE loss, seeds `{42,123,456,789,999,2024,31337,8675309,161803,271828}`
@@ -272,8 +272,8 @@ cleanest_federated/
   physical reorganization is wanted, it must update those references in lockstep.
 
 ## 9. Reproducing & verifying
-- Implementation guards: `bash fl_dermamnist/scripts/commands.sh sanity` (run before trusting any claim).
-- Pre-submission preflight: `bash fl_dermamnist/scripts/pre_submission_check.sh`.
+- Implementation guards: `bash infra/local/commands.sh sanity` (run before trusting any claim).
+- Pre-submission preflight: `bash infra/local/pre_submission_check.sh`.
 - Claim verification ledger: `docs/VERIFICATION_SHEET.txt`. Its two historical ⚠ flags (node-pinned-L4 sign; FedProx update-norm magnitude) were re-verified in the final audit and **both resolve in the report's favour** — the report's `+0.005` and `1.029` (−32%) match the source CSVs; the sheet entries were stale (see the appended final-audit resolution).
 - Full provenance / cleanup audit: `docs/repo_audit_submission_cleanup/`.
 
@@ -299,8 +299,8 @@ The bundle is flat and self-contained — `main.tex`, `references.bib`, and the 
 ```bash
 python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 # place dermamnist_64.npz at the repo root (see fl_dermamnist/data/load.py)
-bash fl_dermamnist/scripts/commands.sh sanity     # implementation guards (μ=0≡FedAvg, etc.)
-bash fl_dermamnist/scripts/commands.sh analyse    # rebuild thesis tables + figures from saved results
+bash infra/local/commands.sh sanity     # implementation guards (μ=0≡FedAvg, etc.)
+bash infra/local/commands.sh analyse    # rebuild thesis tables + figures from saved results
 ```
 
 **Where things live:**
