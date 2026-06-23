@@ -68,7 +68,7 @@ Path shorthands used in the table below: launchers live in `infra/slurm/`; resul
 | §3.3 / Figs 3.3–3.4 | L4 four-condition decomposition | `li2020_asymmetric_L4`, `li2020_asymmetric_L1` (control) | `submit_li2020_asymmetric_L4.sh`, `submit_li2020_quantity_skew_L1.sh` | `ANALYSIS/analyse_li2020_asymmetric_L4.py` | Fig 3.3 `FIGURES/plot_validation_curves_extreme_gaps.py`; Fig 3.4 ² | `F_val_curves_extreme_gaps.pdf`; `F_l4_four_condition_per_class_grid.pdf`; Tables `li-decomp-l4`/`-l1` |
 | §3.3 (Fig 3.3 panel B) | perfect-storm L4 | `fedprox_perfect_storm_L4` | `submit_fedprox_perfect_storm_L4.sh` | `ANALYSIS/analyse_li2020_asymmetric_L4.py` | (panel of Fig 3.3) | in `F_val_curves_extreme_gaps.pdf` |
 | §3.4 / Fig 3.5 | LR-asymmetry envelope | `asymmetric_lr_L4` | `submit_asymmetric_lr_L4.sh` (+ `_fednova_only.sh`, `submit_fednova_lr_envelope_L4.sh`) | `ANALYSIS/analyse_asymmetric_lr_L4.py` | `ANALYSIS/analyse_asymmetric_lr_L4.py` (same; analyse+plot) | `F_asymmetric_lr_L4.pdf`; Table `lr-envelope` |
-| §3.4 / Fig 3.6 + table | FedNova random-τ stress | `system_het_random_fednova` | `submit_fednova_system_het.sh` | `ANALYSIS/analyse_system_heterogeneity.py` | `FIGURES/plot_heterogeneity_escalation.py` ³ | `F_heterogeneity_escalation.pdf`; Table `fednova-regime` |
+| §3.4 / table | FedNova random-τ stress | `system_het_random_fednova` | `submit_fednova_system_het.sh` | `ANALYSIS/analyse_system_heterogeneity.py` | — | Table `fednova-regime` |
 | §3.5 / Fig 3.7 | rare-class collapse (per-class) | pools `li2020_*`, `fedprox_*`, `asymmetric_lr_L4`, `node_pinned_L4`, `mu_sensitivity_flower` | — | (per-class analysers) | `FIGURES/plot_cross_experiment_per_class_heatmap.py` | `F_cross_experiment_per_class.pdf`; Table `collapse-cells` |
 | §3.5 / table | weighted-CE / focal loss | `fedprox_weighted_ce_L4` | `submit_fedprox_weighted_ce_L4.sh`, `submit_fedprox_focal_loss_L4.sh` | `ANALYSIS/analyse_fedprox_weighted_ce_L4.py` | — (table only) | Table `loss-side` |
 | §3.6 / Fig 3.8 | update-norm diagnostics | `flower_C0_baseline` (run with `--log-update-norms`) | (re-run of §3.1) | `ANALYSIS/analyse_d1_mechanism.py` | `FIGURES/plot_update_norms.py` | `F_update_norms.pdf` |
@@ -77,7 +77,6 @@ Path shorthands used in the table below: launchers live in `infra/slurm/`; resul
 
 ¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` is generated and used in the older `FULL_THESIS.tex` / `RESULTS_CHAPTER.tex` drafts, but is **not included in the final submission bundle** (`report/submission_bundle/main.tex`).
 ² `F_l4_four_condition_per_class_grid.pdf` exists in `…/thesis_ready/figures/` and the bundle, but **no current tracked script emits that exact filename** — verify its generator before regenerating. (`FIGURES/plot_validation_curves_l4_four_condition.py` emits the appendix single-panel `F_val_curves_l4_four_condition.pdf`, not this grid.)
-³ `plot_heterogeneity_escalation.py` currently embeds its summary numbers as literals rather than reading them from a CSV.
 ⁴ `analyse_l4_confusion_matrices.py` writes `F_l4_confusion_li2020.pdf` (the four-condition mechanism); the submission bundle includes it **renamed to `F_l4_confusion_four_condition.pdf`**.
 
 ---

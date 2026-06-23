@@ -1202,27 +1202,13 @@ Random-$\tau$ stragglers & macro-F1 $= 0.237 \pm 0.089$; 10/10 final-round major
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:heterogeneity-escalation} places the large FedAvg--FedProx
-gaps from the previous section on one axis. The progression from IID to
+The progression from IID to
 symmetric L4 to Li-style straggler asymmetry and then to perfect-storm shows
 that optimiser gaps become large only in specific stress regimes. Together
 with the FedNova result above, this reinforces the chapter's central point:
 the optimiser ranking depends on the heterogeneity regime, not on the
 optimiser name alone.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{F_heterogeneity_escalation.pdf}
-\caption{Heterogeneity-escalation synthesis. Within-pair
-$\Delta(\textrm{FedProx} - \textrm{FedAvg})$ macro-F1 across five regime
-cells of increasing severity: IID Flower negative control ($-0.007$),
-symmetric L4 multi-seed node-pinned ($+0.005$), Li-style four-condition
-contrast (FA+drop vs FP+$\gamma$-inex, $+0.115$), perfect-storm
-$\mu = 1.0$ ($+0.278$), perfect-storm $\mu = 0.01$ ($+0.404$). The first
-two cells sit inside seed noise; the last three are large,
-mechanism-isolable, and regime-driven.}
-\label{fig:heterogeneity-escalation}
-\end{figure}
 
 The weak protocols fail in a clinically specific way: they lose rare-class
 sensitivity. The next section shows that this failure usually appears as
