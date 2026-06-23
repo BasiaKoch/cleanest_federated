@@ -65,10 +65,10 @@ ax.set_xlim(0, 10); ax.set_ylim(0, 7); ax.axis("off"); ax.set_aspect("equal")
 SV_CX, SV_CY, SV_W, SV_H = 5.0, 5.38, 5.6, 1.18
 SV_BOT, SV_TOP = SV_CY - SV_H / 2, SV_CY + SV_H / 2
 rbox(ax, SV_CX, SV_CY, SV_W, SV_H, SERVER_EC, SERVER_FC, lw=1.6)
-ax.text(SV_CX, SV_CY + 0.28, r"Server  $\cdot$  global model $w_t$", ha="center",
+ax.text(SV_CX, SV_CY + 0.28, r"Server  $\cdot$  global model $w^{t}$", ha="center",
         va="center", fontsize=12.5, color=INK, fontweight="bold", zorder=4)
 ax.text(SV_CX, SV_CY - 0.25,
-        r"4. aggregate:   $w_{t+1} = w_t + \sum_i \frac{n_i}{N}\,\Delta_i$",
+        r"4. aggregate:   $w^{t+1} = \sum_i \frac{n_i}{N}\, w_i^{t+1}$",
         ha="center", va="center", fontsize=11.5, color=INK, zorder=4)
 
 # repeat-loop arc bowing over the server
@@ -105,16 +105,16 @@ for x in CX:
     arrow(ax, (x + OFF, CL_TOP), (a + OFF, SV_BOT), ACCENT, lw=1.4, z=3)   # update
 
 # --- minimal step labels (white-masked so they read over the arrows) ---------
-ax.text(2.45, 3.55, r"1. broadcast $w_t$", ha="center", va="center",
+ax.text(2.45, 3.55, r"1. broadcast $w^{t}$", ha="center", va="center",
         fontsize=10.8, color=MUTE, bbox=WBOX, zorder=7)
-ax.text(7.62, 3.55, r"3. return $\Delta_i$", ha="center", va="center",
+ax.text(7.62, 3.55, r"3. return $d_i$", ha="center", va="center",
         fontsize=10.8, color=ACCENT, fontweight="bold", bbox=WBOX, zorder=7)
 ax.text(5.0, 3.04, r"2. local training ($E$ epochs)", ha="center", va="center",
         fontsize=10.5, color=MUTE, style="italic", bbox=WBOX, zorder=7)
 
 # --- central takeaway --------------------------------------------------------
 ax.text(5.0, 0.30,
-        r"Only model updates ($\Delta_i$) are shared — raw data $D_i$ never leaves the client.",
+        r"Only model updates ($d_i$) are shared — raw data $D_i$ never leaves the client.",
         ha="center", va="center", fontsize=10.8, color=ACCENT, fontweight="bold",
         zorder=7)
 
