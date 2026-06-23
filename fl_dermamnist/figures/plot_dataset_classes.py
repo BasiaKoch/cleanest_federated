@@ -65,8 +65,8 @@ def main():
     rng = np.random.default_rng(SAMPLE_SEED)
     chosen = [rng.choice(np.where(labels == c)[0]) for c in range(7)]
 
-    fig = plt.figure(figsize=(12.0, 5.8))
-    gs = fig.add_gridspec(2, 7, height_ratios=[2.0, 2.7], hspace=1.05, wspace=0.14)
+    fig = plt.figure(figsize=(12.0, 4.9))
+    gs = fig.add_gridspec(2, 7, height_ratios=[2.0, 2.6], hspace=0.52, wspace=0.14)
 
     # --- top: one representative image per class, framed by its group --------
     for c in range(7):
@@ -107,16 +107,9 @@ def main():
     handles = [mpatches.Patch(fc=AMBER, ec="#333333", lw=0.5, label="rare-class group: df, mel, vasc"),
                mpatches.Patch(fc=SLATE, ec="#333333", lw=0.5, label="majority class: nv"),
                mpatches.Patch(fc=GREY, ec="#333333", lw=0.5, label="other classes")]
-    axb.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.012, 0.74),
+    axb.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.012, 0.97),
                frameon=False, fontsize=8.6, handlelength=1.1, labelspacing=0.45,
                borderpad=0.2)
-
-    # unobtrusive macro-F1 motivation
-    axb.text(0.012, 0.985,
-             "Predicting only “nv” already scores 66.9% accuracy —\n"
-             "so the thesis reports macro-F1, not accuracy.",
-             transform=axb.transAxes, ha="left", va="top", fontsize=8.4,
-             color=NOTE, style="italic", linespacing=1.3)
 
     for ext in ("pdf", "png"):
         out = OUT_FIG / f"F_dataset_classes.{ext}"
