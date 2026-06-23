@@ -91,11 +91,11 @@ JS_l4 = js_divergence(M_l4[0], M_l4[1])
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10,
                      "pdf.fonttype": 42})
 
-fig, (axA, axB) = plt.subplots(1, 2, figsize=(9.8, 6.1))
-fig.subplots_adjust(left=0.075, right=0.985, top=0.80, bottom=0.30, wspace=0.20)
+fig, (axA, axB) = plt.subplots(1, 2, figsize=(9.6, 5.4))
+fig.subplots_adjust(left=0.075, right=0.985, top=0.85, bottom=0.17, wspace=0.20)
 
 
-def draw_panel(ax, M, main, sub, js, js_note, mark_rare_client=False):
+def draw_panel(ax, M, title, mark_rare_client=False):
     totals = M.sum(axis=1)
     pct = totals / totals.sum() * 100.0
     P = M / totals[:, None]
@@ -132,41 +132,23 @@ def draw_panel(ax, M, main, sub, js, js_note, mark_rare_client=False):
     ax.spines["right"].set_visible(False)
     ax.margins(x=0.18)
 
-    # panel title + emphasis subtitle
-    ax.text(0.5, 1.135, main, transform=ax.transAxes, ha="center", va="bottom",
+    # concise panel title with the JS contrast folded in
+    ax.text(0.5, 1.04, title, transform=ax.transAxes, ha="center", va="bottom",
             fontsize=11.5, fontweight="bold", color=INK)
-    ax.text(0.5, 1.045, sub, transform=ax.transAxes, ha="center", va="bottom",
-            fontsize=9.3, style="italic", color=MUTE)
-
-    # prominent JS divergence (the quantitative L1/L4 contrast)
-    ax.text(0.5, -0.27, f"JS divergence  {js}", transform=ax.transAxes,
-            ha="center", va="top", fontsize=10.5, fontweight="bold", color=INK)
-    ax.text(0.5, -0.355, js_note, transform=ax.transAxes, ha="center", va="top",
-            fontsize=8.4, style="italic", color=MUTE)
 
 
-draw_panel(axA, M_l1, "L1 — quantity skew only",
-           "near-global class mix on both clients", "≈ 0",
-           "class mixtures near-identical → pure size skew")
-draw_panel(axB, M_l4, "L4 — class-disjoint partition",
-           "rare-class signal isolated on Client 1", "= 1",
-           "class supports disjoint → label skew added", mark_rare_client=True)
+draw_panel(axA, M_l1, "L1 — quantity skew only   (JS ≈ 0)")
+draw_panel(axB, M_l4, "L4 — class-disjoint   (JS = 1)", mark_rare_client=True)
 
-# headline banner: the controlled variable shared by both panels
-fig.text(0.5, 0.945,
-         "Same 86 % / 14 % client-size skew in both panels — only the class structure differs",
-         ha="center", va="center", fontsize=12, fontweight="bold", color=INK)
+fig.text(0.5, 0.95, "Two-client mechanism partitions", ha="center", va="center",
+         fontsize=12.5, fontweight="bold", color=INK)
 
 # grouped legend at the bottom, ordered common → rare → majority
 order = [0, 1, 2, 3, 4, 6, 5]
 handles, labels = axA.get_legend_handles_labels()
-handles = [handles[i] for i in order]
-labels = [labels[i] for i in order]
-fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.055),
-           ncol=7, fontsize=9, frameon=False, columnspacing=1.4, handlelength=1.1)
-fig.text(0.5, 0.012,
-         "grey = common classes      amber = rare-class set {df, mel, vasc}      slate = majority (mel-nevi)",
-         ha="center", va="bottom", fontsize=8.6, color=MUTE)
+fig.legend([handles[i] for i in order], [labels[i] for i in order],
+           loc="lower center", bbox_to_anchor=(0.5, 0.02), ncol=7, fontsize=9.5,
+           frameon=False, columnspacing=1.5, handlelength=1.2)
 
 OUT = thesis_figures_dir()
 out_pdf = OUT / "F_l1_l4_partition_schematic.pdf"

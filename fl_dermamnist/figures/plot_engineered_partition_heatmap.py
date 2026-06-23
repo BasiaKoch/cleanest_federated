@@ -125,14 +125,6 @@ for r in RARE_ROWS:
     ax.add_patch(plt.Rectangle((-0.5, r - 0.5), NUM_CLIENTS, 1, fill=False,
                                edgecolor=AMBER, linewidth=1.7, zorder=6))
 
-# concise structural annotation in the empty upper-right block
-note = ("Each minority class → exactly two clients\n"
-        "    df: C2·C3      mel & vasc: C4·C5\n"
-        "mel-nevi (majority) → shared by all seven")
-ax.text(6.43, -0.40, note, ha="right", va="top", fontsize=8.3, color=INK,
-        linespacing=1.5, zorder=7,
-        bbox=dict(boxstyle="round,pad=0.55", fc="white", ec=AMBER, lw=0.9, alpha=0.96))
-
 # colorbar with plain, meaningful ticks
 cbar = fig.colorbar(im, cax=cax)
 ticks = [t for t in (40, 100, 200, 400, 670) if vmin <= t <= vmax]
