@@ -174,61 +174,54 @@ Every federated training run writes these into its experiment directory, with
 
 ---
 
-## 5. Experiment map — directory ⇄ launcher ⇄ entrypoint ⇄ role
+## 5. Experiment directories — index
 
-All result dirs are under `fl_dermamnist/results/`. Launchers are under
-`infra/slurm/`. **Role**: M=reported in main Results (Ch.5),
-A=appendix/diagnostic, X=archived/not in thesis. Default hyperparameters
-(unless a launcher overrides): R=150, E=20, lr=0.01, bs=32, mom=0.9, μ=0.01,
-CE loss, seeds `{42,123,456,789,999,2024,31337,8675309,161803,271828}`
-(mechanism/L4 use the first 3).
+Every experiment writes to one directory under `fl_dermamnist/results/`. The
+navigation table above links the main ones to their launchers, scripts, and
+figures; this is just the **full index** of result directories and whether each
+appears in the report. Run defaults (unless a launcher overrides): 150 rounds,
+20 local epochs, lr 0.01, μ 0.01, CE loss; 10 paired seeds for headline
+comparisons, 3 for mechanism probes.
 
-### Statistical heterogeneity (§5.2)
-| Directory | Launcher | Entrypoint | Role |
-|---|---|---|---|
-| `headline/` | `submit_headline.sh` | run_one (pure-PyTorch) | M — engineered headline |
-| `flower_C0_baseline/` | `submit_flower_C0_baseline.sh` | run_one_flower | M — **primary** engineered headline |
-| `iid/`, `flower_C0_iid_baseline/` | `submit_robustness.sh`, `submit_flower_C0_iid_baseline.sh` | run_one / run_one_flower | M — IID negative control |
-| `dirichlet_a01/` | `submit_robustness.sh`, `runpod_addendum_provenance.sh` | run_one | M — Dirichlet α=0.1 robustness |
-| `specialist_partition/` | `submit_specialist_partition.sh` | run_one_flower | M — specialist 1-of-7 robustness |
-| `node_pinned_L4/` | `submit_node_pinned_L4.sh` | run_one_flower | M — variance control |
-| `centralised/` | `slurm_centralised.sh` | run_centralised | M — performance ceiling |
+**In the report (Results §3)**
 
-### μ sensitivity (§5.3)
-| `mu_sensitivity_flower/` | `submit_mu_sensitivity_clean.sh` | run_one_flower | M — inverted-U, μ∈{0,0.001,0.01,0.1,1.0} |
-| `mu_sweep_ladder/` | `submit_mu_sweep_ladder.sh` | run_one_flower | A — μ × ladder rung |
+| Directory | § | What it is |
+|---|---|---|
+| `flower_C0_baseline` | 3.1 | engineered 7-client headline — the primary FedAvg-vs-FedProx comparison |
+| `headline` | 3.1 | pure-PyTorch headline (source of the 10 paired-seed numbers) |
+| `iid`, `flower_C0_iid_baseline` | 3.1 | IID negative control |
+| `dirichlet_a01` | 3.1 | Dirichlet α=0.1 robustness |
+| `specialist_partition` | 3.1 | specialist 1-of-7 robustness |
+| `node_pinned_L4` | 3.1 | variance control |
+| `centralised` | 3.1 | non-federated performance ceiling |
+| `mu_sensitivity_flower` | 3.2 | μ inverted-U sweep |
+| `li2020_asymmetric_L4` | 3.3 | four-condition straggler decomposition (centrepiece) |
+| `li2020_asymmetric_L1` | 3.3 | L1 quantity-only control |
+| `fedprox_perfect_storm_L4` | 3.3 | extreme-stress demonstration |
+| `asymmetric_lr_L4` | 3.4 | learning-rate asymmetry, 1:1 → 50:1 |
+| `system_het_random_fednova` | 3.4 | FedNova random-τ collapse |
+| `system_het_{fixed,random,iid_fixed,iid_random}` | 3.4/3.6 | statistical × system-heterogeneity interaction |
+| `fedprox_weighted_ce_L4` | 3.5 | CE / weighted-CE / focal-loss comparison |
 
-### Li-style straggler decomposition (§5.4, centrepiece)
-| `li2020_asymmetric_L4/` | `submit_li2020_asymmetric_L4.sh` | run_one_flower | M — 4-condition decomposition |
-| `li2020_asymmetric_L1/` | `submit_li2020_quantity_skew_L1.sh` | run_one_flower | M — L1 negative control |
-| `fedprox_perfect_storm_L4/` | `submit_fedprox_perfect_storm_L4.sh` | run_one_flower | M — stress demo (μ=1.0, bs=10, straggler 0.9) |
-| `two_client_90_10_rare_stress/` | `submit_two_client_90_10_rare_stress.sh` | run_one_flower | A — L4 deep dive (+`.pt`) |
+**Appendix / diagnostics**
 
-### LR asymmetry & FedNova regime-dependence (§5.5)
-| `asymmetric_lr_L4/` | `submit_asymmetric_lr_L4.sh` + `…_fednova_only.sh` + `submit_fednova_lr_envelope_L4.sh` | run_one_flower / run_one_fednova_flower | M — ratios 1:1…50:1 |
-| `system_het_random_fednova/` | `submit_fednova_system_het.sh`, `hpc_addendum_fednova_c2.sh` | run_one_fednova_flower | M — random-τ collapse |
-| `system_het_random_fednova_{baseline,mom0,serverlr03,servmom,tauclip320}/` | `submit_fednova_mechanism_fork_pilot.sh`, `submit_fednova_stage3_expand.sh` | run_one_fednova_flower | A — collapse-mechanism probes (**WIP**) |
+| Directory | What it is |
+|---|---|
+| `mu_sweep_ladder`, `heterogeneity_ladder` | μ × ladder and L0→L4 ladder pilots |
+| `two_client_90_10_rare_stress` | L4 deep-dive |
+| `system_het_partial_C0.5` | partial participation (C = 0.5) |
+| `asymmetric_mu_L4` | per-client μ |
+| `fednova_unequal_E`, `e_sweep`, `e_sweep_dirichlet_a01` | local-epoch sweeps |
+| `extended_rounds_L3` | longer-run convergence check |
+| `small_hospital_local_only`, `small_hospital_finetune` | clinical small-site case study |
 
-### Rare-class collapse & loss-side correction (§5.6)
-| `fedprox_weighted_ce_L4/` | `submit_fedprox_weighted_ce_L4.sh` + `submit_fedprox_focal_loss_L4.sh` | run_one_flower | M — CE / weighted-CE / focal |
+**Not in the report**
 
-### System heterogeneity & mechanism (§5.4/5.7, App C–E)
-| `system_het_{fixed,random,iid_fixed,iid_random}/` | `submit_system_het.sh`, `submit_system_het_iid.sh` | run_one_flower | M — stat × system interaction |
-| `system_het_partial_C0.5/` | `submit_partial_participation.sh` | run_one_flower | A — C=0.5 partial participation |
-| `asymmetric_mu_L4/` | `submit_asymmetric_mu_L4.sh` | run_one_flower | A — per-client μ (Yao test) |
-| `fednova_unequal_E/` | `submit_fednova_unequal_E.sh` | run_one_fednova_flower | A — unequal-E |
-| `extended_rounds_L3/` | `submit_extended_rounds_L3.sh` | run_one_flower | A — R=250 convergence check |
-| `heterogeneity_ladder/` | `submit_ladder_pilot.sh` | run_one_flower | A — L0→L4 pilot (+`.pt`) |
-| `e_sweep/`, `e_sweep_dirichlet_a01/` | `submit_e_sweep.sh`, `submit_e_sweep_dirichlet_a01.sh` | run_one_flower | A — local-epoch sweep |
-| `small_hospital_local_only/`, `small_hospital_finetune/` | `submit_small_hospital_baselines.sh` | run_local_only, run_finetune | A — clinical case study (App D) |
-| `partitions/` | (generated by `data/partition.py`) | — | partition definitions |
-| `arch_ablation_bn/` | `hpc_arch_ablation_bn.sh`, `runpod_arch_ablation_bn.sh` | run_one_flower | X — **archived, not in thesis** |
-
-> **Known doc wrinkles** (see `docs/repo_audit_submission_cleanup/09_…md`):
-> the older matrix in `fl_dermamnist/README.md` lists `mu_sweep/` and
-> `system_het_random_asymmetric/`, which are **not present on disk** (superseded
-> / HPC-only). The launcher rescue/fix/twin variants (`resubmit_*`, `runpod_*`,
-> `*_rescue`, `*_fix`) are retained as run provenance.
+| Directory | What it is |
+|---|---|
+| `system_het_random_fednova_{baseline,mom0,serverlr03,servmom,tauclip320}` | FedNova collapse-mechanism probes (work in progress) |
+| `arch_ablation_bn` | BatchNorm ablation (archived) |
+| `partitions` | partition definitions, generated by `data/partition.py` |
 
 ---
 
