@@ -72,7 +72,7 @@ Path shorthands used in the table below: launchers live in `infra/slurm/`; resul
 | §3.5 / Fig 3.7 | rare-class collapse (per-class) | pools `li2020_*`, `fedprox_*`, `asymmetric_lr_L4`, `node_pinned_L4`, `mu_sensitivity_flower` | — | (per-class analysers) | `FIGURES/plot_cross_experiment_per_class_heatmap.py` | `F_cross_experiment_per_class.pdf`; Table `collapse-cells` |
 | §3.5 / table | weighted-CE / focal loss | `fedprox_weighted_ce_L4` | `submit_fedprox_weighted_ce_L4.sh`, `submit_fedprox_focal_loss_L4.sh` | `ANALYSIS/analyse_fedprox_weighted_ce_L4.py` | — (table only) | Table `loss-side` |
 | §3.6 / Fig 3.8 | update-norm diagnostics | `flower_C0_baseline` (run with `--log-update-norms`) | (re-run of §3.1) | `ANALYSIS/analyse_d1_mechanism.py` | `FIGURES/plot_update_norms.py` | `F_update_norms.pdf` |
-| Fig 4.1 | regime map (synthesis) | — | — | — | `CONCEPTUAL/make_regime_map_summary.py` | `F_regime_map_summary.pdf`; Table `final-claims` |
+| §4.1 / table | regime synthesis (Discussion) | — | — | — | — | Table `final-claims` (regime-map figure removed from the thesis; now used only by the standalone `docs/final_submission_summary/`) |
 | Appendix | L4 confusion matrix | `li2020_asymmetric_L4` | — | `ANALYSIS/analyse_l4_confusion_matrices.py` | `ANALYSIS/analyse_l4_confusion_matrices.py` (same) | `F_l4_confusion_li2020.pdf` ⁴ |
 
 ¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` is generated and used in the older `FULL_THESIS.tex` / `RESULTS_CHAPTER.tex` drafts, but is **not included in the final submission bundle** (`report/submission_bundle/main.tex`).

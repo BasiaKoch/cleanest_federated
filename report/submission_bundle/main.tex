@@ -1479,26 +1479,8 @@ of when each preserves rare-class signal in the global model. Optimiser
 performance is regime-dependent for one reason: rare-class performance depends on
 whether the rare client's contribution survives aggregation, and different
 optimisers protect or forfeit it under different heterogeneity. This single rule
-organises the six experiments, and Figure~\ref{fig:regime-map-summary} summarises
-the resulting map across the regimes studied.
+organises the six experiments across the regimes studied.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{F_regime_map_summary.pdf}
-\caption[Regime map: synthesis of the thesis findings]{Regime map: a qualitative synthesis of Chapter~\ref{ch:results}, not new
-results. The single rule it encodes is that rare-class performance is preserved
-when rare-client signal reaches the global model. Each cell records the observed
-outcome for an optimiser under one
-heterogeneity regime --- preserved / competitive / rescue / robust (green),
-fragile or no extra gain (amber), collapse or brittle (red), or not tested in this
-thesis (grey, used wherever an optimiser was not run in that regime). The map
-records only the regimes studied here, on a single $28 \times 28$ medical
-benchmark with simulated statistical and system heterogeneity; it is not a general
-law of federated learning and implies no universal optimiser ranking. Mechanism
-probes are $n = 3$ (directional); Table~\ref{tab:final-claims} gives the per-claim
-evidence, strength labels, and caveats.}
-\label{fig:regime-map-summary}
-\end{figure}
 
 Read through that rule, the findings cohere. Statistical heterogeneity alone
 separates FedAvg and FedProx only slightly and runtime-sensitively
