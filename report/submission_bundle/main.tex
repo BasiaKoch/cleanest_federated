@@ -1167,11 +1167,14 @@ heterogeneity, where the amount of local work varies randomly from round to
 round. On the same 7-client engineered partition as the
 \S\,\ref{sec:li-straggler} screening comparison (Regime~A, per-round random
 schedule; \emph{not} an L4 experiment), FedNova obtains only
-$0.237 \pm 0.089$ macro-F1, far below the matching FedAvg and FedProx cells
+$0.237 \pm 0.094$ macro-F1, far below the matching FedAvg and FedProx cells
 ($n = 10$: FA $0.493 \pm 0.028$, FP $0.510 \pm 0.017$). Best-val selection masks
 the severity: three of ten seeds already sit at the majority-class-only baseline
-($\approx 0.114$, predicting mel-nevi for every image) at best-val, and all ten
-reach it by the final round.
+($\approx 0.114$, predicting mel-nevi for every image) at best-val. The final
+validation histories show all ten runs ending below $0.20$ macro-F1, with nine of
+ten reaching the strict mel-nevi-only pattern; because final \emph{test} metrics
+were not saved for this sweep, this is reported as a validation-trajectory failure
+mode rather than a final-test estimate.
 
 This contrast is the main point of the section. FedNova is robust when the
 asymmetry is stable and deterministic: the rare client is consistently
@@ -1197,7 +1200,7 @@ partial updates and collapse to the majority-class baseline.}
 FedNova regime & Result & Interpretation \\
 \midrule
 Persistent LR asymmetry & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & $\tau$-normalisation preserves smaller client's contribution \\
-Random-$\tau$ stragglers & macro-F1 $= 0.237 \pm 0.089$; 10/10 final-round majority collapse (3/10 even at best-val) & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
+Random-$\tau$ stragglers & macro-F1 $= 0.237 \pm 0.094$; 3/10 majority-only at best-val, 9/10 by the final validation round (no final test saved) & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1247,9 +1250,10 @@ FL protocol preserves or amplifies but does not itself create. A confusion-matri
 view of this rare-to-mel-nevi routing across the four-condition cells is given in
 Appendix~\ref{app:diagnostics} (Figure~\ref{fig:l4-confusion-appendix}).
 
-The D1 5:1 cell isolates the optimiser dimension --- melanoma per-class F1 is
-$1.20\,\%$ (FedAvg), $6.13\,\%$ (FedProx), and $46.34\,\%$ (FedNova), the same
-disease across three detection regimes spanning two orders of magnitude. Because
+The D1 5:1 cell isolates the optimiser dimension --- melanoma \emph{recall} is
+$1.20\,\%$ (FedAvg), $6.13\,\%$ (FedProx), and $46.34\,\%$ (FedNova) (melanoma F1,
+which adds the precision penalty, is $2.28\,\%$, $10.82\,\%$, and $36.74\,\%$) --- the
+same disease across three detection regimes spanning two orders of magnitude. Because
 macro-F1 weights all seven classes equally, losing one class moves it by
 $\approx 0.057$ --- the order of the entire engineered $\Delta$ in
 \S\,\ref{sec:statistical-heterogeneity}. The same rare-class shape recurs across
@@ -1260,21 +1264,23 @@ over-regularisation cell (\S\,\ref{sec:mu-sensitivity}, Table~\ref{tab:mu-per-cl
 \centering
 \small
 \caption{Rare-class collapse across four representative cells, spanning the
-straggler and learning-rate-asymmetry axes ($n=3$ each). Rare-F1, melanoma
-per-class F1, and the rare-to-mel-nevi misrouting rate move together: where
-rare signal reaches the global model (FedProx+$\gamma$-inexact, FedNova under
-deterministic asymmetry) rare-F1 is preserved and misrouting is low; where it
-does not (FedAvg+drop, FedAvg under 5:1 asymmetry) rare-F1 flatlines and
-misrouting rises to $51$--$67\,\%$.}
+straggler and learning-rate-asymmetry axes ($n=3$ each). Melanoma recall shows
+whether the melanoma signal is recovered at all; melanoma F1 adds the precision
+penalty; Rare-F1 is the rare-class summary (mean F1 over dermato, melanoma,
+vascular); and misrouting is the rare-to-mel-nevi failure rate. They move
+together: where rare signal reaches the global model (FedProx+$\gamma$-inexact,
+FedNova under deterministic asymmetry) rare-F1 is preserved and misrouting is
+low; where it does not (FedAvg+drop, FedAvg under 5:1 asymmetry) rare-F1
+flatlines and misrouting rises to $51$--$67\,\%$.}
 \label{tab:collapse-cells}
-\begin{tabular}{p{0.16\linewidth} p{0.14\linewidth} c c c p{0.32\linewidth}}
+\begin{tabular}{p{0.15\linewidth} p{0.12\linewidth} c c c c p{0.29\linewidth}}
 \toprule
-Protocol                  & Algorithm & Rare-F1 & Melanoma F1 & Misrouting & Interpretation \\
+Protocol                  & Algorithm & Rare-F1 & Mel.\ recall & Mel.\ F1 & Misrouting & Interpretation \\
 \midrule
-Perfect-storm + drop      & FedAvg    & $0.000$ & $0.00\,\%$  & $67\,\%$   & Rare client dropped; flatline \\
-Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
-D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
-D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $26\,\%$   & $\tau$-normalisation preserves contribution \\
+Perfect-storm + drop      & FedAvg    & $0.000$ & $0.00\,\%$  & $0.00\,\%$  & $67\,\%$   & Rare client dropped; flatline \\
+Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $34.46\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
+D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $2.28\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
+D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $36.74\,\%$ & $26\,\%$   & $\tau$-normalisation preserves contribution \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1561,8 +1567,8 @@ FedProx not free under IID & Flower IID $\Delta = -0.007$ ($n=10$) & strong & II
 Stat-het alone gives fragile separation & Flower engineered $\Delta = +0.007$ (7/10 wins, $n=10$) & medium & Runtime-sensitive (PyTorch $+0.027$) & Do not recommend FedProx on partition alone \\
 $\mu$ must be tuned & Sweep $n=10$: peak $+0.013$ at $\mu = 0.01$; $-0.074$ at $\mu = 1.0$ & strong & Engineered partition only & Default $\mu = 0.01$; do not raise under heterogeneity \\
 $\gamma$-inexact dominates straggler gain & L4 four-condition $n=3$: total $+0.115$, $\gamma$-inex $+0.111$; L1 control $+0.012$ & medium--strong & Simulated stragglers; no FedAvg+$\gamma$-inex standalone cell & Use FedProx + $\gamma$-inexact under straggler protocols \\
-FedNova regime-dependent & LR envelope: FN holds $0.49$--$0.53$ across 1:1--50:1 ($n=3$); random-$\tau$ collapses to $0.237$ ($n=10$, 10/10 final-round majority collapse) & medium--strong & Wang 2020 stable-$\tau$ assumption violated by random-$\tau$ & Prefer FedNova under persistent LR asymmetry, not under random-$\tau$ \\
-Rare-class collapse is the clinical failure mode & Misrouting $24\,\%$--$67\,\%$; D1 5:1 melanoma F1 $= 1.2$/$6.1$/$46.3\,\%$ ($n=3$) & strong & Single dataset, $28 \times 28$ resolution & Report per-class metrics; macro-F1 alone hides it \\
+FedNova regime-dependent & LR envelope: FN holds $0.49$--$0.53$ across 1:1--50:1 ($n=3$); random-$\tau$ collapses to $0.237$ ($n=10$; 9/10 majority-only by the final validation round) & medium--strong & Wang 2020 stable-$\tau$ assumption violated by random-$\tau$ & Prefer FedNova under persistent LR asymmetry, not under random-$\tau$ \\
+Rare-class collapse is the clinical failure mode & Misrouting $24\,\%$--$67\,\%$; D1 5:1 melanoma recall $= 1.2$/$6.1$/$46.3\,\%$ (F1 $2.3$/$10.8$/$36.7\,\%$, $n=3$) & strong & Single dataset, $28 \times 28$ resolution & Report per-class metrics; macro-F1 alone hides it \\
 wCE competes with FedProx & L4 $n=3$: FA+wCE $0.505$ vs FP+CE $0.478$ & medium & $n=3$, L4 symmetric only & Loss-side rebalancing is a competitive intervention \\
 Update-norms support drift-control reading & Engineered: FA $1.523$ vs FP $1.029$ ($-32\,\%$); cross-protocol $r = +0.634$ & exploratory & Within-protocol $r$ does not extrapolate & Drift-control reading is supported, not proven \\
 \bottomrule

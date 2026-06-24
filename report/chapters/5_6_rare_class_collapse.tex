@@ -19,10 +19,11 @@ worst (perfect-storm FA+drop, $n=3$), and $28\,\%$ even under the IID
 Flower negative control ($n=10$) --- a class-imbalance saturation that the
 FL protocol preserves or amplifies but does not itself create.
 
-The D1 5:1 cell isolates the optimiser dimension: melanoma per-class F1 is
+The D1 5:1 cell isolates the optimiser dimension: melanoma \emph{recall} is
 $1.20\,\%$ for FedAvg, $6.13\,\%$ for FedProx, $46.34\,\%$ for FedNova
-($n=3$ each) --- same disease, three detection regimes spanning two orders
-of magnitude. Macro-F1 is structurally sensitive: each class enters with
+($n=3$ each; the corresponding melanoma F1, which adds the precision penalty,
+is $2.28\,\%$, $10.82\,\%$, $36.74\,\%$) --- same disease, three detection
+regimes spanning two orders of magnitude. Macro-F1 is structurally sensitive: each class enters with
 weight $1/7$, so a single class dropping from per-class F1 $\approx 0.4$ to
 $0.0$ moves macro by $\approx 0.057$, the order of the entire engineered
 $\Delta$ in \S\,\ref{sec:statistical-heterogeneity}. The same
@@ -35,14 +36,14 @@ $-0.113$, and mel-nevi is invariant), so across three different mechanisms
 
 \begin{center}
 \small
-\begin{tabular}{p{0.16\linewidth} p{0.14\linewidth} c c c p{0.32\linewidth}}
+\begin{tabular}{p{0.15\linewidth} p{0.12\linewidth} c c c c p{0.29\linewidth}}
 \hline
-Protocol                  & Algorithm & Rare-F1 & Melanoma F1 & Misrouting & Interpretation \\
+Protocol                  & Algorithm & Rare-F1 & Mel.\ recall & Mel.\ F1 & Misrouting & Interpretation \\
 \hline
-Perfect-storm + drop      & FedAvg    & $0.000$ & $0.00\,\%$  & $67\,\%$   & Rare client dropped; flatline \\
-Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
-D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
-D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $26\,\%$   & $\tau$-normalisation preserves contribution \\
+Perfect-storm + drop      & FedAvg    & $0.000$ & $0.00\,\%$  & $0.00\,\%$  & $67\,\%$   & Rare client dropped; flatline \\
+Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $34.46\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
+D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $2.28\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
+D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $36.74\,\%$ & $26\,\%$   & $\tau$-normalisation preserves contribution \\
 \hline
 \end{tabular}
 \end{center}

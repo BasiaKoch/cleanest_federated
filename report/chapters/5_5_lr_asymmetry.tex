@@ -56,7 +56,10 @@ schedule, $\gamma$-inexact, $n=10$), mean macro-F1 is $0.237 \pm 0.094$, far
 below FedAvg and FedProx on the matching \texttt{system\_het\_random} cells
 (FA $0.493$, FP $0.510$ from \S\,\ref{sec:li-straggler}). Three of ten seeds
 (s31337, s271828, s161803) collapse to macro-F1 $= 0.114$ --- the majority-
-class-only baseline (predicting mel-nevi on every test image). This regime
+class-only baseline (predicting mel-nevi on every test image) at best-validation
+selection; by the final validation round all ten runs fall below $0.20$ macro-F1,
+nine reaching the strict mel-nevi-only pattern (final \emph{test} metrics were not
+saved for this sweep, so this is a validation-trajectory observation). This regime
 lies outside Wang 2020's stable-$\tau$ assumption: $\tau$-normalisation
 amplifies stragglers' noisy partial updates rather than correcting for them.
 FedNova's robustness is regime-dependent \emph{in both directions} ---
@@ -69,7 +72,7 @@ instability.
 FedNova regime              & Result                                   & Interpretation \\
 \hline
 Persistent LR asymmetry     & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & $\tau$-normalisation preserves smaller client's contribution \\
-Random-$\tau$ stragglers    & macro-F1 = $0.237 \pm 0.094$; 3/10 majority collapse & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
+Random-$\tau$ stragglers    & macro-F1 = $0.237 \pm 0.094$; 3/10 collapse at best-val, 9/10 by final round & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
 \hline
 \end{tabular}
 \end{center}
