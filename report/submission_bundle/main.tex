@@ -778,8 +778,9 @@ Node-pinned L4       & Flower        & 2       & 3   & $0.492 \pm 0.019$   & $0.
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{F_engineered_per_class.pdf}
-\caption{Per-class validation F1 trajectories on the engineered partition,
-$n = 10$ paired seeds (FedAvg vs FedProx, mean $\pm 1$ SEM bands). By
+\caption{Per-class validation F1 trajectories on the engineered partition from
+the \emph{pure-PyTorch} headline runs, $n = 10$ paired seeds (FedAvg vs FedProx,
+mean $\pm 1$ SEM bands). By
 mid-training the melanoma and actinic-keratoses panels show non-overlapping
 FedAvg/FedProx bands --- the two minority classes that carry the engineered
 FedProx advantage --- while the other five classes overlap throughout 150
@@ -1395,9 +1396,10 @@ optimiser ranking is robust to reporting choices.
 Update norms ($\lVert \Delta w \rVert$, the size of the client update returned to
 the server) are used here only as a supporting diagnostic, not as causal proof.
 Two facts emerge. First, FedProx does what its proximal term intends: on the
-engineered partition ($n=10$) the mean per-round update norm falls from $1.523$
+engineered partition the mean per-round update norm falls from $1.523$
 (FedAvg) to $1.029$ (FedProx, $\mu=0.01$), a $32\%$ reduction
-(Figure~\ref{fig:update-norms}). This is a local-training effect and does not
+(Figure~\ref{fig:update-norms}; update-norm diagnostic logs were available for
+$9$ FedAvg, $8$ FedProx and $7$ FedNova seeds, not the full ten). This is a local-training effect and does not
 contradict \S\,\ref{sec:li-straggler}, where the straggler-regime gain came from
 accepting the rare client's partial update rather than from the proximal term.
 
@@ -1438,7 +1440,7 @@ robust, small symmetric-protocol differences are not.
 \includegraphics[width=0.85\textwidth]{F_update_norms.pdf}
 \caption{Update-norm mechanism on the engineered partition. Mean per-round
 $\lVert \Delta w \rVert$ trajectories per client for FedAvg vs FedProx
-($n=10$ seeds); FedProx tracks lower throughout, consistent with the
+(update-norm logs for $9$ FedAvg and $8$ FedProx seeds); FedProx tracks lower throughout, consistent with the
 proximal term's drift-control intent. Cross-protocol scatter panel
 (78 L4 runs across 8 algorithm $\times$ protocol cells): Spearman
 $r = +0.634$ between dominant-client mean update-norm and rare-class F1;

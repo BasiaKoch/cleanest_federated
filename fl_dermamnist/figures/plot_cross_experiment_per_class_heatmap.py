@@ -64,7 +64,7 @@ d = df.sort_values("class_id")["mean_diff"].values
 rows.append(("statistical", "IID baseline", d, d.mean()))
 df = pd.read_csv(DATA / "per_class_delta.csv")
 d = df.sort_values("class_id")["mean_delta"].values
-rows.append(("statistical", "Engineered 90/10", d, d.mean()))
+rows.append(("statistical", "Engineered 7-client", d, d.mean()))
 df = pd.read_csv(RESULTS / "dirichlet_a01" / "analysis" / "per_class_diff.csv")
 d = df.sort_values("class_id")["mean_diff"].values
 rows.append(("statistical", "Dirichlet α=0.1", d, d.mean()))
