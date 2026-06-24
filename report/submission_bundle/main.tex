@@ -600,7 +600,13 @@ L4 substrate: plain cross-entropy (the unweighted baseline); weighted CE with
 inverse-frequency weights $w_c = (1/n_c)\cdot C / \sum_j (1/n_j)$ normalised so
 $\sum_c w_c = C$; and focal loss \citep{lin2017focal} with $\gamma = 2$ and a
 default inverse-frequency $\alpha_c$ (so the focal comparator is focal with
-class-balanced $\alpha$). Weighted CE intervenes in per-class loss contribution
+class-balanced $\alpha$). The focal condition uses the implemented class-balanced
+focal variant in this repository, in which the $\alpha$-weighted cross-entropy
+enters the focusing calculation (the modulating factor $(1-p_t)^{\gamma}$ is
+computed from the weighted CE, $p_t=\exp(-\mathcal{L}^{\alpha}_{\mathrm{CE}})$,
+rather than from unweighted log-probabilities); it should therefore be read as an
+empirical loss-side comparison, not as a clean test of the canonical focal-loss
+formulation. Weighted CE intervenes in per-class loss contribution
 during local training while FedProx intervenes in aggregation, so if FedProx were
 class re-weighting in disguise, weighted CE would close the gap on its own. This is
 a focused comparator set, run only on L4.

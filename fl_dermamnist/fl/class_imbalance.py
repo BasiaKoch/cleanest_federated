@@ -71,6 +71,15 @@ class FocalLoss(nn.Module):
     multi-class classification with no class weighting, we set
     alpha_c = 1 for all c (the focusing parameter γ alone controls the
     relative weighting between easy and hard examples).
+
+    IMPLEMENTATION NOTE (read before reusing): when ``alpha`` is provided
+    (class-balanced), ``ce`` below is the ALPHA-WEIGHTED cross-entropy and
+    ``p_t = exp(-ce)``, so alpha enters BOTH the loss magnitude AND the focusing
+    term ``(1 - p_t)**gamma``. This is therefore NOT the canonical focal loss
+    (which computes p_t from unweighted log-probabilities and applies alpha
+    separately). It is kept exactly as-is because the thesis loss-side results
+    were produced with it; see ``StandardFocalLoss`` / ``make_standard_focal_loss``
+    for the canonical form.
     """
     def __init__(self, gamma: float = 2.0, alpha: torch.Tensor | None = None):
         super().__init__()
@@ -90,8 +99,51 @@ def make_focal_loss(
     num_classes: int = 7,
     device: str = "cpu",
 ) -> nn.Module:
-    """Returns a FocalLoss; if `labels` provided, uses inverse-freq alpha."""
+    """Returns a FocalLoss; if `labels` provided, uses inverse-freq alpha.
+
+    NOTE: this is the class-balanced focal *variant* (alpha enters the focusing
+    term); see ``make_standard_focal_loss`` for the canonical form. The thesis
+    loss-side results were produced with this function.
+    """
     alpha = None
     if labels is not None:
         alpha = class_weights_inverse_freq(labels, num_classes=num_classes).to(device)
     return FocalLoss(gamma=gamma, alpha=alpha)
+
+
+class StandardFocalLoss(nn.Module):
+    """Canonical multi-class focal loss (Lin et al., 2017).
+
+    L = - alpha_c * (1 - p_c)**gamma * log(p_c), with p_c taken from the
+    UNWEIGHTED log-probabilities (log-softmax) and alpha applied as a separate
+    per-class multiplier, so the class weighting does not distort the focusing
+    term. This differs from ``FocalLoss`` above (the class-balanced variant used
+    for the thesis loss-side results). Provided for future runs that want the
+    standard formulation; it is NOT used to produce any reported number.
+    """
+    def __init__(self, gamma: float = 2.0, alpha: torch.Tensor | None = None):
+        super().__init__()
+        self.gamma = float(gamma)
+        self.alpha = alpha  # tensor of shape [num_classes] or None
+
+    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        logp = F.log_softmax(logits, dim=1)
+        logp_t = logp.gather(1, target.view(-1, 1)).squeeze(1)   # unweighted log p_t
+        p_t = logp_t.exp()
+        loss = -((1.0 - p_t) ** self.gamma) * logp_t
+        if self.alpha is not None:
+            loss = loss * self.alpha[target]
+        return loss.mean()
+
+
+def make_standard_focal_loss(
+    gamma: float = 2.0,
+    labels: Sequence[int] | None = None,
+    num_classes: int = 7,
+    device: str = "cpu",
+) -> nn.Module:
+    """Canonical focal loss (see ``StandardFocalLoss``). NOT used by thesis results."""
+    alpha = None
+    if labels is not None:
+        alpha = class_weights_inverse_freq(labels, num_classes=num_classes).to(device)
+    return StandardFocalLoss(gamma=gamma, alpha=alpha)
