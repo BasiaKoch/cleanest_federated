@@ -92,28 +92,33 @@ def panel(ax, tag, accept):
                 fontsize=14, fontweight="bold", zorder=6)
         titled_box(ax, GL, "Global model", "rare signal preserved",
                    edge=ORANGE, fill=ORANGE_F, sub_color=GREEN, lw=2.1, sub_bold=True)
-        ax.text(4.75, 1.42, "partial update accepted  ($\\gamma$-inexact)",
+        ax.text(4.4, 0.82, "partial update accepted  ($\\gamma$-inexact)",
                 ha="center", va="center", fontsize=10.5, color=GREEN, fontweight="bold")
     else:
-        # rare update dropped: dashed amber arrow stops at a neat block before server
-        block = (4.18, 3.02)
-        arrow(ax, c1_out, block, color=ORANGE, lw=1.8, ls=(0, (4, 2.4)), head=False)
-        ax.text(block[0], block[1], "✕", ha="center", va="center", color=RED,
-                fontsize=13.5, fontweight="bold", zorder=6)
+        # rare update dropped: dashed amber arrow terminates cleanly at a red
+        # barrier ("wall") before the server -- it never reaches aggregation
+        bx, by = 4.22, 3.06
+        arrow(ax, c1_out, (bx, by), color=ORANGE, lw=1.8, ls=(0, (4, 2.4)), head=False)
+        dx, dy = bx - c1_out[0], by - c1_out[1]
+        seg = (dx * dx + dy * dy) ** 0.5
+        px, py = -dy / seg, dx / seg            # unit perpendicular to the arrow
+        hl = 0.30
+        ax.plot([bx - px * hl, bx + px * hl], [by - py * hl, by + py * hl],
+                color=RED, lw=4.2, solid_capstyle="round", zorder=6)
         titled_box(ax, GL, "Global model", "rare signal lost",
                    edge=GREY_E, fill=GREY_F, sub_color=RED)
-        ax.text(4.75, 1.42, "partial update dropped", ha="center", va="center",
+        ax.text(4.4, 0.82, "partial update dropped", ha="center", va="center",
                 fontsize=10.5, color=RED, fontweight="bold")
 
-    # subtle annotation under Client 1 (well spaced below the box)
-    ax.text(cx(C1), 1.42, "only source of rare-class\nsignal in L4", ha="center",
+    # subtle annotation just under Client 1 (its own row, clear of the status label)
+    ax.text(cx(C1), 1.6, "only source of rare-class\nsignal in L4", ha="center",
             va="center", fontsize=7.8, color=ORANGE_DK, style="italic", linespacing=1.25)
 
 
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8.0, 7.4))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13.0, 4.5))
 panel(ax1, "(a) Drop handling", accept=False)
 panel(ax2, "(b) $\\gamma$-inexact handling", accept=True)
-fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0.14)
+fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01, wspace=0.08)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 base = os.path.join(HERE, "F_signal_flow_gamma_inexact")
