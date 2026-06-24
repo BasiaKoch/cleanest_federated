@@ -43,7 +43,7 @@ Protocol                  & Algorithm & Rare-F1 & Mel.\ recall & Mel.\ F1 & Misr
 Perfect-storm + drop      & FedAvg    & $0.000$ & $0.00\,\%$  & $0.00\,\%$  & $67\,\%$   & Rare client dropped; flatline \\
 Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $34.46\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
 D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $2.28\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
-D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $36.74\,\%$ & $26\,\%$   & $\tau$-normalisation preserves contribution \\
+D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $36.74\,\%$ & $26\,\%$   & Robust to the stable weakened update \\
 \hline
 \end{tabular}
 \end{center}

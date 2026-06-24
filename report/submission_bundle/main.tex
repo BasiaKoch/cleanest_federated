@@ -141,9 +141,10 @@ $\gamma$-inexact components using matched class-disjoint (L4) and quantity-only
 (L1) partitions that fix when the effect can appear; it characterises FedNova's
 regime-dependence across deterministic and random system heterogeneity; it
 identifies rare-class collapse into the dominant melanocytic-nevi class as the
-common failure mode; and it shows, through a loss-side comparison, that the
-FedProx advantage is a drift-and-protocol effect rather than class-imbalance
-correction in disguise.
+common failure mode; and --- through the L4/L1 decomposition --- it shows the
+FedProx straggler-regime advantage is a drift-and-protocol effect, with weighted
+cross-entropy a competitive loss-side alternative rather than evidence that this
+advantage is merely class-imbalance correction in disguise.
 
 
 %% =============================================================================
@@ -1176,14 +1177,17 @@ ten reaching the strict mel-nevi-only pattern; because final \emph{test} metrics
 were not saved for this sweep, this is reported as a validation-trajectory failure
 mode rather than a final-test estimate.
 
-This contrast is the main point of the section. FedNova is robust when the
-asymmetry is stable and deterministic: the rare client is consistently
-weakened, and normalisation can compensate. It is brittle when the amount of
-local work is random and noisy: normalisation can then amplify unstable
-partial updates instead of correcting them. We report this as an observed
-failure mode --- its precise cause is not isolated here and is left to future
-work --- so FedNova is best read as regime-dependent rather than universally
-superior (Table~\ref{tab:fednova-regime}).
+This contrast is the main point of the section. FedNova is empirically robust
+under deterministic learning-rate asymmetry in this implementation, and brittle
+when the amount of local work is random and noisy. This should not be read as
+FedNova directly normalising learning-rate differences: the algorithm normalises
+by effective local work ($\tau$), while the learning rate changes the magnitude
+and direction of the returned parameter delta. The safer interpretation is that
+FedNova's normalised aggregation interacts favourably with a stable, persistently
+weakened rare-client update, but amplifies unstable partial updates under random
+$\tau$. We report this as an observed regime dependence --- its precise cause is
+not isolated here and is left to future work --- so FedNova is best read as
+regime-dependent rather than universally superior (Table~\ref{tab:fednova-regime}).
 
 \begin{table}[H]
 \centering
@@ -1199,7 +1203,7 @@ partial updates and collapse to the majority-class baseline.}
 \toprule
 FedNova regime & Result & Interpretation \\
 \midrule
-Persistent LR asymmetry & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & $\tau$-normalisation preserves smaller client's contribution \\
+Persistent LR asymmetry & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & Empirically robust; normalised aggregation, not direct LR correction \\
 Random-$\tau$ stragglers & macro-F1 $= 0.237 \pm 0.094$; 3/10 majority-only at best-val, 9/10 by the final validation round (no final test saved) & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
 \bottomrule
 \end{tabular}
@@ -1280,7 +1284,7 @@ Protocol                  & Algorithm & Rare-F1 & Mel.\ recall & Mel.\ F1 & Misr
 Perfect-storm + drop      & FedAvg    & $0.000$ & $0.00\,\%$  & $0.00\,\%$  & $67\,\%$   & Rare client dropped; flatline \\
 Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $34.46\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
 D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $2.28\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
-D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $36.74\,\%$ & $26\,\%$   & $\tau$-normalisation preserves contribution \\
+D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $36.74\,\%$ & $26\,\%$   & Robust to the stable weakened update \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1313,10 +1317,11 @@ in Table~\ref{tab:loss-side}.
 \caption{Loss-side imbalance correction at L4 ($n=3$ per cell). Cells are
 test macro-F1 $\pm$ sample SD with rare-class F1 in parentheses. The
 strongest cell (bold) is FedAvg with weighted CE, which matches or exceeds
-FedProx with plain CE: a direct loss-level correction reproduces the
-FedProx-regime gain on this partition, so the FedProx advantage is not a
-disguised class-imbalance correction. FedProx adds little on top of either
-loss-side intervention.}
+FedProx with plain CE: on this partition, class reweighting is a competitive
+loss-side alternative for rare-class preservation, and FedProx adds little on top
+of it. This is a loss-stage result and does not explain away the separate
+$\gamma$-inexact straggler effect (\S\ref{sec:li-straggler}), which acts at the
+protocol/aggregation stage.}
 \label{tab:loss-side}
 \begin{tabular}{lccc}
 \toprule
@@ -1501,15 +1506,19 @@ asymmetry the FedProx advantage of about $+0.115$ macro-F1 comes almost entirely
 only $+0.004$ from the proximal term, while the matched L1 control --- where the
 suppressed client carries nothing unique --- collapses the effect, confirming that
 admitting the partial update matters only when that client is the sole source of
-rare-class signal. FedNova is the same rule from another angle
-(\S\ref{sec:lr-asymmetry}): work-normalisation restores a consistently weakened
-client under deterministic learning-rate asymmetry (an advantage of about
-$+0.131$ macro-F1 at the most extreme ratio) but amplifies noise and collapses to
-roughly $0.237$ under random, round-to-round straggling. Finally, class-weighted
+rare-class signal. FedNova fits the same picture from another angle
+(\S\ref{sec:lr-asymmetry}): it is empirically robust under deterministic
+learning-rate asymmetry (an advantage of about $+0.131$ macro-F1 at the most
+extreme ratio) but amplifies noise and collapses to roughly $0.237$ under random,
+round-to-round straggling --- a robustness best read as its work-normalised
+($\tau$) aggregation interacting favourably with a \emph{stable} weakened update,
+not as direct learning-rate normalisation. Finally, class-weighted
 cross-entropy matches or exceeds FedProx with plain cross-entropy on the symmetric
 partition (\S\ref{sec:rare-class-collapse}), locating imbalance correction as a
 loss-side layer distinct from the aggregation-and-protocol layer where FedProx
 acts; the two address different failure modes and could in principle be combined.
+This loss-stage comparison does not explain away the separate $\gamma$-inexact
+straggler result, which acts at the protocol/aggregation stage.
 
 These findings refine rather than contradict prior work. FedAvg
 \citep{mcmahan2017fedavg} behaves as expected when clients are well matched; for
@@ -1545,8 +1554,8 @@ FedProx becomes valuable under Li-style straggler asymmetry mainly because
 $\gamma$-inexact partial-update handling preserves the rare-client signal;
 FedNova is robust under the tested learning-rate asymmetry but fails under
 random-$\tau$ straggler regimes; and across failing settings, the common
-clinical failure mode is rare-class collapse into the majority class
-(mel-nevi). These results do not establish a universal ranking of FedAvg,
+clinically relevant benchmark failure mode is rare-class collapse into the
+majority class (mel-nevi). These results do not establish a universal ranking of FedAvg,
 FedProx, and FedNova. They instead map which optimiser/protocol choices
 preserve or lose rare-class performance under different heterogeneity
 regimes.
@@ -1568,7 +1577,7 @@ Stat-het alone gives fragile separation & Flower engineered $\Delta = +0.007$ (7
 $\mu$ must be tuned & Sweep $n=10$: peak $+0.013$ at $\mu = 0.01$; $-0.074$ at $\mu = 1.0$ & strong & Engineered partition only & Default $\mu = 0.01$; do not raise under heterogeneity \\
 $\gamma$-inexact dominates straggler gain & L4 four-condition $n=3$: total $+0.115$, $\gamma$-inex $+0.111$; L1 control $+0.012$ & medium--strong & Simulated stragglers; no FedAvg+$\gamma$-inex standalone cell & Use FedProx + $\gamma$-inexact under straggler protocols \\
 FedNova regime-dependent & LR envelope: FN holds $0.49$--$0.53$ across 1:1--50:1 ($n=3$); random-$\tau$ collapses to $0.237$ ($n=10$; 9/10 majority-only by the final validation round) & medium--strong & Wang 2020 stable-$\tau$ assumption violated by random-$\tau$ & Prefer FedNova under persistent LR asymmetry, not under random-$\tau$ \\
-Rare-class collapse is the clinical failure mode & Misrouting $24\,\%$--$67\,\%$; D1 5:1 melanoma recall $= 1.2$/$6.1$/$46.3\,\%$ (F1 $2.3$/$10.8$/$36.7\,\%$, $n=3$) & strong & Single dataset, $28 \times 28$ resolution & Report per-class metrics; macro-F1 alone hides it \\
+Rare-class collapse is the clinically relevant benchmark failure mode & Misrouting $24\,\%$--$67\,\%$; D1 5:1 melanoma recall $= 1.2$/$6.1$/$46.3\,\%$ (F1 $2.3$/$10.8$/$36.7\,\%$, $n=3$) & strong & Single dataset, $28 \times 28$ resolution & Report per-class metrics; macro-F1 alone hides it \\
 wCE competes with FedProx & L4 $n=3$: FA+wCE $0.505$ vs FP+CE $0.478$ & medium & $n=3$, L4 symmetric only & Loss-side rebalancing is a competitive intervention \\
 Update-norms support drift-control reading & Engineered: FA $1.523$ vs FP $1.029$ ($-32\,\%$); cross-protocol $r = +0.634$ & exploratory & Within-protocol $r$ does not extrapolate & Drift-control reading is supported, not proven \\
 \bottomrule
@@ -1648,8 +1657,9 @@ partial-update handling rather than the proximal term, and only when the
 suppressed client holds unique rare-class signal (RQ2); FedNova is
 regime-dependent, robust under deterministic learning-rate asymmetry but brittle
 under random stragglers (RQ3); and rare-class collapse into melanocytic nevi is
-the common failure mode, with weighted cross-entropy showing the FedProx advantage
-is not class-imbalance correction in disguise (RQ4). Concretely, in the
+the common failure mode, with weighted cross-entropy a competitive loss-side
+alternative for rare-class preservation rather than evidence that the
+$\gamma$-inexact straggler effect is class-imbalance correction in disguise (RQ4). Concretely, in the
 perfect-storm stress this margin is large: FedProx with $\gamma$-inexact
 acceptance reaches $0.491$ test macro-F1 where FedAvg with straggler dropping
 collapses to $0.087$ --- the thesis's largest FedAvg--FedProx gap, $\Delta =
