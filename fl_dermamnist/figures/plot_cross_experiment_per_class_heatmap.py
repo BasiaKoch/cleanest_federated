@@ -130,16 +130,20 @@ ax.set_yticks(np.arange(-0.5, n_rows, 1), minor=True)
 ax.grid(which="minor", color="white", linewidth=1.1)
 ax.tick_params(which="minor", length=0)
 
-# numbers only for large effects (|delta| >= 0.10); else rely on colour
+# annotate every cell, but with a hierarchy: large effects (|delta| >= 0.10)
+# bold and prominent; small effects smaller and muted so they don't overload
 for i in range(n_rows):
     for j in range(8):
         v = M[i, j]
-        if abs(v) < 0.10:
-            continue
+        txt = "≈0" if abs(v) < 0.005 else f"{v:+.2f}"
         r, g, b, _ = cmap(norm(v))
         lum = 0.299 * r + 0.587 * g + 0.114 * b
-        ax.text(j, i, f"{v:+.2f}", ha="center", va="center", fontsize=8,
-                fontweight="bold", color=("white" if lum < 0.5 else INK))
+        if abs(v) >= 0.10:
+            ax.text(j, i, txt, ha="center", va="center", fontsize=8.2,
+                    fontweight="bold", color=("white" if lum < 0.5 else INK))
+        else:
+            ax.text(j, i, txt, ha="center", va="center", fontsize=6.6,
+                    fontweight="normal", color=("white" if lum < 0.4 else "#555555"))
 
 # column labels (rare set amber, majority slate) + macro
 ax.set_xticks(range(8))
