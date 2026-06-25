@@ -171,7 +171,7 @@ combination (\S\ref{sec:method-optimisers}).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.86\textwidth]{F_federated_learning_workflow.pdf}
+\includegraphics[width=0.70\textwidth]{F_federated_learning_workflow.pdf}
 \caption{Federated learning loop (conceptual; \emph{simulated} on a single
 machine in this thesis). Each round the server broadcasts the global model
 $w^{t}$, clients train locally on private data $D_i$ and return model updates
@@ -419,7 +419,7 @@ the under-trained client holds unique rare-class signal.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{F_l1_l4_partition_schematic.pdf}
+\includegraphics[width=0.8\textwidth]{F_l1_l4_partition_schematic.pdf}
 \caption{Two-client mechanism partitions. \textbf{L1} keeps the (86/14)
 quantity split but gives both clients near-global class proportions.
 \textbf{L4} is class-disjoint: Client~0 holds the common classes and
@@ -549,7 +549,7 @@ independence is what the four-condition decomposition exploits.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.82\textwidth]{F_signal_flow_gamma_inexact.pdf}
+\includegraphics[width=0.90\textwidth]{F_signal_flow_gamma_inexact.png}
 \caption{Rare-client signal flow under drop and $\gamma$-inexact partial-update
 handling in the L4 partition. Client~1 uniquely holds melanoma, dermatofibroma,
 and vascular examples. Under \textbf{(a)} drop handling its partial update is
@@ -1106,7 +1106,7 @@ test macro-F1 for the three optimisers and the FedNova advantage over FedAvg
 and FedProx. FedNova (bold) leads at every ratio and stays flat across the
 envelope, while FedAvg and FedProx plateau at the rare-class floor by 5:1.}
 \label{tab:lr-envelope}
-\resizebox{\textwidth}{!}{%
+\resizebox{0.9\textwidth}{!}{%
 \begin{tabular}{cccccccc}
 \toprule
 Ratio & Client 0 lr & Client 1 lr & FedAvg & FedProx & FedNova & FN$-$FA & FN$-$FP \\
@@ -1284,6 +1284,7 @@ FedNova under deterministic asymmetry) rare-F1 is preserved and misrouting is
 low; where it does not (FedAvg+drop, FedAvg under 5:1 asymmetry) rare-F1
 flatlines and misrouting rises to $51$--$67\,\%$.}
 \label{tab:collapse-cells}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{p{0.15\linewidth} p{0.12\linewidth} c c c c p{0.29\linewidth}}
 \toprule
 Protocol                  & Algorithm & Rare-F1 & Mel.\ recall & Mel.\ F1 & Misrouting & Interpretation \\
@@ -1293,7 +1294,8 @@ Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $34.4
 D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $2.28\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
 D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $36.74\,\%$ & $26\,\%$   & Robust to the stable weakened update \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \noindent
