@@ -40,7 +40,7 @@ This project studies that setting on **DermaMNIST** — a 7-class dermatology im
 - **FedProx is not an imbalance corrector:** it acts at aggregation/drift — a loss-side fix (class-weighted CE on FedAvg) matches or beats it.
 - **Central claim:** *a protocol preserves rare-class F1 iff rare-client signal reaches the global model.*
 
-> **The report.** The submission compiles from **`report/submission_bundle/`** (`main.tex`, pdfLaTeX + BibTeX) — a self-contained four-chapter report (Introduction, Methods, Results, Discussion) plus an Appendix, with its figures and `references.bib`. `report/drafts/FULL_THESIS.tex` is the earlier full-source draft. The table below maps each report section/figure to the code, experiments, and results behind it.
+> **The report.** The submission compiles from **`report/submission_bundle/`** (`main.tex`, pdfLaTeX + BibTeX) — a self-contained four-chapter report (Introduction, Methods, Results, Discussion) plus an Appendix, with its figures and `references.bib`. **The only canonical report source is `report/submission_bundle/main.tex`**; earlier drafts and per-chapter sources have been archived outside the submission repository. The table below maps each report section/figure to the code, experiments, and results behind it.
 
 ---
 
@@ -53,7 +53,7 @@ Orientation for a reader coming from the report:
 - **`fl_dermamnist/results/thesis_ready/figures/`** holds the **canonical thesis-ready figure PDFs**.
 - **`report/submission_bundle/`** is the **frozen submission bundle** (the `main.tex` compile target; its figures are flat copies of the canonical ones).
 
-Path shorthands used in the table below: launchers live in `infra/slurm/`; result directories in `fl_dermamnist/results/`; analysis scripts in `fl_dermamnist/analysis/` (**`ANALYSIS/`**); figure scripts in `fl_dermamnist/figures/` (**`FIGURES/`**); conceptual-diagram scripts in `docs/whole_paper_example_audit/figure_generation/` (**`CONCEPTUAL/`**).
+Path shorthands used in the table below: launchers live in `infra/slurm/`; result directories in `fl_dermamnist/results/`; analysis scripts in `fl_dermamnist/analysis/` (**`ANALYSIS/`**); figure scripts in `fl_dermamnist/figures/` (**`FIGURES/`**); conceptual-diagram scripts in `docs/figure_generation/` (**`CONCEPTUAL/`**).
 
 | Thesis item | What it explains | Main result directory | Launcher / run script | Analysis script | Figure script | Output figure/table |
 |---|---|---|---|---|---|---|
@@ -72,10 +72,10 @@ Path shorthands used in the table below: launchers live in `infra/slurm/`; resul
 | §3.5 / Fig 3.7 | rare-class collapse (per-class) | pools `li2020_*`, `fedprox_*`, `asymmetric_lr_L4`, `node_pinned_L4`, `mu_sensitivity_flower` | — | (per-class analysers) | `FIGURES/plot_cross_experiment_per_class_heatmap.py` | `F_cross_experiment_per_class.pdf`; Table `collapse-cells` |
 | §3.5 / table | weighted-CE / focal loss | `fedprox_weighted_ce_L4` | `submit_fedprox_weighted_ce_L4.sh`, `submit_fedprox_focal_loss_L4.sh` | `ANALYSIS/analyse_fedprox_weighted_ce_L4.py` | — (table only) | Table `loss-side` |
 | §3.6 / Fig 3.8 | update-norm diagnostics | `flower_C0_baseline` (run with `--log-update-norms`) | (re-run of §3.1) | `ANALYSIS/analyse_d1_mechanism.py` | `FIGURES/plot_update_norms.py` | `F_update_norms.pdf` ⁵ |
-| §4.1 / table | regime synthesis (Discussion) | — | — | — | — | Table `final-claims` (regime-map figure removed from the thesis; now used only by the standalone `docs/final_submission_summary/`) |
+| §4.1 / table | regime synthesis (Discussion) | — | — | — | — | Table `final-claims` (the regime-map figure was removed from the thesis) |
 | Appendix | L4 confusion matrix | `li2020_asymmetric_L4` | — | `ANALYSIS/analyse_l4_confusion_matrices.py` | `ANALYSIS/analyse_l4_confusion_matrices.py` (same) | `F_l4_confusion_li2020.pdf` ⁴ |
 
-¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` is generated and used in the older `FULL_THESIS.tex` / `RESULTS_CHAPTER.tex` drafts, but is **not included in the final submission bundle** (`report/submission_bundle/main.tex`).
+¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` exists in earlier (now-archived) drafts but is **not included in the final submission bundle** (`report/submission_bundle/main.tex`).
 ² `F_l4_four_condition_per_class_grid.pdf` is a **static derived asset**: no tracked script emits it. Source data: `li2020_asymmetric_L4/history_*.csv` (the four-condition runs). Treat as static — recover/verify a generator before regenerating. (`FIGURES/plot_validation_curves_l4_four_condition.py` emits the appendix single-panel `F_val_curves_l4_four_condition.pdf`, a different figure.)
 ³ `F_engineered_per_class.pdf` shows **pure-PyTorch** headline validation trajectories (10 paired seeds); the Flower reproduction is the §3.1 headline macro-F1, not this figure.
 ⁴ `analyse_l4_confusion_matrices.py` writes `F_l4_confusion_li2020.pdf` (the four-condition mechanism); the submission bundle includes it **renamed to `F_l4_confusion_four_condition.pdf`**.
@@ -265,12 +265,10 @@ cleanest_federated/
 │   └── results/                   ← one dir per experiment (raw artefacts)
 │       └── thesis_ready/          ← data/ + figures/ (canonical thesis-ready outputs)
 ├── infra/                         ← HPC: slurm/ (templates + submitters), runpod/, local/ (commands.sh, analyse_all.sh)
-├── report/                        ← all thesis text
-│   ├── submission_bundle/         ← the compiled report: main.tex + figures + references.bib
-│   ├── chapters/                  ← §5 section sources (5_*.tex) + bibliographies
-│   └── drafts/                    ← historical drafts (FULL_THESIS.tex, RESULTS_CHAPTER.tex, …)
-├── docs/                          ← verification sheet + audit notes
-└── archive/                       ← legacy code (code_legacy/) + old build guides (docs_legacy/)
+├── report/                        ← thesis submission bundle
+│   └── submission_bundle/         ← the ONLY canonical report: main.tex + figures + references.bib
+├── docs/                          ← provenance/ (verification sheet + traceability matrix) + figure_generation/ (conceptual diagrams)
+└── archive/                       ← curated legacy figure-generation code (code_legacy/)
 ```
 
 ---
@@ -284,7 +282,7 @@ cleanest_federated/
 - **Config travels with the result** (inside `test_at_best_*.json`) — there is
   no separate config file to lose.
 - **`thesis_ready/` is the curated bundle**: `writing/` (tex + bib),
-  `figures/` (the 15 referenced `F_*.pdf`), `data/` (aggregate tables), and
+  `figures/` (the referenced `F_*` figures), `data/` (aggregate tables), and
   `scripts/` (analysers that regenerate them). The thesis `\graphicspath`
   points at `thesis_ready/figures/`.
 - **Paths are hardcoded** in the launchers, entrypoint defaults, and the thesis
@@ -295,13 +293,13 @@ cleanest_federated/
 ## 9. Reproducing & verifying
 - Implementation guards: `bash infra/local/commands.sh sanity` (run before trusting any claim).
 - Pre-submission preflight: `bash infra/local/pre_submission_check.sh`.
-- Claim verification ledger: `docs/VERIFICATION_SHEET.txt`. Its two historical ⚠ flags (node-pinned-L4 sign; FedProx update-norm magnitude) were re-verified in the final audit and **both resolve in the report's favour** — the report's `+0.005` and `1.029` (−32%) match the source CSVs; the sheet entries were stale (see the appended final-audit resolution).
-- Full provenance / cleanup audit: `docs/repo_audit_submission_cleanup/`.
+- Claim verification ledger: `docs/provenance/numerical_verification_sheet.txt`. Its two historical ⚠ flags (node-pinned-L4 sign; FedProx update-norm magnitude) were re-verified in the final audit and **both resolve in the report's favour** — the report's `+0.005` and `1.029` (−32%) match the source CSVs; the sheet entries were stale (see the appended final-audit resolution).
+- Result traceability matrix: `docs/provenance/result_traceability_matrix.csv`.
 
 > Note: `commands.sh` and `fl_dermamnist/README.md` reference a
 > `fl_dermamnist/results/PROVENANCE_AUDIT.md` that is **not present**; its role
-> is currently served by `docs/VERIFICATION_SHEET.txt` and
-> `docs/repo_audit_submission_cleanup/02_RESULT_TRACEABILITY_MATRIX.csv`.
+> is currently served by `docs/provenance/numerical_verification_sheet.txt` and
+> `docs/provenance/result_traceability_matrix.csv`.
 
 ---
 
@@ -312,8 +310,8 @@ rerunning training** (full sweeps need HPC; see the seed/HPC note below).
 
 **Compile the report.** Upload the contents of `report/submission_bundle/` to Overleaf
 (or compile locally): main document `main.tex`, compiler **pdfLaTeX**, then BibTeX.
-The bundle is flat and self-contained — `main.tex`, `references.bib`, and the 15
-`F_*.pdf` figures.
+The bundle is flat and self-contained — `main.tex`, `references.bib`, and its
+14 figure files (13 `F_*.pdf` + 1 `F_*.png`).
 
 **Regenerate the figures/tables from saved outputs** (CPU, minutes):
 
@@ -330,10 +328,10 @@ bash infra/local/commands.sh analyse    # rebuild thesis tables + figures from s
 |---|---|
 | Final report (compile target) | `report/submission_bundle/main.tex` |
 | Report figures (used by the PDF) | `report/submission_bundle/F_*.pdf` — copies of `fl_dermamnist/results/thesis_ready/figures/` |
-| Figure/table generators | `fl_dermamnist/{analysis,figures}/` (`plot_*.py`, `analyse_*.py`) and `docs/whole_paper_example_audit/figure_generation/` (the three conceptual diagrams) |
+| Figure/table generators | `fl_dermamnist/{analysis,figures}/` (`plot_*.py`, `analyse_*.py`) and `docs/figure_generation/` (the conceptual diagrams) |
 | Aggregated tables (CSV/JSON) | `fl_dermamnist/results/thesis_ready/data/` |
 | Raw per-run experiment outputs | `fl_dermamnist/results/<experiment>/` (schema in §4) |
-| Numerical claim ledger | `docs/VERIFICATION_SHEET.txt` |
+| Numerical claim ledger | `docs/provenance/numerical_verification_sheet.txt` |
 
 Saved per-run artefacts (`test_at_best_*.json`, `history_*.csv`, …) are provided so
 every reported number traces back to a source file and the figures/tables can be

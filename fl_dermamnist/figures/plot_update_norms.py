@@ -1,12 +1,18 @@
-"""Update-norm mechanism evidence figure -- clean 2-panel cross-partition.
+"""Update-norm mechanism evidence figure -- 2-panel: trajectory + scatter.
 
-Reads per-client per-round update-norm CSVs from two Flower sweeps:
-  results/flower_C0_baseline/      (engineered partition)
-  results/flower_C0_iid_baseline/  (IID partition)
+Panel A (engineered trajectory):
+  Reads per-client per-round update-norm CSVs from the engineered Flower sweep:
+    results/flower_C0_baseline/   (engineered partition)
+  Mean (across clients within each round) per-round update-norm trajectory
+  for FedAvg vs FedProx, averaged across paired seeds with +/-SEM band.
+  FedProx tracks lower throughout (round-mean ~1.029 vs ~1.523, -32%).
 
-Each panel: mean (across clients within each round) per-round update
-norm trajectory for FedAvg vs FedProx, averaged across paired seeds
-with +/-SEM band.
+Panel B (cross-protocol scatter):
+  Reads the pooled L4 cross-protocol table:
+    results/thesis_ready/data/l4_cross_protocol_mechanism.csv  (78 runs, 8 cells)
+  Dominant-client (Client 0) mean update norm vs rare-class F1, one point per
+  run, coloured by experiment cell. Spearman r = +0.634 (dominant-client norm
+  vs rare-F1); the relative-influence ratio (Client1/Client0) is r = -0.045.
 
 Output:
   results/thesis_ready/figures/F_update_norms.{pdf,png}
@@ -23,6 +29,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.stats import spearmanr
 
 
 THIS = Path(__file__).resolve()
@@ -31,6 +38,8 @@ REPO_ROOT = repo_root()
 RESULTS_ROOT = REPO_ROOT / "fl_dermamnist" / "results"
 OUT_FIG = RESULTS_ROOT / "thesis_ready" / "figures"
 OUT_FIG.mkdir(parents=True, exist_ok=True)
+
+SCATTER_CSV = RESULTS_ROOT / "thesis_ready" / "data" / "l4_cross_protocol_mechanism.csv"
 
 NUM_ROUNDS = 150
 
@@ -75,7 +84,7 @@ def stack(curves: dict[int, np.ndarray]):
     return rounds, mean, sem
 
 
-def _panel(ax, fa, fp, show_legend=False):
+def _traj_panel(ax, fa, fp, show_legend=False):
     for curves, col, lbl in [
         (fa, COL_FEDAVG,  "FedAvg"),
         (fp, COL_FEDPROX, "FedProx ($\\mu = 0.01$)"),
@@ -87,29 +96,62 @@ def _panel(ax, fa, fp, show_legend=False):
     ax.set_xlim(1, NUM_ROUNDS)
     ax.set_ylim(0, 4.2)
     ax.set_xlabel("Communication round")
+    ax.set_ylabel(r"Mean per-client update norm $\|w_i^{t+1} - w^t\|_2$")
     ax.grid(True, alpha=0.25, linestyle="--", linewidth=0.5)
     if show_legend:
         ax.legend(loc="upper right", frameon=False)
 
 
+def _scatter_panel(ax):
+    df = pd.read_csv(SCATTER_CSV)
+    valid = df.dropna(subset=["mean_norm_c0", "rare_avg_f1",
+                              "influence_ratio_c1_to_c0"])
+    # Spearman correlations quoted in the caption.
+    r_norm, _  = spearmanr(valid["mean_norm_c0"], valid["rare_avg_f1"])
+    r_ratio, _ = spearmanr(valid["influence_ratio_c1_to_c0"], valid["rare_avg_f1"])
+    print(f"Scatter: n={len(valid)}  "
+          f"Spearman(dominant-norm, rare-F1)={r_norm:+.3f}  "
+          f"Spearman(influence-ratio, rare-F1)={r_ratio:+.3f}")
+
+    # One colour per experiment cell, taken from the table's own colour column.
+    seen: dict[str, str] = {}
+    for lbl, col in zip(valid["experiment_label"], valid["experiment_color"]):
+        seen.setdefault(lbl, col)
+    for lbl, col in seen.items():
+        sub = valid[valid["experiment_label"] == lbl]
+        ax.scatter(sub["mean_norm_c0"], sub["rare_avg_f1"],
+                   s=34, color=col, edgecolor="white", linewidth=0.4,
+                   alpha=0.9, label=lbl)
+
+    ax.set_xlabel(r"Dominant-client mean update norm $\overline{\|\Delta w_0\|}_2$")
+    ax.set_ylabel("Rare-class F1")
+    ax.grid(True, alpha=0.25, linestyle="--", linewidth=0.5)
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=-0.02)
+
+    ax.text(0.04, 0.96,
+            f"Spearman $r = {r_norm:+.3f}$\n"
+            f"(influence ratio $r = {r_ratio:+.3f}$)",
+            transform=ax.transAxes, ha="left", va="top", fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                      edgecolor="0.7", alpha=0.9))
+    ax.legend(loc="lower right", frameon=False, fontsize=7.2,
+              handletextpad=0.2, labelspacing=0.25)
+
+
 def main():
-    eng_fa = load_per_round(RESULTS_ROOT / "flower_C0_baseline",     "fedavg",  "0.0")
-    eng_fp = load_per_round(RESULTS_ROOT / "flower_C0_baseline",     "fedprox", "0.01")
-    iid_fa = load_per_round(RESULTS_ROOT / "flower_C0_iid_baseline", "fedavg",  "0.0")
-    iid_fp = load_per_round(RESULTS_ROOT / "flower_C0_iid_baseline", "fedprox", "0.01")
+    eng_fa = load_per_round(RESULTS_ROOT / "flower_C0_baseline", "fedavg",  "0.0")
+    eng_fp = load_per_round(RESULTS_ROOT / "flower_C0_baseline", "fedprox", "0.01")
     print(f"Engineered: n_fa={len(eng_fa)}, n_fp={len(eng_fp)}")
-    print(f"IID:        n_fa={len(iid_fa)}, n_fp={len(iid_fp)}")
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.5),
-                             sharey=True,
-                             gridspec_kw={"wspace": 0.10})
-    _panel(axes[0], eng_fa, eng_fp, show_legend=True)
-    axes[0].set_ylabel(r"Mean per-client update norm $\|w_i^{t+1} - w^t\|_2$")
-    _panel(axes[1], iid_fa, iid_fp, show_legend=False)
+                             gridspec_kw={"wspace": 0.22})
+    _traj_panel(axes[0], eng_fa, eng_fp, show_legend=True)
+    _scatter_panel(axes[1])
 
     axes[0].text(0.5, -0.20, "Engineered partition (non-IID)",
                  transform=axes[0].transAxes, ha="center", fontsize=11)
-    axes[1].text(0.5, -0.20, "IID partition (mechanism null)",
+    axes[1].text(0.5, -0.20, "Cross-protocol pool (78 L4 runs)",
                  transform=axes[1].transAxes, ha="center", fontsize=11)
 
     fig.tight_layout()

@@ -50,9 +50,9 @@ advantage (about $+0.115$ macro-F1) is carried almost entirely by its
 $\gamma$-inexact acceptance of partial updates rather than by the proximal term,
 and that FedNova is robust under deterministic learning-rate asymmetry yet
 collapses under random per-round stragglers. Across the failing regimes, rare
-lesions are misrouted into the majority class. These results come from a single
-low-resolution benchmark with simulated heterogeneity and $n=3$ mechanism probes,
-and establish no universal optimiser ranking.
+lesions are misrouted into the majority class. These results come from controlled
+DermaMNIST benchmark simulations with $n=3$ mechanism probes, and map regimes
+rather than establishing a universal optimiser ranking.
 \end{abstract}
 
 \chapter*{Acknowledgements}
@@ -208,9 +208,9 @@ rare-class signal under L4 but not under L1. Performance is measured throughout 
 test macro-F1 at the best-validation checkpoint, with the full metric stack and
 reporting protocol defined in \S\ref{sec:method-metrics}.
 
-Several claims are deliberately \emph{not} made. The simulator does not emulate a
-real hospital network: no wall-clock deadlines, no privacy or communication-cost
-budgets, no clinical validation. The optimiser set is not an exhaustive FL
+Several claims are deliberately out of scope. This is a controlled benchmark
+simulation, not a hospital deployment: no wall-clock deadlines, privacy or
+communication-cost budgets, or clinical validation. The optimiser set is not an exhaustive FL
 benchmark (no SCAFFOLD, FedDyn, or FedAdam). The four-condition decomposition
 lacks a FedAvg~$+~\gamma$-inexact cell, so its rescue attribution is to the
 \emph{FedProx~$+~\gamma$-inexact protocol}, not to $\gamma$-inexact acceptance
@@ -328,8 +328,7 @@ $n = 1$      & Labelled \emph{pilot}; reported only for orientation             
 \section{Simulation and model}
 \label{sec:method-simulation}
 
-All experiments are simulated federated learning, not a real-hospital deployment.
-Each run executes the loop of Figure~\ref{fig:fl-workflow} for $R = 150$ rounds
+All experiments are controlled federated-learning simulations. Each run executes the loop of Figure~\ref{fig:fl-workflow} for $R = 150$ rounds
 with $E = 20$ local epochs of mini-batch SGD per client, using the same global,
 class-stratified validation and test sets throughout --- only the client training
 partition varies. Two federation sizes are used. The \textbf{7-client} federation
@@ -529,12 +528,11 @@ FedNova  & Sample-weighted aggregation of $\tau_i$-normalised local directions $
 \subsection{Partial-update protocols and stress regimes}
 \label{sec:method-protocols}
 
-The L1/L4 partitions and the drop and straggler protocols below are deliberate
-adversarial boundary cases, not models of a typical hospital network: they push
-statistical and system heterogeneity to extremes to expose \emph{when} rare-client
-signal survives or disappears. Such extremes are not purely hypothetical --- a real
-site may genuinely lack whole lesion classes --- but the claims here concern method
-behaviour at the boundary, not naturalistic deployment.
+The L1/L4 partitions and the drop and straggler protocols below are stylised
+stress tests: they push statistical and system heterogeneity to extremes to expose
+\emph{when} rare-client signal survives or disappears. Such extremes are not purely
+hypothetical --- a real site may genuinely lack whole lesion classes --- and the
+claims here concern method behaviour at these boundaries.
 
 System heterogeneity is simulated by reducing certain clients' local work in a
 round (computational asymmetry, not wall-clock latency) under one of three
@@ -652,9 +650,9 @@ Mechanism diagnostics            & cross-protocol pool of L4 runs               
 }
 \end{table}
 
-\noindent{\footnotesize Due to restricted HPC access, experiments were not always
-repeated with the same number of random seeds; the seed count for each experiment
-is reported in the table above.}
+\noindent{\footnotesize Seed counts vary across experiments because compute
+availability varied; each experiment's seed count is reported transparently in the
+table above.}
 
 
 %% =============================================================================
@@ -752,11 +750,11 @@ FedProx helps.
 
 \begin{table}[H]
 \centering
-\caption{Statistical heterogeneity and runtime sensitivity. Six cells:
-IID, the engineered partition through two runtimes plus the $\mu$-peak,
-Dirichlet $\alpha=0.1$, specialist 1-of-7, and the multi-seed node-pinned
-L4 control. Dirichlet, specialist, and IID values from regenerated raw-JSON
-aggregates.}
+\caption{Statistical heterogeneity and runtime sensitivity: test macro-F1
+(mean $\pm$ sample SD where shown) for FedAvg vs FedProx across six settings ---
+IID, the engineered partition through both runtimes plus the $\mu$-peak,
+Dirichlet $\alpha=0.1$, specialist 1-of-7, and the node-pinned L4 control.
+IID, Dirichlet, and specialist values are from regenerated raw-JSON aggregates.}
 \label{tab:stat-het-headline}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lccccccl}
@@ -941,9 +939,8 @@ FedProx + $\gamma$-inexact                      & $\mathbf{0.479 \pm 0.010}$   &
 \noindent\textit{Decomposition:} proximal-only $= 0.368 - 0.364 = +0.004$;
 $\gamma$-inexact $= 0.479 - 0.368 = +0.111$; total $= +0.115$. Rare-F1 is
 the mean over $\mathrm{RARE\_IDX} = \{\text{dermato}, \text{melanoma},
-\text{vascular}\}$ and shows that the macro-F1 gap lives entirely in the
-rare classes: both drop-handling cells flatline rare-F1 to exactly zero,
-and only FedProx+$\gamma$-inexact rescues it.
+\text{vascular}\}$: both drop-handling cells sit at zero and only
+FedProx+$\gamma$-inexact recovers it.
 \end{table}
 
 The first two cells measure the cost of straggling: FedAvg falls from $0.485$
@@ -1030,10 +1027,8 @@ the partial update adds only $+0.012$, compared with $+0.111$ at L4.
 \centering
 \caption{L1 cross-partition control: same four-condition design as
 Table~\ref{tab:li-decomp-l4} but on the L1 partition (quantity-only
-heterogeneity, JS divergence $\approx 0$); $n=3$ matched seeds, mean
-$\pm$ sample SD. The proximal-only and $\gamma$-inexact contributions both
-collapse toward zero relative to L4, which is the cleanest negative
-control for the rare-class-signal-rescue mechanism interpretation.}
+heterogeneity, JS divergence $\approx 0$); $n=3$ matched seeds, test
+macro-F1 mean $\pm$ sample SD with rare-class F1.}
 \label{tab:li-decomp-l1}
 \small
 \begin{tabular}{lcc}
@@ -1051,13 +1046,9 @@ FedProx + $\gamma$-inexact                      & $0.605 \pm 0.009$    & $0.556 
 \noindent\textit{Decomposition (vs L4 in parentheses):}
 proximal-only $= 0.593 - 0.599 = -0.006$ (L4: $+0.004$);
 $\gamma$-inexact $= 0.605 - 0.593 = +0.012$ (L4: $+0.111$);
-drop-cost $= 0.601 - 0.599 = +0.002$ (L4: $+0.121$). The $\gamma$-inexact
-contribution shrinks by an order of magnitude when the dropped client
-carries no class signal the other client lacks. The rare-F1 column makes
-this concrete: at L1 every cell sits in $0.53$--$0.56$ (a $\pm 0.026$
-band), while at L4 the two drop cells crash to exactly zero and only
-$\gamma$-inexact recovers rare-F1 to $0.29$. There is nothing to rescue
-when the dropped client carries no unique rare-class signal.
+drop-cost $= 0.601 - 0.599 = +0.002$ (L4: $+0.121$). At L1 every rare-F1
+cell sits in $0.53$--$0.56$, whereas at L4 the two drop cells fall to zero
+and only $\gamma$-inexact recovers rare-F1 (to $0.29$).
 \end{table}
 
 The L4/L1 contrast is therefore the key mechanism evidence. At L4, the
@@ -1199,12 +1190,11 @@ regime-dependent rather than universally superior (Table~\ref{tab:fednova-regime
 \begin{table}[H]
 \centering
 \small
-\caption{FedNova is robust in one system-heterogeneity regime and brittle in
-the other. Persistent, deterministic learning-rate asymmetry lets
-$\tau$-normalisation preserve the weakened client's contribution; random
-per-round $\tau$ --- the regime outside the stable-$\tau$ assumption of
-\citet{wang2020fednova} --- causes the same mechanism to amplify noisy
-partial updates and collapse to the majority-class baseline.}
+\caption{FedNova across the two system-heterogeneity regimes: persistent
+deterministic learning-rate asymmetry ($n=3$) versus random per-round $\tau$
+stragglers ($n=10$, outside the stable-$\tau$ assumption of
+\citet{wang2020fednova}). Test macro-F1; the mechanism reading is given in the
+text.}
 \label{tab:fednova-regime}
 \begin{tabular}{p{0.22\linewidth}p{0.32\linewidth}p{0.38\linewidth}}
 \toprule
@@ -1274,15 +1264,11 @@ over-regularisation cell (\S\,\ref{sec:mu-sensitivity}, Table~\ref{tab:mu-per-cl
 \begin{table}[H]
 \centering
 \small
-\caption{Rare-class collapse across four representative cells, spanning the
-straggler and learning-rate-asymmetry axes ($n=3$ each). Melanoma recall shows
-whether the melanoma signal is recovered at all; melanoma F1 adds the precision
-penalty; Rare-F1 is the rare-class summary (mean F1 over dermato, melanoma,
-vascular); and misrouting is the rare-to-mel-nevi failure rate. They move
-together: where rare signal reaches the global model (FedProx+$\gamma$-inexact,
-FedNova under deterministic asymmetry) rare-F1 is preserved and misrouting is
-low; where it does not (FedAvg+drop, FedAvg under 5:1 asymmetry) rare-F1
-flatlines and misrouting rises to $51$--$67\,\%$.}
+\caption{Rare-class collapse across four representative cells spanning the
+straggler and learning-rate-asymmetry axes ($n=3$ each). Columns: Rare-F1
+(mean F1 over dermato, melanoma, vascular), melanoma recall, melanoma F1, and
+rare-to-mel-nevi misrouting. Mel.\ recall reports whether melanoma is recovered
+at all; mel.\ F1 adds the precision penalty.}
 \label{tab:collapse-cells}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{p{0.15\linewidth} p{0.12\linewidth} c c c c p{0.29\linewidth}}
@@ -1290,7 +1276,7 @@ flatlines and misrouting rises to $51$--$67\,\%$.}
 Protocol                  & Algorithm & Rare-F1 & Mel.\ recall & Mel.\ F1 & Misrouting & Interpretation \\
 \midrule
 Perfect-storm + drop      & FedAvg    & $0.000$ & $0.00\,\%$  & $0.00\,\%$  & $67\,\%$   & Rare client dropped; flatline \\
-Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.357$ & $38.27\,\%$ & $34.46\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
+Perfect-storm + $\gamma$  & FedProx ($\mu=0.01$) & $0.327$ & $38.27\,\%$ & $34.46\,\%$ & $24\,\%$ & $\gamma$-inex preserves rare signal \\
 D1 5:1 LR asymmetry       & FedAvg    & $0.036$ & $1.20\,\%$  & $2.28\,\%$  & $51\,\%$   & Rare client under-weighted; gradual erosion \\
 D1 5:1 LR asymmetry       & FedNova   & $0.359$ & $46.34\,\%$ & $36.74\,\%$ & $26\,\%$   & Robust to the stable weakened update \\
 \bottomrule
@@ -1324,13 +1310,8 @@ in Table~\ref{tab:loss-side}.
 \begin{table}[H]
 \centering
 \caption{Loss-side imbalance correction at L4 ($n=3$ per cell). Cells are
-test macro-F1 $\pm$ sample SD with rare-class F1 in parentheses. The
-strongest cell (bold) is FedAvg with weighted CE, which matches or exceeds
-FedProx with plain CE: on this partition, class reweighting is a competitive
-loss-side alternative for rare-class preservation, and FedProx adds little on top
-of it. This is a loss-stage result and does not explain away the separate
-$\gamma$-inexact straggler effect (\S\ref{sec:li-straggler}), which acts at the
-protocol/aggregation stage.}
+test macro-F1 $\pm$ sample SD with rare-class F1 in parentheses; the strongest
+cell is bold.}
 \label{tab:loss-side}
 \begin{tabular}{lccc}
 \toprule
@@ -1378,8 +1359,7 @@ L4 decomposition, perfect-storm, asymmetric LR, and node-pinned L4. The mel-nevi
 column is near zero everywhere (both optimisers already classify the majority
 correctly) and the statistical-heterogeneity rows are near zero throughout; large
 positive differences appear in the rare-class columns (dermatofibroma, melanoma,
-vascular) precisely in the system-heterogeneity cells --- the one place across the
-study where optimiser choice strongly rescues rare-class signal.}
+vascular) precisely in the system-heterogeneity cells.}
 \label{fig:cross-experiment-per-class}
 \end{figure}
 
@@ -1627,27 +1607,25 @@ asymmetric $\mu$, node-pinned L4). No cross-scale generalisation claim is
 made between the two sizes.
 \item Local-epoch budget fixed at $E = 20$; straggler protocols are
 simulated via local-epoch counts rather than wall-clock deadlines.
-\item The L1/L4 partitions and the drop/straggler protocols are deliberate
-adversarial boundary cases chosen to stress-test method behaviour, not models of a
-typical federated hospital network; the regime map describes behaviour at these
-boundaries, not expected naturalistic deployment.
+\item The L1/L4 partitions and the drop/straggler protocols are stylised stress
+tests chosen to isolate method behaviour; the regime map describes behaviour at
+these boundaries rather than naturalistic deployment.
 \item Seed counts vary across experiments ($n = 10$ for headline comparisons,
 $n = 3$ for the mechanism and asymmetry probes --- Li-style four-condition,
 perfect-storm, asymmetric LR, weighted-CE, asymmetric $\mu$ --- and single-seed
-pilots labelled as such) because HPC access was restricted. This is reported
-transparently per experiment and should be weighed when interpreting the
-uncertainty of the $n = 3$ claims, for which no significance test is applied.
-\item The heterogeneity ladder is a single-seed pilot and is reported as
-such; multi-seed promotion exists only at L4 ($n = 3$).
+pilots labelled as such) because compute availability varied. Seed tiers are
+reported transparently per experiment; the $n = 3$ probes are directional and not
+significance-tested.
+\item The heterogeneity ladder is an exploratory single-seed pilot; multi-seed
+evidence exists only at L4 ($n = 3$).
 \item Runtime divergence between pure-PyTorch ($+0.027$) and Flower
 ($+0.007$) on the engineered partition limits magnitude claims; only
 direction is robust across runtimes.
 \item No SCAFFOLD, FedAdam, or FedYogi comparator; the optimiser space is
 FedAvg, FedProx, FedNova only.
-\item The FedNova random-$\tau$ collapse is an observed failure mode, not a
-mechanism-isolated result; confirming whether work-normalisation amplifies noisy
-partial updates would need further controlled experiments (e.g.\ varying the
-straggler fraction and $\tau$-variance independently).
+\item The FedNova random-$\tau$ collapse is an observed failure mode; isolating
+its mechanism --- e.g.\ varying the straggler fraction and $\tau$-variance
+independently --- is future work.
 \item No AUC or calibration metrics; predictions are argmax only.
 \item Per-client validation distributions were not logged centrally;
 q-FFL-style fairness CDFs and Sheller-style cross-client generalisation
@@ -1779,8 +1757,8 @@ FedProx + $\gamma$-inexact           & fixed, Client 1 $E = 5$       & accept ($
 \begin{table}[H]
 \centering
 \small
-\caption{Per-class validation F1 mean across the $\mu$ sweep on the
-engineered partition, $n = 10$ paired seeds per cell. SDs across seeds
+\caption{Per-class test F1 mean (at the best-validation checkpoint) across
+the $\mu$ sweep on the engineered partition, $n = 10$ paired seeds per cell. SDs across seeds
 range $0.003$ (mel-nevi) to $0.113$ (rare classes). ``$\Delta$ at $\mu=1.0$''
 is the absolute per-class F1 deficit at the catastrophic cell relative to
 the FedAvg baseline ($\mu = 0$). The deficit concentrates in rare and
