@@ -40,7 +40,7 @@ This project studies that setting on **DermaMNIST** — a 7-class dermatology im
 - **FedProx is not an imbalance corrector:** it acts at aggregation/drift — a loss-side fix (class-weighted CE on FedAvg) matches or beats it.
 - **Central claim:** *a protocol preserves rare-class F1 iff rare-client signal reaches the global model.*
 
-> **The report.** The submission compiles from **`report/submission_bundle/`** (`main.tex`, pdfLaTeX + BibTeX) — a self-contained four-chapter report (Introduction, Methods, Results, Discussion) plus an Appendix, with its figures and `references.bib`. **The only canonical report source is `report/submission_bundle/main.tex`**; earlier drafts and per-chapter sources have been archived outside the submission repository. The table below maps each report section/figure to the code, experiments, and results behind it.
+> **The report.** The compiled deliverables sit at the top of **`report/`**: the thesis (`report.pdf`) and the standalone executive summary (`executive_summary.pdf`). Both build from **`report/supporting/`** (`main.tex` and `executive_summary.tex`, pdfLaTeX + BibTeX) — a self-contained, flat bundle holding the LaTeX sources, all figures, logos, and `references.bib`. The report is a four-chapter document (Introduction, Methods, Results, Discussion) plus an Appendix. **The only canonical report source is `report/supporting/main.tex`**; earlier drafts and per-chapter sources have been archived outside the submission repository. The table below maps each report section/figure to the code, experiments, and results behind it.
 
 ---
 
@@ -51,7 +51,7 @@ Orientation for a reader coming from the report:
 - **`fl_dermamnist/`** is the importable source package (`python -m fl_dermamnist.…`). The name is **historical** — the thesis uses **DermaMNIST** only (there is no MNIST experiment).
 - **`fl_dermamnist/results/`** holds the raw/generated experiment artifacts (one directory per experiment).
 - **`fl_dermamnist/results/thesis_ready/figures/`** holds the **canonical thesis-ready figure PDFs**.
-- **`report/submission_bundle/`** is the **frozen submission bundle** (the `main.tex` compile target; its figures are flat copies of the canonical ones).
+- **`report/`** holds the compiled deliverables (`report.pdf`, `executive_summary.pdf`); **`report/supporting/`** is the **frozen submission bundle** (the `main.tex` / `executive_summary.tex` compile target; its figures are flat copies of the canonical ones).
 
 Path shorthands used in the table below: launchers live in `infra/slurm/`; result directories in `fl_dermamnist/results/`; analysis scripts in `fl_dermamnist/analysis/` (**`ANALYSIS/`**); figure scripts in `fl_dermamnist/figures/` (**`FIGURES/`**); conceptual-diagram scripts in `docs/figure_generation/` (**`CONCEPTUAL/`**).
 
@@ -75,7 +75,7 @@ Path shorthands used in the table below: launchers live in `infra/slurm/`; resul
 | §4.1 / table | regime synthesis (Discussion) | — | — | — | — | Table `final-claims` (the regime-map figure was removed from the thesis) |
 | Appendix | L4 confusion matrix | `li2020_asymmetric_L4` | — | `ANALYSIS/analyse_l4_confusion_matrices.py` | `ANALYSIS/analyse_l4_confusion_matrices.py` (same) | `F_l4_confusion_li2020.pdf` ⁴ |
 
-¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` exists in earlier (now-archived) drafts but is **not included in the final submission bundle** (`report/submission_bundle/main.tex`).
+¹ The §3.1 forest plot `F_statistical_heterogeneity_forest.pdf` exists in earlier (now-archived) drafts but is **not included in the final submission bundle** (`report/supporting/main.tex`).
 ² `F_l4_four_condition_per_class_grid.pdf` is a **static derived asset**: no tracked script emits it. Source data: `li2020_asymmetric_L4/history_*.csv` (the four-condition runs). Treat as static — recover/verify a generator before regenerating. (`FIGURES/plot_validation_curves_l4_four_condition.py` emits the appendix single-panel `F_val_curves_l4_four_condition.pdf`, a different figure.)
 ³ `F_engineered_per_class.pdf` shows **pure-PyTorch** headline validation trajectories (10 paired seeds); the Flower reproduction is the §3.1 headline macro-F1, not this figure.
 ⁴ `analyse_l4_confusion_matrices.py` writes `F_l4_confusion_li2020.pdf` (the four-condition mechanism); the submission bundle includes it **renamed to `F_l4_confusion_four_condition.pdf`**.
@@ -241,7 +241,7 @@ fl_dermamnist/results/<experiment>/        ← raw training artefacts (§4)
 results/thesis_ready/data/*.csv|json   +   results/thesis_ready/figures/F_*.pdf
    │   \input / \includegraphics
    ▼
-report/submission_bundle/main.tex  →  thesis PDF
+report/supporting/main.tex  →  report.pdf (thesis)
 ```
 
 ---
@@ -265,8 +265,8 @@ cleanest_federated/
 │   └── results/                   ← one dir per experiment (raw artefacts)
 │       └── thesis_ready/          ← data/ + figures/ (canonical thesis-ready outputs)
 ├── infra/                         ← HPC: slurm/ (templates + submitters), runpod/, local/ (commands.sh, analyse_all.sh)
-├── report/                        ← thesis submission bundle
-│   └── submission_bundle/         ← the ONLY canonical report: main.tex + figures + references.bib
+├── report/                        ← compiled deliverables: report.pdf + executive_summary.pdf
+│   └── supporting/                ← build sources: main.tex, executive_summary.tex, figures, references.bib
 ├── docs/                          ← provenance/ (verification sheet + traceability matrix) + figure_generation/ (conceptual diagrams)
 └── archive/                       ← curated legacy figure-generation code (code_legacy/)
 ```
@@ -308,10 +308,10 @@ cleanest_federated/
 The figures and tables in the report reproduce **from saved results without
 rerunning training** (full sweeps need HPC; see the seed/HPC note below).
 
-**Compile the report.** Upload the contents of `report/submission_bundle/` to Overleaf
-(or compile locally): main document `main.tex`, compiler **pdfLaTeX**, then BibTeX.
-The bundle is flat and self-contained — `main.tex`, `references.bib`, and its
-14 figure files (13 `F_*.pdf` + 1 `F_*.png`).
+**Compile the report.** Upload the contents of `report/supporting/` to Overleaf (or compile locally):
+the report (`main.tex`) and the standalone executive summary (`executive_summary.tex`),
+compiler **pdfLaTeX**, then BibTeX. The bundle is flat and self-contained — the LaTeX
+sources, `references.bib`, logos, and the 14 report figure files (13 `F_*.pdf` + 1 `F_*.png`).
 
 **Regenerate the figures/tables from saved outputs** (CPU, minutes):
 
@@ -326,8 +326,9 @@ bash infra/local/commands.sh analyse    # rebuild thesis tables + figures from s
 
 | Artefact | Location |
 |---|---|
-| Final report (compile target) | `report/submission_bundle/main.tex` |
-| Report figures (used by the PDF) | `report/submission_bundle/F_*.pdf` — copies of `fl_dermamnist/results/thesis_ready/figures/` |
+| Compiled report & summary | `report/report.pdf`, `report/executive_summary.pdf` |
+| Report compile target | `report/supporting/main.tex` (summary: `report/supporting/executive_summary.tex`) |
+| Report figures (used by the PDF) | `report/supporting/F_*.pdf` — copies of `fl_dermamnist/results/thesis_ready/figures/` |
 | Figure/table generators | `fl_dermamnist/{analysis,figures}/` (`plot_*.py`, `analyse_*.py`) and `docs/figure_generation/` (the conceptual diagrams) |
 | Aggregated tables (CSV/JSON) | `fl_dermamnist/results/thesis_ready/data/` |
 | Raw per-run experiment outputs | `fl_dermamnist/results/<experiment>/` (schema in §4) |
@@ -360,8 +361,16 @@ reproducing the report's figures and tables.
 ## 11. AI / code-assistance statement
 
 **Claude Code** (Anthropic's CLI), using the **Claude Opus 4.8** model, was used during
-this project for coding, debugging, experiments, and repository organization. All
-experiments, numerical results, their interpretation, and the scientific claims in the
-report are the author's own work and remain the author's responsibility; AI-assisted
-code and outputs were reviewed by the author. This statement should be read alongside,
-and adjusted to comply with, the relevant course policy on AI use.
+this project for coding, debugging, experiments, repository organization, and preparing
+this report. All experiments, numerical results, their interpretation, and the scientific
+claims in the report are the author's own work and remain the author's responsibility;
+AI-assisted code and outputs were reviewed by the author. This statement should be read
+alongside, and adjusted to comply with, the relevant course policy on AI use.
+
+---
+
+## 12. License
+
+The code in this repository is released under the **MIT License** (see [`LICENSE`](LICENSE)).
+The DermaMNIST data is not included and is redistributed by MedMNIST v2 from HAM10000
+under **CC BY-NC 4.0**; obtain it via the pinned `medmnist` package (see §2).

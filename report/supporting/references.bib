@@ -97,7 +97,7 @@
 }
 
 % ---------------------------------------------------------------------------
-% Federated optimization — adaptive / robust extensions (new, TODO citations)
+% Federated optimization — adaptive / robust extensions
 % ---------------------------------------------------------------------------
 
 @inproceedings{reddi2021adaptive,
@@ -147,7 +147,7 @@
 }
 
 % ---------------------------------------------------------------------------
-% FL survey and medical-FL framing (new, TODO citations)
+% FL survey and medical-FL framing
 % ---------------------------------------------------------------------------
 
 @article{kairouz2021advances,
@@ -294,6 +294,56 @@
 }
 
 % ---------------------------------------------------------------------------
+% Scientific Python / deep-learning software (implementation + metrics)
+% ---------------------------------------------------------------------------
+
+@inproceedings{paszke2019pytorch,
+  author    = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam
+               and Bradbury, James and Chanan, Gregory and Killeen, Trevor and
+               Lin, Zeming and Gimelshein, Natalia and Antiga, Luca and
+               Desmaison, Alban and K\"opf, Andreas and Yang, Edward and DeVito,
+               Zachary and Raison, Martin and Tejani, Alykhan and Chilamkurthy,
+               Sasank and Steiner, Benoit and Fang, Lu and Bai, Junjie and
+               Chintala, Soumith},
+  title     = {{PyTorch}: An Imperative Style, High-Performance Deep Learning
+               Library},
+  booktitle = {Advances in Neural Information Processing Systems ({NeurIPS})},
+  volume    = {32},
+  pages     = {8024--8035},
+  year      = {2019},
+  publisher = {Curran Associates, Inc.},
+}
+
+@article{pedregosa2011scikit,
+  author  = {Pedregosa, Fabian and Varoquaux, Ga\"el and Gramfort, Alexandre
+             and Michel, Vincent and Thirion, Bertrand and Grisel, Olivier and
+             Blondel, Mathieu and Prettenhofer, Peter and Weiss, Ron and
+             Dubourg, Vincent and Vanderplas, Jake and Passos, Alexandre and
+             Cournapeau, David and Brucher, Matthieu and Perrot, Matthieu and
+             Duchesnay, \'Edouard},
+  title   = {Scikit-learn: Machine Learning in {P}ython},
+  journal = {Journal of Machine Learning Research},
+  volume  = {12},
+  pages   = {2825--2830},
+  year    = {2011},
+}
+
+@article{virtanen2020scipy,
+  author  = {Virtanen, Pauli and Gommers, Ralf and Oliphant, Travis E. and
+             Haberland, Matt and Reddy, Tyler and Cournapeau, David and
+             Burovski, Evgeni and Peterson, Pearu and Weckesser, Warren and
+             Bright, Jonathan and others},
+  title   = {{SciPy} 1.0: Fundamental Algorithms for Scientific Computing in
+             {P}ython},
+  journal = {Nature Methods},
+  volume  = {17},
+  number  = {3},
+  pages   = {261--272},
+  year    = {2020},
+  doi     = {10.1038/s41592-019-0686-2},
+}
+
+% ---------------------------------------------------------------------------
 % Statistical methods
 % ---------------------------------------------------------------------------
 
@@ -338,29 +388,41 @@
 }
 
 % ---------------------------------------------------------------------------
-% Asymmetric / per-client proximal-mu analyses
+% Class imbalance in FL, non-IID degradation, and federated dermatology
 % ---------------------------------------------------------------------------
 
-% TODO: confirm the exact reference. The thesis cites Yao 2024 as predicting
-% that proximal anchoring should benefit most when applied to the client whose
-% local optimum is furthest from the global one (the rare-class-holding client
-% in the 2-client setup tested here). Replace this stub with the verified
-% entry before final submission.
-@misc{yao2024,
-  author = {Yao, [TODO]},
-  title  = {[PLACEHOLDER: directional per-client proximal anchoring in heterogeneous federated optimisation]},
-  year   = {2024},
-  note   = {Bibliography entry to be completed; cited in chapter on asymmetric per-client $\mu$.},
+@article{wang2021classimbalance,
+  author  = {Wang, Lixu and Xu, Shichao and Wang, Xiao and Zhu, Qi},
+  title   = {Addressing Class Imbalance in Federated Learning},
+  journal = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume  = {35},
+  number  = {11},
+  pages   = {10165--10173},
+  year    = {2021},
+  doi     = {10.1609/aaai.v35i11.17219},
 }
 
-% TODO: confirm the exact reference. The thesis cites Charles 2024 for the
-% training-stability metric (standard deviation of validation macro-F1 over
-% the last 50 rounds). Replace this stub with the verified entry before
-% final submission.
-@misc{charles2024stability,
-  author = {Charles, [TODO] et~al.},
-  title  = {[PLACEHOLDER: federated-training stability and end-of-training oscillation in heterogeneous settings]},
-  year   = {2024},
-  note   = {Bibliography entry to be completed; cited in chapter on training-stability metric.},
+@misc{zhao2018noniid,
+  author        = {Zhao, Yue and Li, Meng and Lai, Liangzhen and Suda, Naveen and
+                   Civin, Damon and Chandra, Vikas},
+  title         = {Federated Learning with Non-{IID} Data},
+  year          = {2018},
+  eprint        = {1806.00582},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+}
+
+@article{yaqoob2023skinfl,
+  author  = {Yaqoob, Muhammad Mateen and Alsulami, Musleh and Khan, Muhammad Amir
+             and Alsadie, Deafallah and Saudagar, Abdul Khader Jilani and
+             AlKhathami, Mohammed},
+  title   = {Federated Machine Learning for Skin Lesion Diagnosis: An
+             Asynchronous and Weighted Approach},
+  journal = {Diagnostics},
+  volume  = {13},
+  number  = {11},
+  pages   = {1964},
+  year    = {2023},
+  doi     = {10.3390/diagnostics13111964},
 }
 

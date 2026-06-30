@@ -21,10 +21,33 @@
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{setspace}
 \usepackage[round,authoryear]{natbib}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
 \onehalfspacing
 
-\title{Federated Optimisation on DermaMNIST\\
-\large FedAvg, FedProx, and FedNova under Statistical and System Heterogeneity}
+%% --- Page layout: compact chapter headings + running headers (exemplar style)
+% Compact numbered chapter title "1  Introduction" at the top of the page
+% (no "Chapter" prefix and no deep vertical drop), as in the example report.
+\titleformat{\chapter}[hang]
+  {\normalfont\huge\bfseries}{\thechapter}{1em}{}
+\titlespacing*{\chapter}{0pt}{0pt}{18pt}
+
+% Running header: chapter (left) and current section (right) in small caps,
+% with a rule beneath; page number centred in the footer.
+\setlength{\headheight}{14pt}
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter.\ #1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}}
+\fancypagestyle{fancy}{%
+  \fancyhf{}%
+  \fancyhead[L]{\nouppercase{\scshape\leftmark}}%
+  \fancyhead[R]{\nouppercase{\scshape\rightmark}}%
+  \fancyfoot[C]{\thepage}%
+  \renewcommand{\headrulewidth}{0.4pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+
+\title{Preserving Rare-Class Signal in Federated Learning\\
+\large under Statistical and System Heterogeneity}
 \author{Barbara Koch}
 \date{}
 
@@ -34,7 +57,68 @@
 %% FRONT MATTER
 %% =============================================================================
 
-\maketitle
+%% --- Title page (styled after the course exemplar) -------------------------
+%% Logo files in this bundle: cam_logo_trim.png (University of Cambridge),
+%% dis_logo.png (DiS MPhil programme), college_crest.png (college crest).
+%% Each \coverlogo slot falls back to a labelled placeholder box if its file
+%% is missing.
+\newcommand{\coverlogo}[3]{% #1 = filename, #2 = height, #3 = placeholder label
+  \IfFileExists{#1}{\includegraphics[height=#2]{#1}}%
+    {\fbox{\parbox[c][#2][c]{0.34\textwidth}{\centering\scriptsize\itshape #3}}}}
+\begin{titlepage}
+\centering
+
+% institutional logos: Cambridge (left), DiS MPhil (right)
+% top-aligned and flush to the top of the page, as in the example report
+\vspace*{-1.2cm}
+\noindent\makebox[\textwidth]{%
+  \raisebox{-\height}{\coverlogo{cam_logo_trim.png}{1.5cm}{University of Cambridge logo}}\hfill
+  \raisebox{-\height}{\coverlogo{dis_logo.png}{1.5cm}{DiS MPhil logo}}}
+
+\vspace*{\fill}
+
+{\huge\bfseries
+ \setstretch{1.1}
+ Preserving Rare-Class Signal in\\
+ Federated Learning\par}
+\vspace{0.9em}
+{\large\bfseries under Statistical and System Heterogeneity\par}
+
+\vspace{2.8em}
+{\large\scshape\bfseries A Report Presented\par}
+\vspace{0.45em}
+{\scshape\bfseries by\par}
+\vspace{0.45em}
+{\Large\scshape\bfseries Barbara Koch\par}
+
+\vspace{2.6em}
+{\bfseries Departments}\par
+\vspace{0.4em}
+{\bfseries Department of Applied Mathematics and Theoretical Physics\par}
+{\bfseries Department of Physics (Cavendish Laboratory)\par}
+
+\vspace{1.4em}
+{\bfseries Degree}\par
+\vspace{0.4em}
+{\bfseries MPhil in Data Intensive Science\par}
+
+\vspace{1.4em}
+{\bfseries Supervision}\par
+\vspace{0.4em}
+{\bfseries Dr Joshua Kaggie\par}
+
+\vspace*{\fill}
+
+% college crest above the college / university / date block
+\coverlogo{peterhouse_crest.png}{2.2cm}{Peterhouse crest}\par
+\vspace{0.6em}
+{\large\scshape\bfseries Peterhouse\par}
+{\large\scshape\bfseries University of Cambridge\par}
+{\large\scshape\bfseries 1st July 2026\par}
+\end{titlepage}
+
+% front matter: page number only, no running header
+\pagestyle{plain}
 
 \begin{abstract}
 Federated learning lets institutions train a shared model without pooling private
@@ -55,12 +139,18 @@ DermaMNIST benchmark simulations with $n=3$ mechanism probes, and map regimes
 rather than establishing a universal optimiser ranking.
 \end{abstract}
 
-\chapter*{Acknowledgements}
-\addcontentsline{toc}{chapter}{Acknowledgements}
-I would like to thank my supervisor for guidance, feedback, and helpful
-discussions throughout this project. I am also grateful to the course staff and
-computing-support team for providing the resources and infrastructure that made
-the experiments possible.
+\chapter*{Declaration}
+\addcontentsline{toc}{chapter}{Declaration}
+This thesis contains 6,862 words.
+
+I declare that this thesis is original and is submitted as part of the requirements
+for the degree. Except where explicitly stated, it contains nothing which is the
+outcome of work done in collaboration with others.
+
+I used GitHub for version control and repository management. Claude by Anthropic
+was used for assistance with coding and debugging, and ChatGPT by OpenAI was used
+for organisation, planning, and structuring support. The experiments, analysis,
+interpretation, and final submitted text remain my own responsibility.
 
 \tableofcontents
 \listoffigures
@@ -70,6 +160,8 @@ the experiments possible.
 %% =============================================================================
 %% CHAPTER 1: INTRODUCTION
 %% =============================================================================
+% body: running headers (chapter left, section right) from here on
+\pagestyle{fancy}
 \chapter{Introduction}
 \label{ch:intro}
 
@@ -82,17 +174,21 @@ centrally because of privacy regulation and governance. Federated learning
 sidesteps this by keeping each institution's data in place and exchanging only
 model updates \citep{mcmahan2017fedavg, rieke2020future, sheller2020medicalfl},
 which makes it a natural setting for collaborative learning across hospitals
-\citep{kairouz2021advances}. It also introduces two difficulties that are acute
-in medicine. Under \emph{statistical heterogeneity}, sites see different case
-mixes, so client data is non-IID; under \emph{system heterogeneity}, sites differ
+\citep{kairouz2021advances, pati2022fets}. It also introduces two difficulties
+that are acute in medicine. Under \emph{statistical heterogeneity}, sites see
+different case mixes, so client data is non-IID \citep{zhao2018noniid}; under
+\emph{system heterogeneity}, sites differ
 in compute and availability, so some clients return only partial updates in a
 round. The two coincide most damagingly when the under-resourced site is also the
 one holding the rare cases.
 
-Medical data is, in addition, severely class-imbalanced. DermaMNIST
+Medical data is, in addition, severely class-imbalanced, a recognised obstacle
+for federated training \citep{wang2021classimbalance}. DermaMNIST
 \citep{yang2023medmnistv2}, derived from the HAM10000 dermatoscopic collection
 \citep{tschandl2018ham10000} and used throughout this thesis, is dominated by
-benign melanocytic nevi, while the diagnostically urgent lesions are rare. A model
+benign melanocytic nevi, while the diagnostically urgent lesions are rare;
+federated learning has itself been applied to skin-lesion classification
+\citep{yaqoob2023skinfl}. A model
 can therefore post high accuracy while failing on exactly the lesions that matter,
 so we report macro-F1 and per-class rare-class diagnostics rather than accuracy.
 Crucially, the information needed to recognise a rare lesion reaches the global
@@ -122,29 +218,33 @@ deployment.
 \section{Research questions and contributions}
 \label{sec:intro-questions}
 
-This framing raises four questions, examined in turn in
-Chapter \ref{ch:results}. Because the literature often credits FedProx and
-FedNova with broad gains, the thesis first asks whether statistical heterogeneity
-alone is enough to separate FedAvg and FedProx or whether additional stress is
-required; then, where FedProx does help under stragglers, whether that benefit
-comes from its proximal regularisation or from its $\gamma$-inexact acceptance of
-partial updates; whether FedNova's work-normalisation is robust in general or
-only under deterministic learning-rate asymmetry, failing under random
+This framing raises four questions. Because the literature often credits FedProx
+and FedNova with broad gains, the thesis first asks whether statistical
+heterogeneity alone is enough to separate FedAvg and FedProx or whether additional
+stress is required; then, where FedProx does help under stragglers, whether that
+benefit comes from its proximal regularisation or from its $\gamma$-inexact
+acceptance of partial updates; whether FedNova's work-normalisation is robust in
+general or only under deterministic learning-rate asymmetry, failing under random
 round-to-round straggling; and finally whether rare-class collapse into the
 majority class is the shared failure mode, and whether the FedProx advantage is
-merely class-imbalance correction in disguise.
+merely class-imbalance correction in disguise. Chapter~\ref{ch:results} follows
+this order: statistical heterogeneity (\S\ref{sec:statistical-heterogeneity}), the
+proximal coefficient (\S\ref{sec:mu-sensitivity}), straggler asymmetry
+(\S\ref{sec:li-straggler}), FedNova regime-dependence (\S\ref{sec:lr-asymmetry}),
+and rare-class collapse with the loss-side comparison
+(\S\ref{sec:rare-class-collapse}).
 
 Answering these yields the contributions of the thesis. It maps the regimes in
-which FedAvg, FedProx, and FedNova preserve or lose rare-class signal; it
+which FedAvg, FedProx, and FedNova preserve or lose rare-class signal, and
 decomposes the FedProx straggler-regime advantage into its proximal and
 $\gamma$-inexact components using matched class-disjoint (L4) and quantity-only
-(L1) partitions that fix when the effect can appear; it characterises FedNova's
-regime-dependence across deterministic and random system heterogeneity; it
-identifies rare-class collapse into the dominant melanocytic-nevi class as the
-common failure mode; and --- through the L4/L1 decomposition --- it shows the
-FedProx straggler-regime advantage is a drift-and-protocol effect, with weighted
-cross-entropy a competitive loss-side alternative rather than evidence that this
-advantage is merely class-imbalance correction in disguise.
+(L1) partitions that fix when the effect can appear. It then characterises
+FedNova's regime-dependence across deterministic and random system heterogeneity,
+and identifies rare-class collapse into the dominant melanocytic-nevi class as the
+common failure mode. Finally, through the same L4/L1 decomposition, it shows the
+FedProx straggler-regime advantage to be a drift-and-protocol effect, with
+weighted cross-entropy a competitive loss-side alternative rather than evidence
+that the advantage is merely class-imbalance correction in disguise.
 
 
 %% =============================================================================
@@ -162,12 +262,18 @@ together train a single global model without exchanging raw data
 (Figure~\ref{fig:fl-workflow}). Client $i$ holds a private training set $D_i$ of
 $n_i$ examples, with $N = \sum_i n_i$. In each round $t$ the server broadcasts the
 global model $w^{t}$; every participating client runs $E$ epochs of local SGD on
-$D_i$ to obtain $w_i^{t+1}$ and returns its update $d_i = w_i^{t+1} - w^{t}$; the
-baseline rule, FedAvg \citep{mcmahan2017fedavg}, recombines these by the
-sample-weighted mean $w^{t+1} = \sum_i (n_i / N)\, w_i^{t+1}$. FedProx
-\citep{li2020fedprox} and FedNova \citep{wang2020fednova} modify, respectively,
-the local objective and the way the updates $d_i$ are normalised before
-combination (\S\ref{sec:method-optimisers}).
+$D_i$ to obtain $w_i^{t+1}$ and returns its update
+\[
+  d_i = w_i^{t+1} - w^{t}.
+\]
+The baseline rule, FedAvg \citep{mcmahan2017fedavg}, recombines these by the
+sample-weighted mean
+\[
+  w^{t+1} = \sum_i \frac{n_i}{N}\, w_i^{t+1}.
+\]
+FedProx \citep{li2020fedprox} and FedNova \citep{wang2020fednova} modify,
+respectively, the local objective and the way the updates $d_i$ are normalised
+before combination (\S\ref{sec:method-optimisers}).
 
 \begin{figure}[t]
 \centering
@@ -195,29 +301,19 @@ interact most sharply when the client carrying the rare classes is also the one
 that is slow or under-weighted.
 
 This motivates the concept that organises the thesis, \emph{rare-client signal
-flow}: the per-round contribution that the client holding rare-class examples
-makes to the global update. A rare class is learned only to the extent that the
-information in that client's update $d_i$ reaches and persists in $w^{t+1}$, so the
-organising hypothesis is that rare-class performance is preserved precisely when
-rare-client signal continues to reach the global model. Two matched two-client
-partitions isolate this (Figure~\ref{fig:l1-l4-schematic}): the class-disjoint
-\textbf{L4}, in which one client uniquely holds melanoma, dermatofibroma, and
-vascular lesions, and its quantity-only control \textbf{L1}, in which both clients
-carry near-global proportions --- so suppressing a client removes unique
-rare-class signal under L4 but not under L1. Performance is measured throughout by
-test macro-F1 at the best-validation checkpoint, with the full metric stack and
-reporting protocol defined in \S\ref{sec:method-metrics}.
+flow}: the per-round contribution that the rare-class-holding client makes to the
+global update. A rare class is learned only to the extent that the information in
+that client's update $d_i$ reaches and persists in $w^{t+1}$, so the organising
+hypothesis is that rare-class performance is preserved precisely when rare-client
+signal continues to reach the global model. The matched two-client partitions L4
+(class-disjoint) and L1 (quantity-only control) isolate this
+(\S\ref{sec:method-partitions}). Performance is measured throughout by test
+macro-F1 at the best-validation checkpoint (\S\ref{sec:method-metrics}).
 
-Several claims are deliberately out of scope. This is a controlled benchmark
-simulation, not a hospital deployment: no wall-clock deadlines, privacy or
-communication-cost budgets, or clinical validation. The optimiser set is not an exhaustive FL
-benchmark (no SCAFFOLD, FedDyn, or FedAdam). The four-condition decomposition
-lacks a FedAvg~$+~\gamma$-inexact cell, so its rescue attribution is to the
-\emph{FedProx~$+~\gamma$-inexact protocol}, not to $\gamma$-inexact acceptance
-alone. The chapter follows a causal-contrast sequence that the
-Results chapter walks in order: IID baseline $\to$ engineered
-statistical-heterogeneity $\to$ $\mu$-sweep $\to$ L1/L4 four-condition
-decomposition $\to$ learning-rate-asymmetry envelope $\to$ loss-side comparators.
+The optimiser set is deliberately limited rather than exhaustive, and the
+four-condition decomposition lacks a FedAvg $+$ $\gamma$-inexact cell, so its
+rescue attribution is to the \emph{FedProx $+$ $\gamma$-inexact protocol}, not to
+$\gamma$-inexact acceptance alone.
 
 \section{Dataset, metrics, and reporting}
 \label{sec:method-dataset}
@@ -232,20 +328,17 @@ test images, permuted to channel-first float, scaled to $[0, 1]$, and normalised
 with ImageNet channel statistics.
 
 The benchmark is severely class-imbalanced (Figure~\ref{fig:dataset-classes},
-Table~\ref{tab:dataset-classes}): the melanocytic-nevi class (mel-nevi) dominates
-the training set, while the two smallest classes --- dermatofibroma and vascular
-lesions --- have so little support that any optimiser that fails to learn them
-suffers a large macro-F1 penalty while keeping raw accuracy almost unchanged.
-Melanoma is mid-support but is included in the canonical rare-class group used
-throughout, $\mathrm{RARE\_IDX} = \{\text{dermato}, \text{melanoma},
-\text{vascular}\}$, because missing a melanoma is the highest-priority failure the
-dataset can express. Mel-nevi acts throughout as the
-\emph{majority attractor}: under several failing optimiser/protocol combinations,
-rare-class images are disproportionately routed into it, so raw accuracy stays
-misleadingly high while macro-F1 collapses. Client partitions
-(\S\ref{sec:method-partitions}) apply to the training set only; the validation and
-test sets remain global and class-stratified, so any reported test-set rare-class
-collapse is not a partition artefact.
+Table~\ref{tab:dataset-classes}): mel-nevi dominates the training set, while
+dermatofibroma and vascular lesions have so little support that failing to learn
+them incurs a large macro-F1 penalty at almost unchanged accuracy. Melanoma is
+mid-support but is kept in the canonical rare-class group
+$\mathrm{RARE\_IDX} = \{\text{dermato}, \text{melanoma}, \text{vascular}\}$, since
+missing a melanoma is the highest-priority failure. Mel-nevi acts as the
+\emph{majority attractor}: under failing protocols, rare-class images are routed
+into it, so accuracy stays high while macro-F1 collapses. Partitions
+(\S\ref{sec:method-partitions}) apply to the training set only; validation and test
+sets stay global and class-stratified, so any test-set rare-class collapse is not a
+partition artefact.
 
 \begin{table}[H]
 \centering
@@ -286,33 +379,30 @@ is why raw accuracy is misleading and the thesis ranks optimisers by macro-F1.}
 The primary metric throughout is \emph{test macro-F1 at the best-validation
 checkpoint}, computed on the global test set: macro-F1 weights all seven classes
 equally and is sensitive to rare-class collapse, whereas raw accuracy saturates at
-the $\approx 66.9\,\%$ mel-nevi floor and would not separate a model that has lost
-the rare classes from one that has not. Secondary diagnostics are per-class F1;
+the $\approx 66.9\,\%$ mel-nevi floor. Secondary diagnostics are per-class F1;
 per-class recall (the confusion-matrix diagonal $P(\hat{y} = c \mid y = c)$);
-rare-class F1 over $\mathrm{RARE\_IDX}$ (the $0.265$ value from earlier drafts that
-excluded melanoma is not used); rare-to-mel-nevi misrouting, the mean over rare
-classes of $P(\hat{y} = \text{nv} \mid y = c)$; convergence curves; and per-client
-update norms (diagnostic only). Balanced accuracy is stored only as a sanity check
-and never used to rank optimisers --- raw accuracy would mis-rank the L4 5{:}1
-LR-asymmetry cell (\S\ref{sec:lr-asymmetry}). Validation macro-F1 selects the best
+rare-class F1 over $\mathrm{RARE\_IDX}$; rare-to-mel-nevi misrouting, the mean over
+rare classes of $P(\hat{y} = \text{nv} \mid y = c)$; convergence curves; and
+per-client update norms (diagnostic only). Balanced accuracy is stored only as a
+sanity check, never used to rank optimisers. Validation macro-F1 selects the best
 checkpoint round-by-round; test metrics are evaluated once at that checkpoint.
-Probabilities are not stored, so AUC and calibration are not used. A
+Evaluation uses argmax predictions. A
 \emph{protocol flip} is a sign reversal of $\Delta = \mathrm{FedProx} -
-\mathrm{FedAvg}$ between the best-validation, final-round, and last-$K$ summaries;
-it is a robustness check on reporting choice, not a result claim.
+\mathrm{FedAvg}$ between the best-validation, final-round, and last-$K$ summaries,
+reported as a robustness check.
 
 Three seed tiers are reported distinctly (Table~\ref{tab:seed-tiers}); sample SDs
-use the unbiased ($N-1$) denominator. The \emph{node-pinned L4} configuration is a variance control,
-not a partition design: it re-runs L4 cells on a single compute node with matched
-seeds to isolate cross-node CUDA non-determinism from any optimiser effect.
+use the unbiased ($N-1$) denominator. The \emph{node-pinned L4} configuration is a variance control: it re-runs L4 cells
+on a single compute node with matched seeds to isolate cross-node CUDA
+non-determinism from any optimiser effect.
 
 \begin{table}[H]
 \centering
 \small
 \caption{Seed-tier reporting protocol. Wins is the number of paired
 within-seed comparisons in which FedProx exceeds FedAvg. Wilcoxon refers
-to the paired signed-rank test, used only where $n = 10$ provides
-sufficient power.}
+to the paired signed-rank test \citep{demsar2006classifier}, used only where
+$n = 10$ provides sufficient power.}
 \label{tab:seed-tiers}
 \begin{tabular}{c p{0.32\linewidth} p{0.36\linewidth}}
 \toprule
@@ -320,7 +410,7 @@ Tier         & Statistical reporting                                            
 \midrule
 $n = 10$     & Mean $\pm$ sample SD; paired $\Delta$; wins; paired Wilcoxon signed-rank where meaningful        & Headline statistical-heterogeneity, $\mu$-sweep, IID baseline, system-het 7-client experiments            \\
 $n = 3$      & Mean $\pm$ sample SD; directional only; no significance language                                & Mechanism/asymmetry probes: four-condition, perfect-storm, LR asymmetry, weighted-CE, asymmetric-$\mu$    \\
-$n = 1$      & Labelled \emph{pilot}; reported only for orientation                                            & Heterogeneity ladder L0--L4; never used to derive headline numbers                                        \\
+$n = 1$      & Labelled \emph{pilot} (single seed)                                            & Heterogeneity ladder L0--L4                                        \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -331,30 +421,30 @@ $n = 1$      & Labelled \emph{pilot}; reported only for orientation             
 All experiments are controlled federated-learning simulations. Each run executes the loop of Figure~\ref{fig:fl-workflow} for $R = 150$ rounds
 with $E = 20$ local epochs of mini-batch SGD per client, using the same global,
 class-stratified validation and test sets throughout --- only the client training
-partition varies. Two federation sizes are used. The \textbf{7-client} federation
-carries the headline 10-seed benchmarks (IID, engineered balanced-paired,
-Dirichlet $\alpha = 0.1$, specialist 1-of-7) and the random-straggler system-het
-comparisons including the FedNova random-$\tau$ collapse; the \textbf{2-client}
-federation carries the controlled mechanism probes that need a clean rare-client
-vs dominant-client interaction (L1/L4 four-condition, perfect-storm, LR-asymmetry
-envelope, weighted-CE/focal comparators, asymmetric $\mu$, node-pinned L4, ladder
-pilot). No cross-scale generalisation between the two sizes is claimed. Two
-training regimes are used: \textbf{Regime~A} (7-client default: SGD momentum
-$0.9$, batch $32$, $\textrm{lr} = 0.01$, weight decay $0$) and \textbf{Regime~B}
-(Li-style plain SGD for the 2-client probes: momentum $0$, batch $10$, same
-lr/wd/$E$/$R$); the four-condition decomposition additionally fixes Client~1's
-$E_{\textrm{straggler}} = 5$. Each experiment's regime is stated in the
-corresponding Results section.
+partition varies. Two federation sizes are used: the \textbf{7-client} federation carries the
+headline 10-seed benchmarks and the random-straggler system-het comparisons, while
+the \textbf{2-client} federation carries the controlled mechanism probes that need
+a clean rare-client vs dominant-client interaction (no cross-scale claim is made
+between the two). Two training regimes are used: \textbf{Regime~A} (7-client
+default: SGD momentum $0.9$, batch $32$, $\textrm{lr} = 0.01$, weight decay $0$)
+and \textbf{Regime~B} (Li-style plain SGD for the 2-client probes: momentum $0$,
+batch $10$, same lr/wd/$E$/$R$); the four-condition decomposition additionally
+fixes Client~1's $E_{\textrm{straggler}} = 5$. Each experiment's regime is stated
+in its Results section.
 
-The model is a small CNN used as the benchmark vehicle, not a contribution: four
-convolutional blocks of widths $32 \to 64 \to 128 \to 256$ (each a $3 \times 3$
+The model is a small CNN used as the fixed benchmark vehicle, so that optimiser
+differences are attributable to the federated method rather than the architecture:
+four convolutional blocks of widths $32 \to 64 \to 128 \to 256$ (each a $3 \times 3$
 convolution with GroupNorm \citep{wu2018groupnorm} and ReLU; max-pooling between
 the first three, adaptive average pooling after the fourth), then a $256 \to 128$
 dense layer with dropout $0.2$ and a seven-class head. GroupNorm is used rather
 than BatchNorm because BN's per-batch statistics diverge across heterogeneous
-clients, a documented non-IID FL pathology \citep{hsieh2020quagmire}. The local
+clients, a documented non-IID FL pathology \citep{hsieh2020quagmire, li2021fedbn}. The local
 objective is unweighted cross-entropy unless \S\ref{sec:method-losses} overrides,
-with best-validation checkpointing.
+with best-validation checkpointing. Models were implemented in PyTorch
+\citep{paszke2019pytorch}; macro-F1, per-class F1, and confusion matrices were
+computed with scikit-learn \citep{pedregosa2011scikit}, and statistical diagnostics
+with SciPy \citep{virtanen2020scipy}.
 
 \label{sec:method-runtimes}
 Two runtimes are used: a \emph{pure-PyTorch reference loop} and the \emph{Flower
@@ -368,25 +458,22 @@ are given in Appendix~\ref{app:provenance}.
 \section{Partitions, optimisers, and protocols}
 \label{sec:method-partitions}
 
-Partition design is the primary lever for statistical heterogeneity: it determines
-whether each client sees a near-global class mix, or rare-class signal is
+Partition design is the primary lever for statistical heterogeneity, determining
+whether each client sees a near-global class mix or rare-class signal is
 concentrated on a few clients --- or, in the strongest probes, on a single client
-whose contribution can then be made to fail or succeed by varying the
-system-heterogeneity protocol. The partitions and their downstream consumers are
-listed in Table~\ref{tab:partition-designs}. The \emph{IID} partition is a
-negative control: every client receives a representative random sample, so a
-substantial FedProx advantage here would not support the
-heterogeneity-correction interpretation and would require implementation scrutiny.
-The \emph{engineered balanced-paired} 7-client partition is a controlled
-middle ground between IID and the singleton specialist case: every minority class
-is concentrated on exactly two clients (rare-class signal unevenly shared) but no
-minority class is isolated to a single client. It is the substrate for the
-headline FedAvg/FedProx comparison and the $\mu$-sweep
-(Figure~\ref{fig:engineered-partition}); by the author's own design note it was
+whose contribution can then be made to fail or succeed by the system-heterogeneity
+protocol (Table~\ref{tab:partition-designs}). The \emph{IID} partition is a
+negative control: every client receives a representative sample, so a substantial
+FedProx advantage here would not support the heterogeneity-correction
+interpretation. The \emph{engineered balanced-paired} 7-client partition is a
+controlled middle ground in which every minority class is concentrated on exactly
+two clients (rare-class signal unevenly shared) but none is isolated to a single
+client. It is the substrate for the headline FedAvg/FedProx comparison and the
+$\mu$-sweep (Figure~\ref{fig:engineered-partition}); it was deliberately
 \emph{``designed to maximise FedProx's advantage on the per-class drift
-mechanism''}, so the small Flower-paired $\Delta$ reported in
+mechanism''}, so the small Flower-paired $\Delta$ in
 \S\ref{sec:statistical-heterogeneity} should be read against that FedProx-favouring
-framing rather than as a naturalistic deployment.
+framing rather than as a general effect estimate.
 
 \begin{figure}[H]
 \centering
@@ -403,18 +490,15 @@ bottom bar gives the total training-sample count per client.}
 \end{figure}
 
 The two-client \textbf{L1} and \textbf{L4} partitions are matched mechanism
-controls (Figure~\ref{fig:l1-l4-schematic}): both use the same $86/14$ sample
-split and protocol family and differ in one variable --- whether Client~1 carries
-class information Client~0 lacks. In \emph{L4} the split is class-disjoint:
-Client~0 holds mel-nevi, benign-keratosis, actinic keratoses, and basal cell
-carcinoma, while Client~1 uniquely holds melanoma, dermatofibroma, and vascular
-lesions (JS divergence $1.0$). L4 is
-the substrate for the four-condition decomposition, perfect-storm, asymmetric-LR,
-and loss-side experiments. \emph{L1} keeps the same $86/14$ quantity skew but
-stratifies every class across both clients in near-global proportions (JS
-divergence $\approx 5 \times 10^{-6}$), so it tests whether $\gamma$-inexact
-acceptance helps generically, while L4 tests whether it helps specifically when
-the under-trained client holds unique rare-class signal.
+controls (Figure~\ref{fig:l1-l4-schematic}): both use the same $86/14$ split and
+protocol family and differ in one variable --- whether Client~1 carries class
+information Client~0 lacks. \emph{L4} is class-disjoint: Client~1 uniquely holds
+melanoma, dermatofibroma, and vascular lesions (JS divergence $1.0$), and is the
+substrate for the four-condition decomposition, perfect-storm, asymmetric-LR, and
+loss-side experiments. \emph{L1} keeps the same quantity skew but stratifies every
+class across both clients (JS divergence $\approx 5 \times 10^{-6}$), so it tests
+whether $\gamma$-inexact acceptance helps generically, while L4 tests whether it
+helps specifically when the under-trained client holds unique rare-class signal.
 
 \begin{figure}[H]
 \centering
@@ -444,7 +528,7 @@ IID                             & 7-client   & none                            &
 Engineered balanced-paired      & 7-client   & paired minority ownership       & Main FedAvg/FedProx comparison and $\mu$-sweep                         & §\ref{sec:statistical-heterogeneity}, §\ref{sec:mu-sensitivity} \\
 Dirichlet $\alpha = 0.1$        & 7-client   & stochastic label skew           & Test whether the engineered result generalises                         & §\ref{sec:statistical-heterogeneity}            \\
 Specialist 1-of-7               & 7-client   & singleton minority ownership    & Test stronger class specialisation without changing client sizes       & §\ref{sec:statistical-heterogeneity}            \\
-Ladder L0--L4                   & 2-client   & escalating label skew           & Single-seed pilot; orientation only                                    & §\ref{sec:statistical-heterogeneity} (pilot)    \\
+Ladder L0--L4                   & 2-client   & escalating label skew           & Single-seed pilot                                                      & §\ref{sec:statistical-heterogeneity} (pilot)    \\
 L1                              & 2-client   & quantity-only                   & Negative control for the $\gamma$-inexact mechanism                    & §\ref{sec:li-straggler}                         \\
 L4                              & 2-client   & class-disjoint                  & Mechanism substrate for straggler, LR-asymmetry, and loss experiments  & §\ref{sec:li-straggler}, §\ref{sec:lr-asymmetry}, §\ref{sec:rare-class-collapse} \\
 \bottomrule
@@ -479,9 +563,12 @@ bit-identical to FedAvg, an equivalence verified numerically by a regression tes
 so any later FedProx advantage cannot be a coding artefact. \textbf{FedNova}
 \citep{wang2020fednova} keeps FedAvg-style solvers but normalises each client's
 update by its effective local work $\tau_i$ via the momentum-aware factor
-$a_i = (\tau_i(1-m) - m(1-m^{\tau_i}))/(1-m)^{2}$ (which reduces to $a_i = \tau_i$
-when $m = 0$, as under Regime~B), aggregating $d_i / a_i$ and scaling the global
-step by $a_{\textrm{eff}} = \sum_i p_i a_i$; both its asymmetry regimes lie outside
+\[
+  a_i = \frac{\tau_i(1-m) - m\,(1 - m^{\tau_i})}{(1-m)^{2}},
+\]
+which reduces to $a_i = \tau_i$ when $m = 0$ (as under Regime~B). The server
+aggregates $d_i / a_i$ and scales the global step by
+$a_{\textrm{eff}} = \sum_i p_i a_i$; both FedNova's asymmetry regimes lie outside
 the stable-$\tau$ assumption of the original analysis.
 Figure~\ref{fig:optimizer-comparison} contrasts these three mechanisms against the
 shared federated-learning loop.
@@ -541,8 +628,8 @@ run $E_{\textrm{straggler}} < E_{\max}$); or random-straggler (a fraction per ro
 run a random $E \in [1, E_{\max}-1]$). When a client returns a partial update the
 server either \emph{drops} it (excluded from that round's aggregation) or accepts
 it under \emph{$\gamma$-inexact} handling (Figure~\ref{fig:signal-flow-gamma}).
-\textbf{Drop versus $\gamma$-inexact is a protocol choice, not an optimiser
-property:} either policy pairs with either FedAvg or FedProx, and this
+\textbf{Drop versus $\gamma$-inexact is a protocol choice independent of the
+optimiser:} either policy pairs with either FedAvg or FedProx, and this
 independence is what the four-condition decomposition exploits.
 
 \begin{figure}[t]
@@ -566,17 +653,17 @@ variability, so the only quantities that change between the four cells are the o
 (FedAvg vs FedProx) and the partial-update protocol (drop vs $\gamma$-inexact); the
 full cell-by-cell design grid is tabulated in Appendix~\ref{app:supp-tables}
 (Table~\ref{tab:four-condition-design}). The design deliberately
-omits a FedAvg~$+~\gamma$-inexact cell, so attributing the rare-class-rescue effect
+omits a FedAvg $+$ $\gamma$-inexact cell, so attributing the rare-class-rescue effect
 to the $\gamma$-inexact protocol (rather than to the proximal term alone) is a
-claim about the \emph{FedProx~$+~\gamma$-inexact} protocol, not about
+claim about the \emph{FedProx $+$ $\gamma$-inexact} protocol, not about
 $\gamma$-inexact acceptance in isolation.
 
 Three further system-asymmetry regimes build on this. The \emph{perfect-storm}
 stress keeps L4/Regime~B but raises straggling to a random fraction $0.9$,
 comparing FedAvg+drop with FedProx+$\gamma$-inexact at $\mu \in \{1.0, 0.01\}$
 ($n = 3$); because its schedule and arms differ from the four-condition design it
-is reported as a stress demonstration of the same ordering, not a second
-decomposition. The \emph{learning-rate-asymmetry} envelope keeps Client~0 at
+is reported as a stress demonstration of the same ordering. The
+\emph{learning-rate-asymmetry} envelope keeps Client~0 at
 $\textrm{lr} = 0.01$ and varies Client~1 across six ratios from $1{:}1$ to $50{:}1$
 ($\textrm{lr}_1 \in \{0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002\}$), weakening the
 rare client's update magnitude \emph{without dropping it} and so separating the
@@ -596,29 +683,22 @@ is really a disguised class-imbalance correction, a direct loss-level correction
 should match or exceed it on the same partition. Three losses are compared on the
 L4 substrate: plain cross-entropy (the unweighted baseline); weighted CE with
 inverse-frequency weights $w_c = (1/n_c)\cdot C / \sum_j (1/n_j)$ normalised so
-$\sum_c w_c = C$; and focal loss \citep{lin2017focal} with $\gamma = 2$ and a
-default inverse-frequency $\alpha_c$ (so the focal comparator is focal with
-class-balanced $\alpha$). The focal condition uses the implemented class-balanced
-focal variant in this repository, in which the $\alpha$-weighted cross-entropy
-enters the focusing calculation (the modulating factor $(1-p_t)^{\gamma}$ is
-computed from the weighted CE, $p_t=\exp(-\mathcal{L}^{\alpha}_{\mathrm{CE}})$,
-rather than from unweighted log-probabilities); it should therefore be read as an
-empirical loss-side comparison, not as a clean test of the canonical focal-loss
-formulation. Weighted CE intervenes in per-class loss contribution
-during local training while FedProx intervenes in aggregation, so if FedProx were
-class re-weighting in disguise, weighted CE would close the gap on its own. This is
-a focused comparator set, run only on L4.
+$\sum_c w_c = C$; and focal loss \citep{lin2017focal} ($\gamma = 2$,
+inverse-frequency $\alpha_c$). The focal comparator uses this repository's
+class-balanced variant, in which the modulating factor is computed from the
+$\alpha$-weighted cross-entropy rather than from unweighted log-probabilities, so
+it is an empirical loss-side comparison. Weighted CE intervenes in per-class loss during local training while FedProx
+intervenes in aggregation, so if FedProx were class re-weighting in disguise,
+weighted CE would close the gap on its own. This comparator set is run only on L4.
 
 \section{Experiment families}
 \label{sec:method-roadmap}
 
-Methods has now fixed the partitions, optimisers, protocols, losses, runtime, and
-seed tiers. Table~\ref{tab:experiment-families} maps the eleven experiment families
-to the Results sections they support; the Results chapter follows this table as a
-single argument rather than a list of detached experiments. L4 appears in five
-rows --- the controlled-mechanism substrate --- while L1 appears once but is the
-load-bearing negative control for the $\gamma$-inexact rare-class-rescue mechanism
-(\S\ref{sec:li-straggler}).
+Table~\ref{tab:experiment-families} maps the eleven experiment families to the
+Results sections they support; the Results chapter follows it as a single argument
+rather than a list of detached experiments. L4 is the controlled-mechanism
+substrate (five rows); L1 appears once but is the load-bearing negative control for
+the $\gamma$-inexact rescue mechanism (\S\ref{sec:li-straggler}).
 
 \begin{table}[H]
 \centering
@@ -706,21 +786,18 @@ within seed noise. We treat this as a negative control: statistical
 heterogeneity is a necessary condition for any FedAvg--FedProx gap on this
 benchmark.
 
-On the engineered balanced-paired seven-client partition we report three
-estimates ($n=10$ paired seeds each): Flower paired $\Delta = +0.007$ (7/10
-paired wins, with full run provenance and update-norm logs), Flower $\mu$-sweep
-peak at $\mu = 0.01$ $\Delta = +0.013$ (full provenance, $\mu$ characterisation
-in \S\,\ref{sec:mu-sensitivity}), and pure-PyTorch reference $\Delta = +0.027$
-(9/10 wins, without that provenance). All three measure the same partition through
-slightly different code paths; they agree on sign and bracket the magnitude
-at $0.01$--$0.03$. The Flower paired $\Delta = +0.007$ is the central
-headline; the pure-PyTorch number is cross-runtime corroboration.
+On the engineered balanced-paired seven-client partition, three estimates ($n=10$
+paired seeds each; Table~\ref{tab:stat-het-headline}) agree on sign and bracket the
+magnitude at $0.01$--$0.03$: the central headline is the Flower paired
+$\Delta = +0.007$ (7/10 wins, full provenance), with the $\mu$-sweep peak
+($+0.013$) and the pure-PyTorch reference ($+0.027$, 9/10 wins) as cross-runtime
+corroboration.
 
 The pure-PyTorch $+0.027$ is concentrated in two minority classes --- melanoma
 and actinic keratoses carry $61\%$ and $36\%$ of the macro-F1 advantage --- while
 the other five classes, including the invariant mel-nevi, are flat
-(Figure~\ref{fig:engineered-per-class}). The gain is the rebalancing of two
-minority classes, not a uniform optimiser improvement.
+(Figure~\ref{fig:engineered-per-class}). The gain is concentrated in the
+rebalancing of two minority classes.
 
 Three further partitions replicate the small-magnitude finding --- Dirichlet
 $\alpha = 0.1$, specialist 1-of-7 ($n=10$ each), and the multi-seed node-pinned L4
@@ -728,9 +805,7 @@ control ($n=3$), all with small positive $\Delta$
 (Table~\ref{tab:stat-het-headline}). The single-seed
 heterogeneity-ladder pilot at L4 gives $\Delta = -0.030$, but that deficit is one
 rare-class (vascular) outcome on one seed and the $n=3$ node-pinned promotion
-averages it out. All Dirichlet aggregates use regenerated raw-JSON summaries; the
-previously-committed analysis CSVs were stale and showed a spurious catastrophic
-FedProx failure that the regenerated data do not support.
+averages it out. (Dirichlet aggregates use regenerated raw-JSON summaries.)
 
 On the engineered partition, FedProx reduces test-macro-F1 SD from $0.025$
 to $0.014$ ($-45\,\%$), reaches validation macro-F1 $= 0.40$ in $9.8$ vs
@@ -805,24 +880,19 @@ prevalence saturation.}
 \section{Proximal coefficient: a narrow useful range}
 \label{sec:mu-sensitivity}
 
-If the small FedProx advantage of \S\,\ref{sec:statistical-heterogeneity} is
-real, the natural next question is whether the proximal coefficient $\mu$ ---
-the one knob that distinguishes FedProx from FedAvg --- governs it, and whether
-a larger $\mu$ buys a larger advantage under heterogeneity. A five-cell sweep
-of $\mu \in \{0.001, 0.01, 0.1, 1.0\}$ against the FedAvg
-baseline ($\mu = 0$) on the engineered partition ($n=10$ paired seeds per
-cell) answers both questions at once, tracing a clear inverted-$U$
-(Table~\ref{tab:mu-sweep},
-Figure~\ref{fig:mu-inverted-u}): peak near $\mu = 0.01$, dropping below
-baseline by $\mu = 0.1$ and catastrophic at $\mu = 1.0$.
+The next question is whether the proximal coefficient $\mu$ --- the one knob
+distinguishing FedProx from FedAvg --- governs the advantage, and whether larger
+$\mu$ helps under heterogeneity. A five-cell sweep ($\mu \in \{0.001, 0.01, 0.1,
+1.0\}$ against the $\mu = 0$ FedAvg baseline; engineered partition, $n=10$ paired
+seeds) traces a clear inverted-$U$ (Table~\ref{tab:mu-sweep},
+Figure~\ref{fig:mu-inverted-u}): peak near $\mu = 0.01$, below baseline by
+$\mu = 0.1$, catastrophic at $\mu = 1.0$.
 
-The peak is at $\mu = 0.01$ ($0.506$, $\Delta = +0.013$, 6/10 paired wins),
-essentially tied with $\mu = 0.001$; by $\mu = 0.1$ FedProx is below the FedAvg
-baseline ($0.493$), and at $\mu = 1.0$ it collapses to $0.419$
-($\Delta = -0.074$, 0/10 wins --- every seed loses; Table~\ref{tab:mu-sweep}).
-The $0.09$ macro-F1 spread between best and worst $\mu$ is an order of magnitude
-larger than any partition-level $\Delta$ in
-\S\,\ref{sec:statistical-heterogeneity}.
+The peak is at $\mu = 0.01$ ($\Delta = +0.013$, 6/10 wins), essentially tied with
+$\mu = 0.001$; by $\mu = 0.1$ FedProx falls below baseline, and at $\mu = 1.0$ it
+collapses ($\Delta = -0.074$, 0/10 wins; Table~\ref{tab:mu-sweep}). The $0.09$
+macro-F1 spread between best and worst $\mu$ is an order of magnitude larger than
+any partition-level $\Delta$ in \S\,\ref{sec:statistical-heterogeneity}.
 
 The $\mu$-sweep peak $\Delta = +0.013$ exceeds the
 \S\,\ref{sec:statistical-heterogeneity} Flower paired $\Delta = +0.007$
@@ -832,7 +902,7 @@ bracket the same small effect at $+0.005$ to $+0.015$.
 The practical region of useful $\mu$ on this benchmark is a single decade
 around $0.01$. The expectation that larger $\mu$ should be preferred under
 stronger statistical heterogeneity is not supported here --- a benchmark
-observation, not a refutation of the underlying analysis.
+observation specific to this setting.
 
 The $\mu = 1.0$ deficit concentrates in the rare and minority classes while the
 dominant mel-nevi is essentially invariant (Table~\ref{tab:mu-per-class}) --- the
@@ -943,18 +1013,14 @@ the mean over $\mathrm{RARE\_IDX} = \{\text{dermato}, \text{melanoma},
 FedProx+$\gamma$-inexact recovers it.
 \end{table}
 
-The first two cells measure the cost of straggling: FedAvg falls from $0.485$
-(no straggler) to $0.364$ when the partial update is dropped, so in L4 dropping
-the straggler removes class information rather than merely slowing training. The
-next two identify the cure. Adding the proximal term while still dropping changes
-almost nothing (FedProx+drop $0.368$, $+0.004$ above FedAvg+drop), whereas
-accepting the partial update recovers nearly the full baseline
-(FedProx+$\gamma$-inexact $0.479$, a $+0.111$ gain over FedProx+drop). Of the
-total $+0.115$ gain, then, about $96\%$ comes from $\gamma$-inexact acceptance and
-only $+0.004$ from the proximal term. Because the design omits a
-FedAvg+$\gamma$-inexact cell, this is evidence for the FedProx+$\gamma$-inexact
-protocol, not proof that $\gamma$-inexact acceptance is universally beneficial on
-its own.
+Dropping the straggler removes class information rather than merely slowing
+training: FedAvg falls from $0.485$ to $0.364$. Adding the proximal term while
+still dropping changes almost nothing ($+0.004$), whereas accepting the partial
+update recovers nearly the full baseline ($+0.111$). About $96\%$ of the $+0.115$
+gain is therefore $\gamma$-inexact acceptance, not the proximal term. Because the
+design omits a FedAvg+$\gamma$-inexact cell, this is evidence for the
+FedProx+$\gamma$-inexact protocol specifically; the standalone effect of
+$\gamma$-inexact acceptance is left for future isolation.
 
 Figure~\ref{fig:val-curves-extreme-gaps}~(A) shows the same result over
 training: the FedAvg+drop and FedProx+drop trajectories overlap for all 150
@@ -1013,15 +1079,11 @@ second causal decomposition: the schedule and arms differ from the four-conditio
 design, and FedAvg+drop collapses too completely for a clean
 $\gamma$-inexact-vs-proximal split.
 
-Finally, the L1 control tests whether partial-update acceptance helps simply
-because it is a better generic straggler policy. It does not. L1 uses the
-same two-client four-condition design, but the clients have identical label
-proportions; the split changes quantity, not class information. In this
-setting, all four cells are nearly flat (Table~\ref{tab:li-decomp-l1}):
-FedAvg-no-straggler $0.601 \pm 0.010$, FedAvg+drop $0.599 \pm 0.006$,
-FedProx+drop $0.593 \pm 0.022$, and FedProx+$\gamma$-inexact
-$0.605 \pm 0.009$. Dropping the straggler costs almost nothing, and accepting
-the partial update adds only $+0.012$, compared with $+0.111$ at L4.
+Finally, the L1 control tests whether partial-update acceptance is simply a better
+generic straggler policy. It is not. L1 uses the same four-condition design but with
+identical label proportions, so the split changes quantity, not class information.
+All four cells are then nearly flat (Table~\ref{tab:li-decomp-l1}): accepting the
+partial update adds only $+0.012$, against $+0.111$ at L4.
 
 \begin{table}[H]
 \centering
@@ -1136,25 +1198,18 @@ Table~\ref{tab:lr-envelope}.}
 \label{fig:lr-asymmetry-envelope}
 \end{figure}
 
-The 5:1 cell is also where the chapter's metric choice earns its keep. Mean
-test accuracy across the three matched seeds is $0.753$ for FedAvg and
-$0.726$ for FedNova: ranking by raw accuracy would prefer FedAvg, even
-though its macro-F1 ($0.375$) and rare-class F1 ($\approx 0.02$) make it
-clear that FedAvg has lost the rare-class signal almost entirely while
-FedNova has not (macro-F1 $0.504$, rare-F1 $\approx 0.37$). The accuracy
-gap is small precisely because both models still get mel-nevi
-($66.9\,\%$ of the test set) right; macro-F1 separates them because it
-weights all seven classes equally. This is the operational reason \S\,\ref{sec:method-metrics}
-ranks optimisers by macro-F1 and never by accuracy.
+The 5:1 cell is where the metric choice earns its keep. Raw accuracy would prefer
+FedAvg ($0.753$) over FedNova ($0.726$), yet FedAvg's macro-F1 ($0.375$, rare-F1
+$\approx 0.02$) shows it has lost the rare classes while FedNova has not ($0.504$,
+rare-F1 $\approx 0.37$): the accuracy gap is small only because both still classify
+mel-nevi ($66.9\,\%$ of the test set) correctly. This is why
+\S\,\ref{sec:method-metrics} ranks by macro-F1, not accuracy.
 
-A simple interpretation is that FedAvg and FedProx allow the rare client's
-update to become too small. When Client 1's learning rate is reduced, its
-local model moves less during training, so the update it sends back to the
-server carries weaker rare-class information. FedAvg does not correct this,
-and the FedProx proximal term does not restore a rare-client update that has
-already become too small. FedNova, by contrast, normalises client updates by
-effective local work, which helps preserve Client 1's contribution in this
-deterministic asymmetry setting.
+The interpretation is that a reduced learning rate makes Client~1's local model
+move less, so its update carries weaker rare-class information. FedAvg does not
+correct this, and the FedProx proximal term cannot restore an update that is
+already too small; FedNova, by normalising updates by effective local work,
+preserves Client~1's contribution in this deterministic-asymmetry setting.
 
 The update-norm logs are mechanism-consistent: at 5:1 Client~1's update retains
 $0.91$ of its 1:1 size under FedNova but only about half ($0.47$ FedAvg, $0.50$
@@ -1175,17 +1230,14 @@ ten reaching the strict mel-nevi-only pattern; because final \emph{test} metrics
 were not saved for this sweep, this is reported as a validation-trajectory failure
 mode rather than a final-test estimate.
 
-This contrast is the main point of the section. FedNova is empirically robust
-under deterministic learning-rate asymmetry in this implementation, and brittle
-when the amount of local work is random and noisy. This should not be read as
-FedNova directly normalising learning-rate differences: the algorithm normalises
-by effective local work ($\tau$), while the learning rate changes the magnitude
-and direction of the returned parameter delta. The safer interpretation is that
-FedNova's normalised aggregation interacts favourably with a stable, persistently
-weakened rare-client update, but amplifies unstable partial updates under random
-$\tau$. We report this as an observed regime dependence --- its precise cause is
-not isolated here and is left to future work --- so FedNova is best read as
-regime-dependent rather than universally superior (Table~\ref{tab:fednova-regime}).
+This contrast is the section's main point: FedNova is empirically robust under
+deterministic learning-rate asymmetry but brittle under random, noisy local work.
+The mechanism is work-normalisation: FedNova normalises by effective
+local work ($\tau$), and this normalised aggregation interacts favourably with a
+stable, persistently weakened update but amplifies unstable partial updates under
+random $\tau$; the precise cause is left
+to future work, so FedNova is best read as regime-dependent rather than universally
+superior (Table~\ref{tab:fednova-regime}).
 
 \begin{table}[H]
 \centering
@@ -1200,23 +1252,16 @@ text.}
 \toprule
 FedNova regime & Result & Interpretation \\
 \midrule
-Persistent LR asymmetry & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & Empirically robust; normalised aggregation, not direct LR correction \\
+Persistent LR asymmetry & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & Empirically robust; robustness from work-normalised ($\tau$) aggregation \\
 Random-$\tau$ stragglers & macro-F1 $= 0.237 \pm 0.094$; 3/10 majority-only at best-val, 9/10 by the final validation round (no final test saved) & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The progression from IID to
-symmetric L4 to Li-style straggler asymmetry and then to perfect-storm shows
-that optimiser gaps become large only in specific stress regimes. Together
-with the FedNova result above, this reinforces the chapter's central point:
-the optimiser ranking depends on the heterogeneity regime, not on the
-optimiser name alone.
-
-
-The weak protocols fail in a clinically specific way: they lose rare-class
-sensitivity. The next section shows that this failure usually appears as
-rare-class images being routed into the dominant mel-nevi class.
+Across these regimes, optimiser gaps become large only under specific stress, and
+the failing protocols fail in a clinically specific way --- they lose rare-class
+sensitivity. The next section shows this failure usually appears as rare-class
+images routed into the dominant mel-nevi class.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1251,15 +1296,13 @@ FL protocol preserves or amplifies but does not itself create. A confusion-matri
 view of this rare-to-mel-nevi routing across the four-condition cells is given in
 Appendix~\ref{app:diagnostics} (Figure~\ref{fig:l4-confusion-appendix}).
 
-The D1 5:1 cell isolates the optimiser dimension --- melanoma \emph{recall} is
-$1.20\,\%$ (FedAvg), $6.13\,\%$ (FedProx), and $46.34\,\%$ (FedNova) (melanoma F1,
-which adds the precision penalty, is $2.28\,\%$, $10.82\,\%$, and $36.74\,\%$) --- the
-same disease across three detection regimes spanning two orders of magnitude. Because
-macro-F1 weights all seven classes equally, losing one class moves it by
-$\approx 0.057$ --- the order of the entire engineered $\Delta$ in
-\S\,\ref{sec:statistical-heterogeneity}. The same rare-class shape recurs across
-aggregation dropout, learning-rate asymmetry, and the $\mu = 1.0$
-over-regularisation cell (\S\,\ref{sec:mu-sensitivity}, Table~\ref{tab:mu-per-class}).
+The D1 5:1 cell isolates the optimiser dimension: melanoma \emph{recall} is
+$1.20\,\%$ (FedAvg), $6.13\,\%$ (FedProx), and $46.34\,\%$ (FedNova) --- the same
+disease across three regimes spanning two orders of magnitude. Because macro-F1
+weights all seven classes equally, losing one class moves it by $\approx 0.057$,
+the order of the entire engineered $\Delta$ (\S\,\ref{sec:statistical-heterogeneity}).
+The same shape recurs across aggregation dropout, learning-rate asymmetry, and the
+$\mu = 1.0$ over-regularisation cell (\S\,\ref{sec:mu-sensitivity}).
 
 \begin{table}[H]
 \centering
@@ -1326,22 +1369,19 @@ FedProx & $0.478 \pm 0.016$ ($0.291$) & $0.503 \pm 0.014$ ($0.346$)             
 Three points follow (Table~\ref{tab:loss-side}). Weighted CE is the strongest
 loss-side correction: FedAvg+wCE ($0.505$) marginally exceeds FedProx+CE
 ($0.478$), the CE-to-wCE step alone raising FedAvg rare-F1 by $+0.082$. Focal
-trades macro for rare-recall (it raises rare-F1 but lowers macro at $\gamma=2$).
-And FedProx adds little on top of either loss --- FP+wCE sits inside FA+wCE's
-seed SD --- so FedProx acts as a drift/protocol intervention
-(\S\,\ref{sec:li-straggler}), not a substitute for direct loss-side correction;
-the two are combinable in principle but tested only separately here ($n=3$, L4
-symmetric).
-
-This does not conflict with the \S\,\ref{sec:li-straggler} result:
-$\gamma$-inexact acceptance restores aggregation under straggler-induced signal
-loss, while weighted CE re-weights rare classes during local training --- they
-act at different pipeline stages (signal loss vs label saturation), and are
-combinable in principle but tested only separately here.
+raises rare-F1 but lowers macro at $\gamma=2$. And FedProx adds little on top of
+either loss --- FP+wCE sits inside FA+wCE's seed SD --- so FedProx acts as a
+drift/protocol intervention complementary to direct loss-side correction.
+This does not conflict with \S\,\ref{sec:li-straggler}: $\gamma$-inexact acceptance
+restores aggregation under straggler-induced signal loss while weighted CE
+re-weights rare classes during local training, so they act at different pipeline
+stages and are combinable in principle, though tested only separately here
+($n=3$, L4).
 
 The rare-class collapse documented here is clinically \emph{motivated},
 not clinically \emph{validated}: DermaMNIST is a $28 \times 28$-pixel
-benchmark and not a deployment artefact. The next section turns to the
+benchmark, and external validation on real multi-site workflows remains future
+work. The next section turns to the
 per-round update-norm activity behind these per-class outcomes.
 
 
@@ -1391,15 +1431,14 @@ $9$ FedAvg, $8$ FedProx and $7$ FedNova seeds, not the full ten). This is a loca
 contradict \S\,\ref{sec:li-straggler}, where the straggler-regime gain came from
 accepting the rare client's partial update rather than from the proximal term.
 
-Second, update size tracks rare-class performance only within a controlled
-protocol. Pooled across 78 L4 runs, larger dominant-client update norms
-correlate with higher rare-class F1 (Spearman $r=+0.634$), but the
-Client~1-to-Client~0 update-size ratio does not ($r=-0.045$) because the pool
-mixes mechanisms (drop, $\gamma$-inexact, LR, $\mu$, loss). Inside the
-asymmetric-LR experiment alone, where only Client~1's learning rate varies,
-rare-class F1 closely follows the rare client's relative update strength
-($r=+0.80$ FedAvg, $r=+0.87$ FedProx; cf.\ \S\,\ref{sec:lr-asymmetry}). These are
-mechanism-consistent correlations, not causal proof; the main claims rest on the
+Second, as a separate cross-protocol correlation (not shown in
+Figure~\ref{fig:update-norms}), update size tracks rare-class performance only
+within a controlled protocol. Pooled across 78 L4 runs, larger dominant-client
+update norms correlate with higher rare-class F1 (Spearman $r=+0.634$), but the
+Client~1-to-Client~0 ratio does not ($r=-0.045$) because the pool mixes mechanisms.
+Inside the asymmetric-LR experiment alone, rare-class F1 closely follows the rare
+client's relative update strength ($r=+0.80$ FedAvg, $r=+0.87$ FedProx). These are
+mechanism-consistent correlations; the main claims rest on the
 controlled contrasts in \S\,\ref{sec:li-straggler} and \S\,\ref{sec:lr-asymmetry}.
 
 \paragraph{Protocol-flip audit.}
@@ -1412,12 +1451,11 @@ decomposition, perfect-storm) versus $3/9$ in the small-effect settings. The
 centrepiece \S\,\ref{sec:li-straggler} effect ($+0.115$) and the
 \S\,\ref{sec:lr-asymmetry} FedNova gap ($+0.131$) therefore survive
 checkpoint choice, while the small \S\,\ref{sec:statistical-heterogeneity}
-separations should be read as fragile. Further diagnostics (the
-$B$-dissimilarity proxy, training-instability metric, asymmetric-$\mu$ Yao test,
-early-warning collapse detector, and small-hospital case study) were also
-examined; none is load-bearing for the main conclusions and they are omitted for
-brevity. Both checks support the same message: large regime-dependent effects are
-robust, small symmetric-protocol differences are not.
+separations should be read as fragile. Several further diagnostics (the
+$B$-dissimilarity proxy, training-instability metric, asymmetric-$\mu$ probe,
+early-warning detector, and small-hospital case study) were examined but are not
+load-bearing. Both checks support the same message: large regime-dependent effects
+are robust, small symmetric-protocol differences are not.
 
 % =============================================================================
 % update-norm mechanism
@@ -1426,13 +1464,16 @@ robust, small symmetric-protocol differences are not.
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{F_update_norms.pdf}
-\caption{Update-norm mechanism on the engineered partition. Mean per-round
-$\lVert \Delta w \rVert$ trajectories per client for FedAvg vs FedProx
-(update-norm logs for $9$ FedAvg and $8$ FedProx seeds); FedProx tracks lower throughout, consistent with the
-proximal term's drift-control intent. Cross-protocol scatter panel
-(78 L4 runs across 8 algorithm $\times$ protocol cells): Spearman
-$r = +0.634$ between dominant-client mean update-norm and rare-class F1;
-relative-influence ratio $r = -0.045$ across protocols.}
+\caption{Update-norm mechanism diagnostic. Mean per-round client update-norm
+($\lVert \Delta w \rVert_2$) trajectories for FedAvg and FedProx on the
+engineered non-IID partition (panel~A) and the IID mechanism-null partition
+(panel~B), with light $\pm1$ SEM bands across seeds. Update-norm logs were
+available for $9$ FedAvg and $8$ FedProx seeds on the engineered partition
+($10$ each on the IID partition). FedProx tracks lower update norms under the
+engineered partition, consistent with the proximal term's drift-control role;
+on the IID partition the two trajectories sit low and close together, as
+expected when the mechanism is largely inactive. This is a supporting
+diagnostic.}
 \label{fig:update-norms}
 \end{figure}
 
@@ -1489,21 +1530,25 @@ separates FedAvg and FedProx only slightly and runtime-sensitively
 preference, and the proximal coefficient is sharply tuned: useful near
 $\mu = 0.01$ but harmful at $\mu = 1.0$, where it damages exactly the rare classes
 (\S\ref{sec:mu-sensitivity}). This already indicates that the proximal term acts
-on local drift, not on whether a client's signal is admitted. The L4/L1
-decomposition makes the point precise (\S\ref{sec:li-straggler}): under straggler
+on local drift, not on whether a client's signal is admitted.
+
+The L4/L1 decomposition makes the point precise (\S\ref{sec:li-straggler}): under straggler
 asymmetry the FedProx advantage of about $+0.115$ macro-F1 comes almost entirely
 ($+0.111$) from $\gamma$-inexact acceptance of the straggler's partial update and
 only $+0.004$ from the proximal term, while the matched L1 control --- where the
 suppressed client carries nothing unique --- collapses the effect, confirming that
 admitting the partial update matters only when that client is the sole source of
-rare-class signal. FedNova fits the same picture from another angle
+rare-class signal.
+
+FedNova fits the same picture from another angle
 (\S\ref{sec:lr-asymmetry}): it is empirically robust under deterministic
 learning-rate asymmetry (an advantage of about $+0.131$ macro-F1 at the most
 extreme ratio) but amplifies noise and collapses to roughly $0.237$ under random,
 round-to-round straggling --- a robustness best read as its work-normalised
 ($\tau$) aggregation interacting favourably with a \emph{stable} weakened update,
-not as direct learning-rate normalisation. Finally, class-weighted
-cross-entropy matches or exceeds FedProx with plain cross-entropy on the symmetric
+not as direct learning-rate normalisation.
+
+Finally, class-weighted cross-entropy matches or exceeds FedProx with plain cross-entropy on the symmetric
 partition (\S\ref{sec:rare-class-collapse}), locating imbalance correction as a
 loss-side layer distinct from the aggregation-and-protocol layer where FedProx
 acts; the two address different failure modes and could in principle be combined.
@@ -1520,56 +1565,33 @@ rather than a claim that the method underperforms; and for FedNova
 \citep{wang2020fednova} the random-$\tau$ collapse is consistent with operating
 outside its stable-work assumption, not with a flaw in its analysis. No result
 here should be read as refuting these analyses. The clinical reading stays
-cautious too: rare lesions collapsing into melanocytic nevi is the shared failure
-mode --- a collapse raw accuracy cannot see, since predicting the majority class
-keeps accuracy near its $66.9\,\%$ floor while macro-F1 falls, which is why every
-comparison here is by macro-F1. DermaMNIST is a $28 \times 28$ benchmark, however,
-so this is clinically motivated, not validated.
+cautious: rare lesions collapsing into melanocytic nevi is the shared failure
+mode, but DermaMNIST is a $28 \times 28$ benchmark, so this is clinically
+motivated, not validated.
 
-The five headline findings, with explicit strength labels and caveats, are
-collected in Table~\ref{tab:final-claims}: the small, runtime-sensitive
-statistical-heterogeneity separation (Flower $\Delta = +0.007$, IID control
-$-0.007$); the inverted-$U$ $\mu$ sensitivity (catastrophic $\Delta = -0.074$ at
-$\mu = 1.0$); the L4 decomposition in which $\gamma$-inexact handling carries
-$+0.111$ of the $+0.115$ straggler-regime gain while the proximal term carries
-only $+0.004$, with the L1 control flattening it to $+0.012$; FedNova's
-regime-dependence ($+0.131$ at 50:1 deterministic asymmetry versus collapse to
-$0.237$ under random-$\tau$); and rare-class collapse into mel-nevi ($24$--$67\%$
-misrouting), against which weighted CE on FedAvg ($0.505$) matches FedProx+CE
-($0.478$).
-
-Federated optimiser performance in imbalanced medical FL is regime-dependent:
-FedAvg remains competitive under IID or symmetric low-risk protocols;
-FedProx becomes valuable under Li-style straggler asymmetry mainly because
-$\gamma$-inexact partial-update handling preserves the rare-client signal;
-FedNova is robust under the tested learning-rate asymmetry but fails under
-random-$\tau$ straggler regimes; and across failing settings, the common
-clinically relevant benchmark failure mode is rare-class collapse into the
-majority class (mel-nevi). These results do not establish a universal ranking of FedAvg,
-FedProx, and FedNova. They instead map which optimiser/protocol choices
-preserve or lose rare-class performance under different heterogeneity
-regimes.
+The headline findings and supporting diagnostics, with explicit strength labels,
+are collected in Table~\ref{tab:final-claims}.
 
 \begin{table}[H]
 \centering
 \small
-\caption[Final claim--evidence--caveat summary]{Final claim--evidence--caveat summary. Strength labels: \emph{strong}
+\caption[Final claim--evidence summary]{Final claim--evidence summary. Strength labels: \emph{strong}
 = multi-seed, mechanism-isolable, checkpoint-robust; \emph{medium} =
 multi-seed but small effect or single-protocol; \emph{exploratory} =
 correlational, single-protocol, or $n=3$ without mechanism isolation.}
 \label{tab:final-claims}
-\begin{tabular}{p{3.0cm}p{3.6cm}p{1.6cm}p{2.6cm}p{2.6cm}}
+\begin{tabular}{p{3.0cm}p{5.0cm}p{1.7cm}p{3.6cm}}
 \toprule
-Claim & Evidence & Strength & Caveat & Implication \\
+Claim & Evidence & Strength & Implication \\
 \midrule
-FedProx not free under IID & Flower IID $\Delta = -0.007$ ($n=10$) & strong & IID is artificial & Reach for FedProx only when heterogeneity exists \\
-Stat-het alone gives fragile separation & Flower engineered $\Delta = +0.007$ (7/10 wins, $n=10$) & medium & Runtime-sensitive (PyTorch $+0.027$) & Do not recommend FedProx on partition alone \\
-$\mu$ must be tuned & Sweep $n=10$: peak $+0.013$ at $\mu = 0.01$; $-0.074$ at $\mu = 1.0$ & strong & Engineered partition only & Default $\mu = 0.01$; do not raise under heterogeneity \\
-$\gamma$-inexact dominates straggler gain & L4 four-condition $n=3$: total $+0.115$, $\gamma$-inex $+0.111$; L1 control $+0.012$ & medium--strong & Simulated stragglers; no FedAvg+$\gamma$-inex standalone cell & Use FedProx + $\gamma$-inexact under straggler protocols \\
-FedNova regime-dependent & LR envelope: FN holds $0.49$--$0.53$ across 1:1--50:1 ($n=3$); random-$\tau$ collapses to $0.237$ ($n=10$; 9/10 majority-only by the final validation round) & medium--strong & Wang 2020 stable-$\tau$ assumption violated by random-$\tau$ & Prefer FedNova under persistent LR asymmetry, not under random-$\tau$ \\
-Rare-class collapse is the clinically relevant benchmark failure mode & Misrouting $24\,\%$--$67\,\%$; D1 5:1 melanoma recall $= 1.2$/$6.1$/$46.3\,\%$ (F1 $2.3$/$10.8$/$36.7\,\%$, $n=3$) & strong & Single dataset, $28 \times 28$ resolution & Report per-class metrics; macro-F1 alone hides it \\
-wCE competes with FedProx & L4 $n=3$: FA+wCE $0.505$ vs FP+CE $0.478$ & medium & $n=3$, L4 symmetric only & Loss-side rebalancing is a competitive intervention \\
-Update-norms support drift-control reading & Engineered: FA $1.523$ vs FP $1.029$ ($-32\,\%$); cross-protocol $r = +0.634$ & exploratory & Within-protocol $r$ does not extrapolate & Drift-control reading is supported, not proven \\
+FedProx not free under IID & Flower IID $\Delta = -0.007$ ($n=10$) & strong & Reach for FedProx only when heterogeneity exists \\
+Stat-het alone gives fragile separation & Flower engineered $\Delta = +0.007$ (7/10 wins, $n=10$) & medium & Do not recommend FedProx on partition alone \\
+$\mu$ must be tuned & Sweep $n=10$: peak $+0.013$ at $\mu = 0.01$; $-0.074$ at $\mu = 1.0$ & strong & Default $\mu = 0.01$; do not raise under heterogeneity \\
+$\gamma$-inexact dominates straggler gain & L4 four-condition $n=3$: total $+0.115$, $\gamma$-inex $+0.111$; L1 control $+0.012$ & medium--strong & Use FedProx + $\gamma$-inexact under straggler protocols \\
+FedNova regime-dependent & LR envelope: FN holds $0.49$--$0.53$ across 1:1--50:1 ($n=3$); random-$\tau$ collapses to $0.237$ ($n=10$; 9/10 majority-only by the final validation round) & medium--strong & Prefer FedNova under persistent LR asymmetry, not under random-$\tau$ \\
+Rare-class collapse is the clinically relevant benchmark failure mode & Misrouting $24\,\%$--$67\,\%$; D1 5:1 melanoma recall $= 1.2$/$6.1$/$46.3\,\%$ (F1 $2.3$/$10.8$/$36.7\,\%$, $n=3$) & strong & Report per-class metrics; macro-F1 alone hides it \\
+wCE competes with FedProx & L4 $n=3$: FA+wCE $0.505$ vs FP+CE $0.478$ & medium & Loss-side rebalancing is a competitive intervention \\
+Update-norms support drift-control reading & Engineered: FA $1.523$ vs FP $1.029$ ($-32\,\%$); cross-protocol $r = +0.634$ & exploratory & Update norms corroborate the drift-control reading \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1577,60 +1599,36 @@ Update-norms support drift-control reading & Engineered: FA $1.523$ vs FP $1.029
 \section{Limitations}
 \label{sec:limitations}
 
-Several limitations bound these conclusions. The mechanism probes use three
-matched seeds and are reported as directional; stragglers are simulated through
-local-epoch counts rather than wall-clock deadlines; the two runtimes disagree in
-magnitude on the engineered partition, so only its direction is robust; the study
-uses a single low-resolution dataset and mixes two federation sizes; it omits
-variance-reduced and adaptive comparators such as SCAFFOLD
-\citep{karimireddy2020scaffold} and adaptive federated optimisers
-\citep{reddi2021adaptive}; and evaluation is by argmax predictions only. The
-thesis therefore establishes neither a universal ranking nor a clinically
-validated claim. The map still gives regime-indexed guidance: under near-IID
-conditions FedAvg is competitive; under statistical heterogeneity alone the
-FedProx gain is small and the proximal coefficient should be kept small; when
-stragglers coincide with a client holding unique rare-class signal, FedProx with
-$\gamma$-inexact acceptance is valuable; under deterministic learning-rate
-asymmetry FedNova is promising but should not be assumed safe under random
-straggling; and under severe imbalance, per-class metrics should be reported and
-weighted cross-entropy considered as a competitive complement.
+Several scope conditions bound these conclusions. First, the study is a controlled
+benchmark simulation rather than a clinical deployment. All experiments use
+DermaMNIST at $28 \times 28$ resolution, stragglers are simulated through
+local-epoch budgets rather than wall-clock deadlines, and the L1/L4 partitions are
+stylised stress regimes designed to isolate mechanism behaviour. These choices make
+the failure modes easier to attribute, but they also mean that the results should
+be read as a regime map for controlled heterogeneity settings, not as a validated
+claim about real hospital networks or full-resolution dermatology workflows.
 
-\begin{itemize}
-\setlength\itemsep{0.15em}
-\item Single dataset at low resolution (DermaMNIST $28 \times 28$); no
-replication on Camelyon, full-resolution ISIC, or non-dermatology MedMNIST
-subsets.
-\item Mixed federation sizes: 7-client for the engineered headline and
-statistical-heterogeneity settings; 2-client for the mechanism probes
-(Li-style four-condition, perfect-storm, asymmetric LR, weighted-CE,
-asymmetric $\mu$, node-pinned L4). No cross-scale generalisation claim is
-made between the two sizes.
-\item Local-epoch budget fixed at $E = 20$; straggler protocols are
-simulated via local-epoch counts rather than wall-clock deadlines.
-\item The L1/L4 partitions and the drop/straggler protocols are stylised stress
-tests chosen to isolate method behaviour; the regime map describes behaviour at
-these boundaries rather than naturalistic deployment.
-\item Seed counts vary across experiments ($n = 10$ for headline comparisons,
-$n = 3$ for the mechanism and asymmetry probes --- Li-style four-condition,
-perfect-storm, asymmetric LR, weighted-CE, asymmetric $\mu$ --- and single-seed
-pilots labelled as such) because compute availability varied. Seed tiers are
-reported transparently per experiment; the $n = 3$ probes are directional and not
-significance-tested.
-\item The heterogeneity ladder is an exploratory single-seed pilot; multi-seed
-evidence exists only at L4 ($n = 3$).
-\item Runtime divergence between pure-PyTorch ($+0.027$) and Flower
-($+0.007$) on the engineered partition limits magnitude claims; only
-direction is robust across runtimes.
-\item No SCAFFOLD, FedAdam, or FedYogi comparator; the optimiser space is
-FedAvg, FedProx, FedNova only.
-\item The FedNova random-$\tau$ collapse is an observed failure mode; isolating
-its mechanism --- e.g.\ varying the straggler fraction and $\tau$-variance
-independently --- is future work.
-\item No AUC or calibration metrics; predictions are argmax only.
-\item Per-client validation distributions were not logged centrally;
-q-FFL-style fairness CDFs and Sheller-style cross-client generalisation
-grids cannot be produced from existing artefacts.
-\end{itemize}
+Second, the evidence is strongest where the experiments are replicated and more
+exploratory where compute limited the number of seeds. The headline comparisons use
+larger seed counts, while the mechanism probes use three matched seeds and are
+reported as directional rather than significance-tested. The heterogeneity ladder is
+a single-seed exploratory pilot. In addition, the engineered partition shows the
+same direction of FedProx--FedAvg separation across the pure-PyTorch and Flower
+runtimes, but with different magnitudes, so the robust conclusion is directional
+rather than an exact effect-size claim.
+
+Third, the optimiser and evaluation space is deliberately limited. The comparison
+covers FedAvg, FedProx, and FedNova, but not variance-reduced or adaptive federated
+methods such as SCAFFOLD \citep{karimireddy2020scaffold}, FedAdam, or FedYogi
+\citep{reddi2021adaptive}. Evaluation is based on argmax predictions, macro-F1, and
+per-class diagnostics; AUC, calibration, and cross-client fairness measures are not
+reported.
+
+These limitations mainly restrict the breadth of the claims rather than the internal
+comparison. The thesis does not establish a universal optimiser ranking or a
+clinically validated recommendation. It instead identifies where rare-class signal
+is preserved or lost under controlled forms of statistical and system heterogeneity.
+Directions for addressing these constraints are set out in the Conclusion.
 
 \section{Conclusion}
 \label{sec:conc}
@@ -1676,31 +1674,62 @@ signal reaching the global model.
 \chapter{Provenance, reproducibility, and supplementary diagnostics}
 \label{app:repro}
 
+\section{Code, data, and environment}
+\label{app:repro-setup}
+
+\paragraph{Code availability.}
+All code accompanies this submission as the \texttt{fl\_dermamnist} repository,
+released under the MIT licence (\texttt{LICENSE}); its top-level
+\texttt{README.md} maps each Results section to the code, raw results, and figure
+that support it, together with the commands below.
+
+\paragraph{Data availability.}
+Experiments use DermaMNIST from MedMNIST~v2 \citep{yang2023medmnistv2}, derived
+from HAM10000 \citep{tschandl2018ham10000}. The data is not versioned with the
+code: it is stored locally as a $64\times64$ array (\texttt{dermamnist\_64.npz})
+and the loader resizes to the $28\times28$ resolution used throughout. It is
+freely re-obtainable through the pinned \texttt{medmnist} package; HAM10000 is
+released under CC~BY-NC~4.0.
+
+\paragraph{Environment.}
+Dependencies are pinned in \texttt{requirements.txt} (tested on Python~3.14); the
+package installs with \texttt{pip install -e .}\ from the repository root.
+
+\paragraph{Reproduction.}
+The report's tables and figures rebuild from the saved per-run artefacts without
+re-training. \texttt{bash infra/local/commands.sh sanity} runs the implementation
+guards (the FedProx $\mu=0\equiv$ FedAvg equivalence, the proximal term, the
+FedNova normaliser, and straggler handling), and
+\texttt{bash infra/local/commands.sh analyse} regenerates the thesis tables and
+figures. Full hyperparameter sweeps were run on HPC via the
+\texttt{infra/slurm/submit\_*.sh} launchers and are costly to re-run; the saved
+outputs are the intended reproduction path.
+
+\paragraph{Provenance.}
+Every reported number traces to a raw artefact through the result-traceability
+matrix (claim $\rightarrow$ section $\rightarrow$ raw files $\rightarrow$ generating
+script $\rightarrow$ HPC job) and a numerical verification ledger, both under
+\texttt{docs/provenance/}.
+
 \section{Runtimes and implementation provenance}
 \label{app:provenance}
 
-The implementation modules referenced abstractly in the Methods chapter are:
-aggregation and the pure-PyTorch loop under \texttt{fl/} (\texttt{aggregation.py},
-\texttt{server\_loop.py}, \texttt{local\_train.py}, \texttt{system\_het.py},
-\texttt{class\_imbalance.py}, \texttt{evaluation.py}), the partitioner under
-\texttt{data/partition.py}, the Flower strategies under \texttt{fl\_flower/}
-(\texttt{strategy\_fednova.py}, \texttt{strategy\_straggler\_dropping.py}), and the
-guards under \texttt{tests/} covering the proximal term, the
+The implementation modules (aggregation, the pure-PyTorch and Flower training
+loops under \texttt{fl/} and \texttt{fl\_flower/}, the partitioner, and the
+FedNova/straggler strategies) and the unit-test guards are documented in the
+repository README. The guards cover the proximal term, the
 $\mu = 0 \Leftrightarrow$ FedAvg equivalence, the FedNova normaliser, straggler
-dropping, partition determinism, and framework-provenance fields.
+dropping, partition determinism, and provenance fields.
 
-Flower production runs save \texttt{history\_*.csv} (per-round validation),
-\texttt{test\_at\_best\_*.json} (selected-round metrics plus a provenance
-dictionary --- git commit, hostname, framework version, Python/PyTorch versions,
-ISO start/finish timestamps), \texttt{test\_predictions\_*.npz} (argmax
-predictions and labels, used for confusion matrices and rare-to-mel-nevi
-misrouting in §\ref{sec:rare-class-collapse}), and optional
-\texttt{client\_update\_norms\_*.csv} (diagnostic only). Older pure-PyTorch
-headline runs retain \texttt{history\_*.csv} and \texttt{test\_at\_best\_*.json}
-but lack full git-commit provenance, prediction NPZs, and companion update-norm
-logs, which is why the chapter treats them as direction-only corroboration. Every
-numerical claim in Chapter~\ref{ch:results} traces to raw artefacts or freshly
-regenerated summaries, never to stale committed CSVs.
+Flower production runs save per-round validation histories, selected-round metrics
+with a provenance dictionary (git commit, hostname, framework and Python/PyTorch
+versions, timestamps), argmax prediction NPZs (used for confusion matrices and
+misrouting in §\ref{sec:rare-class-collapse}), and optional update-norm logs.
+Older pure-PyTorch headline runs retain histories and metrics but lack git-commit
+provenance, prediction NPZs, and update-norm logs, which is why the chapter treats
+them as direction-only corroboration. Every numerical claim in
+Chapter~\ref{ch:results} traces to raw artefacts or freshly regenerated summaries,
+never to stale committed CSVs.
 
 \section{Supplementary tables}
 \label{app:supp-tables}
@@ -1723,7 +1752,7 @@ Secondary metrics       & Per-class F1, per-class recall (confusion-matrix diago
 Rare-class definition   & $\{\text{dermato}, \text{melanoma}, \text{vascular}\}$ & Low support + high clinical priority (melanoma is mid-support but high-stakes) \\
 $n = 10$ protocol       & Paired sign count + Wilcoxon where applicable & Headline statistical-heterogeneity comparisons \\
 $n = 3$ protocol        & Directional only; no significance test       & Mechanism probes; power insufficient for $p$-values \\
-$n = 1$ protocol        & Labelled ``pilot''; no headline use          & Heterogeneity ladder; single-class seed events possible \\
+$n = 1$ protocol        & Labelled ``pilot'' (single seed)             & Heterogeneity ladder; single-class seed events possible \\
 Runtimes                & Flower (central), pure-PyTorch (corroboration) & Flower carries full git+update-norm provenance \\
 \bottomrule
 \end{tabular}
