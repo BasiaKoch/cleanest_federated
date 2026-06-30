@@ -33,11 +33,18 @@ fl_dermamnist/
 │   ├── run_centralised.py               # centralised (non-federated) reference
 │   ├── verify_flower_equivalence.py     # μ = 0 equivalence smoke
 │   └── compare_equivalence_full_scale.py# full pure-PyTorch ↔ Flower cross-check
-├── analysis/                   # legacy tables + plots scripts
-├── scripts/                    # commands.sh + check_results.sh + analyse_all.sh
-├── results/                    # per-experiment directories (see below)
-└── tests/                      # μ=0 equivalence, proximal-term, provenance
+├── analysis/                   # analyse_*.py — thesis tables + numeric summaries
+├── figures/                    # plot_*.py — thesis figure generators (F_*.pdf)
+├── common/                     # paths.py — repo/results/figure path resolver
+├── results/                    # one directory per experiment (see below)
+│   └── thesis_ready/           # data/ (aggregate tables) + figures/ (canonical F_*.pdf)
+└── tests/                      # μ=0 equivalence, proximal-term, provenance guards
 ```
+
+Local run/analysis helpers live in **`infra/local/commands.sh`** (one dispatcher
+for sanity tests, single-seed training, and figure/table regeneration — *not* in
+this package); conceptual-diagram generators live in **`docs/figure_generation/`**;
+the full HPC sweep launchers live in **`infra/slurm/submit_*.sh`**.
 
 ## Runtime roles
 
@@ -56,9 +63,11 @@ fl_dermamnist/
   (`results/system_het_random_fednova/`).
 
 The pure-PyTorch and Flower runtimes give different effect sizes on the
-same engineered partition; the thesis reports both side by side in
-`tab:engineered-results`. See `results/PROVENANCE_AUDIT.md` for the
-full per-directory ledger.
+same engineered partition; the thesis reports both side by side. The full
+per-directory provenance ledger lives in **`docs/provenance/`**
+(`result_traceability_matrix.csv` maps every claim → result → script → figure;
+`numerical_verification_sheet.txt` re-derives each headline number from the raw
+artefacts).
 
 ## Current experiment matrix
 
@@ -142,20 +151,21 @@ PYTHONPATH=. python -m fl_dermamnist.experiments.compare_equivalence_full_scale
 
 ### 6. Analysis (thesis-ready tables and figures)
 
-The thesis-ready analysis pipeline lives in
-`fl_dermamnist/results/thesis_ready/scripts/`. Run individual
-analysers with `python <script>` from the repo root; representative
-entry points:
+Table generators live in **`fl_dermamnist/analysis/`** (`analyse_*.py`) and
+figure generators in **`fl_dermamnist/figures/`** (`plot_*.py`); conceptual
+diagrams live in `docs/figure_generation/`. They rebuild every thesis table and
+figure from the **saved per-run results, without retraining**.
+
+Canonical one-command path (from the repo root):
 
 ```bash
-PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/analyse_statistical_heterogeneity.py
-PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/plot_engineered_convergence.py
-PYTHONPATH=. python fl_dermamnist/results/thesis_ready/scripts/plot_engineered_per_class.py
+bash infra/local/commands.sh analyse     # rebuild all thesis tables + figures
 ```
 
-Legacy entry points in `fl_dermamnist/analysis/` (`tables.py`,
-`plots.py`) are retained for backwards compatibility but are not the
-sources for the thesis tables/figures.
+Outputs land in `fl_dermamnist/results/thesis_ready/{data,figures}/`; the report
+bundle (`report/supporting/`) carries flat copies of the `F_*.pdf` figures. The
+exact section → script → figure mapping is the navigation table in the top-level
+`README.md`, and every reported number is traced in `docs/provenance/`.
 
 ## Statistical claims policy
 
@@ -188,4 +198,4 @@ section is the within-arm update-norm comparison.
 | Paired runs: same init, partition, dataloader RNG | `fl/server_loop.py` (`dataloader_generator_seed(seed, round, client)`) |
 | Test evaluated only at best-val checkpoint | `fl/server_loop.py` (argmax of `val_macro_f1`, evaluated once after training) |
 | Pure-PyTorch ↔ Flower equivalence at $\mu = 0$ | `experiments/verify_flower_equivalence.py`, `experiments/compare_equivalence_full_scale.py`, `tests/test_framework_provenance.py` |
-| Provenance ledger | `results/PROVENANCE_AUDIT.md` |
+| Provenance ledger | `docs/provenance/result_traceability_matrix.csv` + `numerical_verification_sheet.txt` |

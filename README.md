@@ -281,10 +281,12 @@ cleanest_federated/
   `fedprox_mu0.01_E20_s42`); `mu0.0` ⇒ FedAvg.
 - **Config travels with the result** (inside `test_at_best_*.json`) — there is
   no separate config file to lose.
-- **`thesis_ready/` is the curated bundle**: `writing/` (tex + bib),
-  `figures/` (the referenced `F_*` figures), `data/` (aggregate tables), and
-  `scripts/` (analysers that regenerate them). The thesis `\graphicspath`
-  points at `thesis_ready/figures/`.
+- **`fl_dermamnist/results/thesis_ready/` is the curated outputs bundle**:
+  `figures/` (the canonical `F_*` figure PDFs) and `data/` (aggregate
+  tables/JSON). The analysers and figure generators that produce them live in
+  `fl_dermamnist/{analysis,figures}/`; the LaTeX sources live in
+  `report/supporting/`, whose `\graphicspath` is flat (`./`) with figure copies
+  beside `main.tex`.
 - **Paths are hardcoded** in the launchers, entrypoint defaults, and the thesis
   `\graphicspath`. Result directories were therefore **not** relocated during
   cleanup — moving them would break reproduction and figure resolution. If a
@@ -296,9 +298,9 @@ cleanest_federated/
 - Claim verification ledger: `docs/provenance/numerical_verification_sheet.txt`. Its two historical ⚠ flags (node-pinned-L4 sign; FedProx update-norm magnitude) were re-verified in the final audit and **both resolve in the report's favour** — the report's `+0.005` and `1.029` (−32%) match the source CSVs; the sheet entries were stale (see the appended final-audit resolution).
 - Result traceability matrix: `docs/provenance/result_traceability_matrix.csv`.
 
-> Note: `commands.sh` and `fl_dermamnist/README.md` reference a
-> `fl_dermamnist/results/PROVENANCE_AUDIT.md` that is **not present**; its role
-> is currently served by `docs/provenance/numerical_verification_sheet.txt` and
+> Note: a few `infra/local/*.sh` helper scripts still echo a
+> `fl_dermamnist/results/PROVENANCE_AUDIT.md` path that is **not present**; its
+> role is served by `docs/provenance/numerical_verification_sheet.txt` and
 > `docs/provenance/result_traceability_matrix.csv`.
 
 ---
