@@ -60,7 +60,7 @@
 #   Cond | Algorithm | μ    | bs | mom | Stragglers     | Drop?       | Role
 #   -----+-----------+------+----+-----+----------------+-------------+----------------------
 #    1   | FedAvg    |  -   | 10 | 0.0 | random, f=0.9  | YES (drop)  | Li-2020 FA arm
-#    2   | FedProx   | 1.0  | 10 | 0.0 | random, f=0.9  | NO (keep)   | ⭐ Li-2020 FP arm
+#    2   | FedProx   | 1.0  | 10 | 0.0 | random, f=0.9  | NO (keep)   | (key) Li-2020 FP arm
 #    3   | FedProx   | 0.01 | 10 | 0.0 | random, f=0.9  | NO (keep)   | μ ablation
 #
 # Headline pair (1, 2) is the canonical Li-2020 FedAvg-vs-FedProx

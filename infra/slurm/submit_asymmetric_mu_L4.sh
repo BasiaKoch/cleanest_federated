@@ -38,7 +38,7 @@
 #   ---------------------------------------------------------------------
 #   1. FedAvg                          0.0       0.0     no proximal anchor
 #   2. Symmetric FedProx               0.01      0.01    baseline (suspect: hurts vascular)
-#   3. Asymmetric "anchor-large" ⭐    0.01      0.0     anchor dominant, free specialist
+#   3. Asymmetric "anchor-large" (key)  0.01      0.0     anchor dominant, free specialist
 #   4. Asymmetric "anchor-small" CTL   0.0       0.01    REVERSE control - direction matters
 #
 # The 4-th condition is the critical control. Without it, condition 3
