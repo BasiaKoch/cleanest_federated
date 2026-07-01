@@ -1,7 +1,7 @@
 """Flower NumPyClient implementing FedAvg / FedProx local training.
 
 This client mirrors the local-training logic in
-`fl_dermamnist/fl/local_train.py` so a Flower simulation produces results
+`fl_dermamnist/core/local_train.py` so a Flower simulation produces results
 equivalent (within floating-point noise) to the pure-PyTorch loop.
 
 Per-client per-round local epochs are read from `config["local_epochs"]`
@@ -20,7 +20,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset, Subset
 
-from fl_dermamnist.fl.seeding import dataloader_generator_seed, numpy_legacy_seed
+from fl_dermamnist.core.seeding import dataloader_generator_seed, numpy_legacy_seed
 
 
 def state_dict_to_numpy(model: nn.Module) -> List[np.ndarray]:

@@ -46,7 +46,7 @@
 # USAGE
 # -----
 # Run AFTER pulling the commit that adds:
-#   - fl_dermamnist/fl_flower/strategy_straggler_dropping.py
+#   - fl_dermamnist/runtimes/flower/strategy_straggler_dropping.py
 #   - --drop-stragglers flag in run_one_flower.py
 #
 #   cd /home/bk489/federated_clean/cleanest_federated
@@ -67,7 +67,7 @@ SEEDS=(42 123 456 789 999 2024 31337 161803 271828 8675309)
 cd "$REPO"
 
 # Sanity checks
-if ! grep -q "numpy_legacy_seed" fl_dermamnist/fl_flower/client.py; then
+if ! grep -q "numpy_legacy_seed" fl_dermamnist/runtimes/flower/client.py; then
   echo "ERROR: HPC checkout missing seed-overflow fix." >&2
   exit 2
 fi

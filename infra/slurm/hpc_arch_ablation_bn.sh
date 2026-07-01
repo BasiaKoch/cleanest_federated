@@ -31,7 +31,7 @@ EXTRA_ARGS="--model-variant bn --log-update-norms"
 cd "$REPO"
 
 # Sanity check 1: seeding fix must be present (required for s8675309)
-if ! grep -q "numpy_legacy_seed" fl_dermamnist/fl_flower/client.py; then
+if ! grep -q "numpy_legacy_seed" fl_dermamnist/runtimes/flower/client.py; then
   echo "ERROR: HPC checkout missing the seed-overflow fix." >&2
   echo "Pull latest main before submitting these jobs." >&2
   exit 2

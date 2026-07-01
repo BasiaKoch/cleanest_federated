@@ -120,8 +120,8 @@ bk489/
 ├── fl_dermamnist/            ← the source package
 │   ├── data/                 ← DermaMNIST loader + client partitions
 │   ├── models/               ← the GroupNorm CNN (+ BatchNorm ablation)
-│   ├── fl/                   ← pure-PyTorch FL core (local train, aggregation, eval, stragglers)
-│   ├── fl_flower/            ← Flower simulation runtime (clients + FedNova/straggler strategies)
+│   ├── core/                 ← shared FL algorithms (local train, aggregation, eval, losses, stragglers)
+│   ├── runtimes/             ← pytorch/ (reference loop) + flower/ (Flower clients + strategies)
 │   ├── experiments/          ← training entrypoints (run_*.py)
 │   ├── analysis/             ← analyse_*.py — thesis tables + numeric summaries
 │   ├── figures/              ← plot_*.py — thesis figure generators

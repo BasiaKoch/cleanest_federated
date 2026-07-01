@@ -3,7 +3,7 @@
 Reconstructs the per-(round, client) local-epoch schedule for each of
 the three system-heterogeneity conditions (C0 uniform, C1 fixed
 stragglers, C2 random stragglers) at seed=42. Each schedule is a
-deterministic function of the seed via fl/system_het.py, so paired
+deterministic function of the seed via core/system_het.py, so paired
 FedAvg/FedProx runs at the same seed see identical schedules.
 
 Output:
@@ -20,7 +20,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from fl_dermamnist.fl.system_het import SystemHetConfig, build_epoch_schedule
+from fl_dermamnist.core.system_het import SystemHetConfig, build_epoch_schedule
 
 
 THIS = Path(__file__).resolve()

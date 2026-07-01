@@ -3,7 +3,7 @@
 The thesis pipeline writes a ``framework`` field into every ``test_at_best_*.json``
 to record which FL runtime produced each result. Two canonical values exist:
 
-  * ``"pure-pytorch"``    - the in-repo reference loop (``fl/server_loop.py``)
+  * ``"pure-pytorch"``    - the in-repo reference loop (``runtimes/pytorch/server_loop.py``)
                              invoked via ``experiments/run_one.py`` and
                              back-stamped onto the headline JSONs by
                              ``scripts/backstamp_headline_provenance.py``.

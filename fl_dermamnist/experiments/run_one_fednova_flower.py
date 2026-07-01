@@ -7,7 +7,7 @@ for the system-heterogeneity section, where heterogeneous local-step
 counts create objective inconsistency that FedNova's normalised
 aggregation is specifically designed to address.
 
-The local client is `FlClientFedNova` (in `fl_dermamnist/fl_flower/`),
+The local client is `FlClientFedNova` (in `fl_dermamnist/runtimes/flower/`),
 which is identical to the standard `FlClient` except that it reports
 `tau` (the local SGD step count) via the fit-metrics dict so the
 strategy can compute the momentum-aware normaliser - the L1 norm of
@@ -20,7 +20,7 @@ which reduces to a_i = tau_i at m = 0 (vanilla SGD). NB: an earlier
 draft of this comment used `a_i = (1 - m^{tau_i}) / (1 - m)`, the last
 element of the cumulative series; that is NOT the L1 norm and gives
 the wrong normalisation under momentum > 0. See
-`fl_dermamnist/fl_flower/strategy_fednova.py:fednova_normaliser` for
+`fl_dermamnist/runtimes/flower/strategy_fednova.py:fednova_normaliser` for
 the implementation.
 
 CLI is identical to `run_one_flower.py`. Algorithm is hard-coded to
@@ -65,12 +65,12 @@ from fl_dermamnist.data.partition import (
     two_client_86_14_quantity_only_stratified,
     two_client_90_10_rare_stress,
 )
-from fl_dermamnist.fl.evaluation import evaluate
-from fl_dermamnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
-from fl_dermamnist.fl.system_het import SystemHetConfig, build_epoch_schedule
-from fl_dermamnist.fl_flower.client import state_dict_to_numpy, numpy_to_state_dict
-from fl_dermamnist.fl_flower.client_fednova import FlClientFedNova
-from fl_dermamnist.fl_flower.strategy_fednova import PairedFedNovaStrategy
+from fl_dermamnist.core.evaluation import evaluate
+from fl_dermamnist.core.runtime_provenance import collect_runtime_provenance, utc_now_iso
+from fl_dermamnist.core.system_het import SystemHetConfig, build_epoch_schedule
+from fl_dermamnist.runtimes.flower.client import state_dict_to_numpy, numpy_to_state_dict
+from fl_dermamnist.runtimes.flower.client_fednova import FlClientFedNova
+from fl_dermamnist.runtimes.flower.strategy_fednova import PairedFedNovaStrategy
 from fl_dermamnist.models import DermMNISTCNN
 
 

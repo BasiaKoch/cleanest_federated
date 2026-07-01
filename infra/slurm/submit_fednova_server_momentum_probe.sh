@@ -4,7 +4,7 @@
 #
 # Reference: Hsu, Qi & Brown 2019, FedAvgM (arxiv.org/abs/1909.06335);
 # Cheng et al., AAAI 2024, "On the Role of Server Momentum in FL".
-# Implementation in fl_dermamnist/fl_flower/strategy_fednova.py mirrors
+# Implementation in fl_dermamnist/runtimes/flower/strategy_fednova.py mirrors
 # flwr.server.strategy.fedavgm.FedAvgM exactly (first-round init m_1 = g_1,
 # subsequent m_t = β·m_{t-1} + g_t, applied as w_{t+1} = w_t − m_t).
 #

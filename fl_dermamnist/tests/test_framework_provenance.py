@@ -1,7 +1,7 @@
 """Guard tests for framework-label normalisation.
 
 The thesis pipeline writes a ``framework`` field into every result JSON.
-``fl_dermamnist/fl/provenance.py`` is the single source of truth for the
+``fl_dermamnist/core/provenance.py`` is the single source of truth for the
 allowed values and the alias table that maps legacy strings to canonical
 ones. These tests fail loudly if either side drifts:
 
@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from fl_dermamnist.fl.provenance import (
+from fl_dermamnist.core.provenance import (
     CANONICAL_FRAMEWORKS,
     FRAMEWORK_ALIASES,
     canonicalise_framework,

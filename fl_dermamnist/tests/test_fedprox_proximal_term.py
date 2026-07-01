@@ -20,14 +20,14 @@ right thing. These tests close that gap with two checks:
       survive a mutation of the model parameters, and (c) the same
       property holds for the Flower client's inline snapshot pattern
       ``[p.clone().detach() for p in model.parameters()]`` at
-      ``fl_flower/client.py:143``.
+      ``runtimes/flower/client.py:143``.
 """
 from __future__ import annotations
 
 import torch
 import torch.nn as nn
 
-from fl_dermamnist.fl.local_train import freeze_global_weights
+from fl_dermamnist.core.local_train import freeze_global_weights
 
 
 # --------------------------------------------------------------------------- #
@@ -167,7 +167,7 @@ def test_global_weights_frozen_is_not_aliased() -> None:
 def test_flower_client_snapshot_pattern_is_not_aliased() -> None:
     """The Flower client snapshots inline; verify the same alias property.
 
-    ``fl_flower/client.py:143`` does
+    ``runtimes/flower/client.py:143`` does
         ``global_params = [p.clone().detach() for p in self.model.parameters()]``
     rather than calling ``freeze_global_weights``. This test guards the
     inline pattern against the same regression. If the inline pattern is

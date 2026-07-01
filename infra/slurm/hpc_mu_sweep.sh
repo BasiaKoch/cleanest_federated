@@ -54,7 +54,7 @@ cd "$REPO"
 # (round, cid), so the 32-bit mask is unnecessary on this path.
 # We sanity-check by verifying the seeding helper import is in place.
 if ! grep -q "from fl_dermamnist.fl.seeding import dataloader_generator_seed" \
-        fl_dermamnist/fl/server_loop.py; then
+        fl_dermamnist/runtimes/pytorch/server_loop.py; then
   echo "ERROR: HPC checkout missing seeding.py import in server_loop.py." >&2
   echo "Pull at least commit f6d0fd9 (the seeding refactor)." >&2
   exit 2

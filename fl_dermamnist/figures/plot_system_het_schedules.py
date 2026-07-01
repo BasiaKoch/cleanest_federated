@@ -17,7 +17,7 @@ Each panel:
   Colour: viridis, 0 (black) to 20 (yellow)
 
 The schedules are reconstructed deterministically from seed=42 using
-fl_dermamnist.fl.system_het.build_epoch_schedule, so this figure shows
+fl_dermamnist.core.system_het.build_epoch_schedule, so this figure shows
 exactly the per-round work assignment that the experiments executed.
 
 Output:
@@ -30,7 +30,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from fl_dermamnist.fl.system_het import SystemHetConfig, build_epoch_schedule
+from fl_dermamnist.core.system_het import SystemHetConfig, build_epoch_schedule
 
 
 THIS = Path(__file__).resolve()

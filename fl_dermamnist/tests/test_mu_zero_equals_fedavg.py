@@ -22,7 +22,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from fl_dermamnist.fl.server_loop import FLConfig, run_fl
+from fl_dermamnist.runtimes.pytorch.server_loop import FLConfig, run_fl
 from fl_dermamnist.models import DermMNISTCNN
 
 

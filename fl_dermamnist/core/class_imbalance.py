@@ -1,7 +1,7 @@
 """Class-imbalance-aware loss functions for the imbalance-baseline experiment.
 
 Two loss variants are provided, both drop-in replacements for the
-standard cross-entropy in `fl_dermamnist.fl.local_train`:
+standard cross-entropy in `fl_dermamnist.core.local_train`:
 
   - `make_class_weighted_ce(labels)`: inverse-frequency class weights
     \\propto 1/n_c, normalised so weights sum to num_classes. The

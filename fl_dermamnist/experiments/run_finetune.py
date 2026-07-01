@@ -59,7 +59,7 @@ from fl_dermamnist.data.partition import (
     specialist_7_clients,
     two_client_90_10_rare_stress,
 )
-from fl_dermamnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
+from fl_dermamnist.core.runtime_provenance import collect_runtime_provenance, utc_now_iso
 from fl_dermamnist.models import DermMNISTCNN
 
 

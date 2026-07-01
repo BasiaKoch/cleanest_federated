@@ -17,7 +17,7 @@ Usage:
 
 When `--system-het-mode` is set to a non-uniform value, the server's
 configure_fit() function reads from the per-(round, client) schedule
-generated in `fl_dermamnist.fl.system_het`, identical to the pure-PyTorch
+generated in `fl_dermamnist.core.system_het`, identical to the pure-PyTorch
 path.
 """
 from __future__ import annotations
@@ -49,11 +49,11 @@ from fl_dermamnist.data.partition import (
     two_client_86_14_quantity_only_stratified,
     two_client_90_10_rare_stress,
 )
-from fl_dermamnist.fl.evaluation import evaluate
-from fl_dermamnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
-from fl_dermamnist.fl.system_het import SystemHetConfig, build_epoch_schedule
-from fl_dermamnist.fl_flower.client import FlClient, state_dict_to_numpy, numpy_to_state_dict
-from fl_dermamnist.fl_flower.strategy_straggler_dropping import StragglerDroppingFedAvg
+from fl_dermamnist.core.evaluation import evaluate
+from fl_dermamnist.core.runtime_provenance import collect_runtime_provenance, utc_now_iso
+from fl_dermamnist.core.system_het import SystemHetConfig, build_epoch_schedule
+from fl_dermamnist.runtimes.flower.client import FlClient, state_dict_to_numpy, numpy_to_state_dict
+from fl_dermamnist.runtimes.flower.strategy_straggler_dropping import StragglerDroppingFedAvg
 from fl_dermamnist.models import DermMNISTCNN, get_model, resolve_variant
 
 
@@ -237,7 +237,7 @@ def main():
     # for partial-participation client selection. Without this seed, two
     # runs with --fraction-fit < 1.0 (and otherwise identical
     # configurations) will select different client subsets per round.
-    # The pure-PyTorch reference loop in fl/server_loop.py uses a
+    # The pure-PyTorch reference loop in runtimes/pytorch/server_loop.py uses a
     # separate np.random.default_rng(seed + 9_000_001) for client
     # sampling; the two runtimes therefore sample DIFFERENT subsets even
     # with the same seed under partial participation. This is acceptable
@@ -318,7 +318,7 @@ def main():
 
         # Flower invokes evaluate_fn once at server_round=0 with the
         # untrained initial parameters AND after every fit round 1..R.
-        # The pure-PyTorch reference loop (fl/server_loop.py) only
+        # The pure-PyTorch reference loop (runtimes/pytorch/server_loop.py) only
         # evaluates after rounds 1..R, so we skip writing the round-0
         # row here to keep history CSVs cross-runtime comparable.
         # The best-val tracker is also skipped for round 0; untrained
@@ -438,7 +438,7 @@ def main():
     def build_criterion():
         if args.loss_type == "ce":
             return torch.nn.CrossEntropyLoss()
-        from fl_dermamnist.fl.class_imbalance import (
+        from fl_dermamnist.core.class_imbalance import (
             make_class_weighted_ce, make_focal_loss,
         )
         if args.loss_type == "class_weighted_ce":

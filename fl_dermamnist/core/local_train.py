@@ -51,7 +51,7 @@ def local_train(
         criterion: optional loss module. Defaults to standard CrossEntropyLoss
                    (the headline FedAvg/FedProx configuration). Pass a
                    class-weighted CE or FocalLoss to evaluate loss-side
-                   imbalance baselines (fl_dermamnist.fl.class_imbalance).
+                   imbalance baselines (fl_dermamnist.core.class_imbalance).
 
     Returns:
         {'train_loss': avg loss over local steps, 'n_batches': int}

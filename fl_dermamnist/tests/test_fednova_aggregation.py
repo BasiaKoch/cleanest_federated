@@ -23,7 +23,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from fl_dermamnist.fl_flower.strategy_fednova import fednova_normaliser
+from fl_dermamnist.runtimes.flower.strategy_fednova import fednova_normaliser
 
 
 # ---------- Test 1: normaliser closed-form matches brute force ---------------
@@ -186,7 +186,7 @@ def test_aggregation_with_heterogeneous_tau():
 
 import flwr as fl
 from flwr.common import FitRes, Status, Code, ndarrays_to_parameters
-from fl_dermamnist.fl_flower.strategy_fednova import PairedFedNovaStrategy
+from fl_dermamnist.runtimes.flower.strategy_fednova import PairedFedNovaStrategy
 
 
 def _make_fit_res(new_params, num_examples, tau, cid):
@@ -237,7 +237,7 @@ def test_tau_clip_active_changes_only_low_tau_denominator():
     """With tau_clip_min=10, the tau=5 client's normaliser must equal
     fednova_normaliser(10, m), not fednova_normaliser(5, m). The tau=20
     client must be untouched."""
-    from fl_dermamnist.fl_flower.strategy_fednova import fednova_normaliser
+    from fl_dermamnist.runtimes.flower.strategy_fednova import fednova_normaliser
     anchor = [np.array([0.0, 0.0])]
     # Two clients: one straggler (tau=5) and one full (tau=20). Updates
     # are non-zero so the aggregate moves; we don't check the exact value,

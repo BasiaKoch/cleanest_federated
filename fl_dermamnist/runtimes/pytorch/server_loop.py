@@ -29,11 +29,11 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset, Subset
 
-from fl_dermamnist.fl.aggregation import weighted_average_state_dicts
-from fl_dermamnist.fl.evaluation import evaluate
-from fl_dermamnist.fl.local_train import freeze_global_weights, local_train
-from fl_dermamnist.fl.seeding import dataloader_generator_seed
-from fl_dermamnist.fl.system_het import (
+from fl_dermamnist.core.aggregation import weighted_average_state_dicts
+from fl_dermamnist.core.evaluation import evaluate
+from fl_dermamnist.core.local_train import freeze_global_weights, local_train
+from fl_dermamnist.core.seeding import dataloader_generator_seed
+from fl_dermamnist.core.system_het import (
     SystemHetConfig,
     build_epoch_schedule,
     summarise_schedule,
@@ -76,7 +76,7 @@ class FLConfig:
     # System-heterogeneity scenario. When mode='uniform' (default), every client
     # performs local_epochs every round, matching the headline statistical-
     # heterogeneity experiments. Other modes simulate stragglers; see
-    # fl_dermamnist.fl.system_het.
+    # fl_dermamnist.core.system_het.
     system_het: SystemHetConfig = field(default_factory=SystemHetConfig)
     # Loss-side imbalance baselines (audit HV2). 'ce' = standard cross-entropy
     # (the headline configuration). 'class_weighted_ce' = inverse-frequency
@@ -109,7 +109,7 @@ def _build_criterion(cfg: "FLConfig", train_labels: Sequence[int] | None, device
             f"loss_type={cfg.loss_type!r} requires train_labels (global) "
             f"to compute inverse-frequency class weights."
         )
-    from fl_dermamnist.fl.class_imbalance import (
+    from fl_dermamnist.core.class_imbalance import (
         make_class_weighted_ce, make_focal_loss,
     )
     if cfg.loss_type == "class_weighted_ce":

@@ -9,7 +9,7 @@
 # What this script does:
 #   Block 0: deletes 7 known-bad s8675309 JSONs (and their history/npz
 #            companions) that were produced by the numpy-seed-overflow
-#            bug fixed in fl/seeding.py. The runner will then re-run them.
+#            bug fixed in core/seeding.py. The runner will then re-run them.
 #   Block 1: 6 missing flower_C0_baseline jobs.
 #   Block 2: 5 missing system_het_fixed (C1) jobs + 1 bad-s8675309 rerun.
 #   Block 3: 5 missing system_het_random (C2) jobs + 1 bad-s8675309 rerun.
@@ -27,7 +27,7 @@
 #
 # Usage on the pod:
 #   cd /workspace/cleanest_federated
-#   git pull origin main      # gets fl/seeding.py + fixed clients
+#   git pull origin main      # gets core/seeding.py + fixed clients
 #   bash infra/runpod/runpod_resubmit_missing.sh 2>&1 | tee /workspace/runpod_log.txt
 #
 # Wall-clock estimate on RTX 4090: ~15h sequential (20 jobs * ~45 min).

@@ -8,7 +8,7 @@
 #   - fednova s8675309 (was the numpy-overflow bug; re-runs with seed fix)
 #
 # Prerequisite: the HPC checkout must contain the seeding-fix
-# (fl_dermamnist/fl/seeding.py, used by client_fednova.py). The script
+# (fl_dermamnist/core/seeding.py, used by client_fednova.py). The script
 # refuses to submit if the fix is absent.
 #
 # Idempotent: deletes the known-bad s8675309 JSON before submitting.
@@ -31,7 +31,7 @@ EXTRA="--straggler-fraction 0.5 --log-update-norms"
 cd "$REPO"
 
 # Sanity check: seed fix must be present
-if ! grep -q "numpy_legacy_seed" fl_dermamnist/fl_flower/client_fednova.py; then
+if ! grep -q "numpy_legacy_seed" fl_dermamnist/runtimes/flower/client_fednova.py; then
   echo "ERROR: HPC checkout does not contain the seed-overflow fix." >&2
   echo "Pull latest main before submitting these jobs." >&2
   exit 2

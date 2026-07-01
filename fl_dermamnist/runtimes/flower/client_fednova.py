@@ -51,8 +51,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset, Subset
 
-from fl_dermamnist.fl.seeding import dataloader_generator_seed, numpy_legacy_seed
-from fl_dermamnist.fl_flower.client import state_dict_to_numpy, numpy_to_state_dict
+from fl_dermamnist.core.seeding import dataloader_generator_seed, numpy_legacy_seed
+from fl_dermamnist.runtimes.flower.client import state_dict_to_numpy, numpy_to_state_dict
 
 
 class FlClientFedNova(fl.client.NumPyClient):

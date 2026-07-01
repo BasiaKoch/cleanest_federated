@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from fl_dermamnist.fl.seeding import dataloader_generator_seed, numpy_legacy_seed
+from fl_dermamnist.core.seeding import dataloader_generator_seed, numpy_legacy_seed
 
 
 def test_large_paired_seed_keeps_raw_torch_seed_but_numpy_is_32_bit() -> None:

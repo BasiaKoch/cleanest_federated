@@ -4,7 +4,7 @@ LOCAL ONLY - NOT FOR HPC SUBMISSION.
 
 The project-wide rule is that every HPC submission uses the Flower
 runtime. This entry point invokes the pure-PyTorch reference loop in
-``fl_dermamnist/fl/server_loop.py`` and stamps output JSONs with
+``fl_dermamnist/runtimes/pytorch/server_loop.py`` and stamps output JSONs with
 ``framework="pure-pytorch"``. It is preserved as:
 
   - the implementation that produced the 20 backstamped headline JSONs
@@ -55,7 +55,7 @@ from fl_dermamnist.data.partition import (
     specialist_7_clients,
     two_client_90_10_rare_stress,
 )
-from fl_dermamnist.fl.server_loop import FLConfig, run_fl, save_run_outputs
+from fl_dermamnist.runtimes.pytorch.server_loop import FLConfig, run_fl, save_run_outputs
 from fl_dermamnist.models import DermMNISTCNN
 
 
@@ -102,7 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
                     default=str(Path(__file__).resolve().parents[2] / "dermamnist_64.npz"))
     ap.add_argument("--out-dir", default="fl_dermamnist/results/headline")
     # --- System heterogeneity (per-client variable local epochs) ---
-    # See fl_dermamnist/fl/system_het.py for the canonical reference and the
+    # See fl_dermamnist/core/system_het.py for the canonical reference and the
     # connection to Li et al. (2020) §5.2. mode='uniform' is the default and
     # bit-identical to the pre-system-het code path.
     ap.add_argument("--system-het-mode",
@@ -138,7 +138,7 @@ def main():
     client_indices, _ = partitioner(train.labels, seed=args.seed)
 
     # Build the system-het config (default 'uniform' = no system het)
-    from fl_dermamnist.fl.system_het import SystemHetConfig
+    from fl_dermamnist.core.system_het import SystemHetConfig
     fixed_ids = None
     if args.fixed_straggler_ids:
         fixed_ids = [int(x) for x in args.fixed_straggler_ids.split(",")]

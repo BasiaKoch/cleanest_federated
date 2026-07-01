@@ -33,7 +33,7 @@ CLASS_NAMES = (
     "vascular_lesions",
 )
 
-# Filename schema (see fl/server_loop.py:save_run_outputs and the Flower runners):
+# Filename schema (see runtimes/pytorch/server_loop.py:save_run_outputs and the Flower runners):
 #   test_at_best_<algo>_mu<mu>_E<E>[_sh-<sh_mode>][_C<frac>]_s<seed>.json
 # where:
 #   - <algo>     ∈ {fedavg, fedprox, fednova}

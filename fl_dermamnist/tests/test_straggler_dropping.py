@@ -14,7 +14,7 @@ from flwr.common import (
     Code, FitRes, ndarrays_to_parameters, parameters_to_ndarrays, Status,
 )
 
-from fl_dermamnist.fl_flower.strategy_straggler_dropping import (
+from fl_dermamnist.runtimes.flower.strategy_straggler_dropping import (
     StragglerDroppingFedAvg,
 )
 

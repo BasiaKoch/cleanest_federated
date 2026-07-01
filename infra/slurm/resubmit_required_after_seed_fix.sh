@@ -2,9 +2,9 @@
 # Targeted recovery submission after the Flower client seed-overflow fix.
 #
 # Run this from the HPC checkout AFTER pulling the commit that contains:
-#   - fl_dermamnist/fl/seeding.py
-#   - numpy_legacy_seed(...) usage in fl_flower/client.py
-#   - numpy_legacy_seed(...) usage in fl_flower/client_fednova.py
+#   - fl_dermamnist/core/seeding.py
+#   - numpy_legacy_seed(...) usage in runtimes/flower/client.py
+#   - numpy_legacy_seed(...) usage in runtimes/flower/client_fednova.py
 #
 # This script resubmits only jobs that are still missing, provenance-incomplete,
 # or known-broken in the latest synced local audit. It deliberately does NOT
@@ -25,7 +25,7 @@ IID=iid_7_clients
 
 cd "$REPO"
 
-if ! grep -q "numpy_legacy_seed" fl_dermamnist/fl_flower/client.py; then
+if ! grep -q "numpy_legacy_seed" fl_dermamnist/runtimes/flower/client.py; then
   echo "ERROR: HPC checkout does not contain the seed-overflow fix." >&2
   echo "Pull/sync the latest repo before resubmitting these jobs." >&2
   exit 2

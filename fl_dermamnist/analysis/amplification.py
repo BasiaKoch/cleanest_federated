@@ -8,7 +8,7 @@ round, client_id, update_norm, n_samples, local_epochs, tau). Where the newer
 (runs made after the Stage‑0 instrumentation), those DIRECTLY‑LOGGED values are
 used instead and the `source` column is set to "logged".
 
-Definitions (mirroring `fl_flower/strategy_fednova.py`):
+Definitions (mirroring `runtimes/flower/strategy_fednova.py`):
     a_i              = fednova_normaliser(tau_i, m)          [reconstructed from tau]
     p_i              = n_i / sum_j n_j
     a_eff            = sum_i p_i * a_i
@@ -45,7 +45,7 @@ import pandas as pd
 # identical local copy (kept in sync; verified by tests/test_fednova_aggregation
 # style checks). The fallback avoids a hard dependency on flwr for analysis.
 try:  # pragma: no cover - exercised implicitly
-    from fl_dermamnist.fl_flower.strategy_fednova import fednova_normaliser
+    from fl_dermamnist.runtimes.flower.strategy_fednova import fednova_normaliser
 except Exception:  # pragma: no cover
     def fednova_normaliser(tau: float, momentum: float) -> float:
         tau = float(tau)

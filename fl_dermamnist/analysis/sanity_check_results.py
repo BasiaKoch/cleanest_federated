@@ -4,7 +4,7 @@ Before any inferential test runs, verify the data is not pathological:
 
   1. Per-sweep JSON counts match expectations.
   2. Every framework label is canonical (resolved through
-     fl_dermamnist.fl.provenance.canonicalise_framework).
+     fl_dermamnist.core.provenance.canonicalise_framework).
   3. No JSON has a pathological macro_f1 (< 0.05 = silent training
      failure; > 0.98 = data leak).
   4. selected_round (best-val round) ranges across runs - not always 1
@@ -32,7 +32,7 @@ from fl_dermamnist.common.paths import repo_root, package_root, results_root, th
 # Allow PYTHONPATH=. invocation from repo root
 sys.path.insert(0, str(repo_root()))
 
-from fl_dermamnist.fl.provenance import (  # noqa: E402
+from fl_dermamnist.core.provenance import (  # noqa: E402
     CANONICAL_FRAMEWORKS,
     canonicalise_framework,
 )

@@ -19,13 +19,16 @@ fl_dermamnist/
 │   └── partition.py            # IID / engineered / specialist / Dirichlet / pathological
 ├── models/
 │   └── dermmnist_cnn.py        # 4 conv blocks + GroupNorm + FC head
-├── fl/
+├── core/                       # shared FL algorithms (used by both runtimes)
 │   ├── local_train.py          # CE + gated proximal term (μ = 0 ⇒ FedAvg)
 │   ├── aggregation.py          # size-weighted average of state dicts
 │   ├── evaluation.py           # macro-F1, balanced accuracy, per-class F1
-│   ├── provenance.py           # framework / git-commit canonicalisation
-│   └── server_loop.py          # paired-fair FL run (pure-PyTorch)
-├── fl_flower/                  # Flower-runtime client + strategy wiring
+│   ├── class_imbalance.py      # CE / weighted-CE / focal losses
+│   ├── system_het.py           # straggler schedules
+│   └── seeding.py, provenance.py, runtime_provenance.py
+├── runtimes/
+│   ├── pytorch/server_loop.py  # paired-fair reference loop (pure-PyTorch)
+│   └── flower/                 # Flower client + FedNova/straggler strategies
 ├── experiments/
 │   ├── run_one.py                       # pure-PyTorch single run
 │   ├── run_one_flower.py                # Flower single run
@@ -48,12 +51,12 @@ the full HPC sweep launchers live in **`infra/slurm/submit_*.sh`**.
 
 ## Runtime roles
 
-- **Pure-PyTorch (`run_one.py` → `fl/server_loop.py`)** — reference
+- **Pure-PyTorch (`run_one.py` → `runtimes/pytorch/server_loop.py`)** — reference
   loop. Used for the **engineered-partition headline** in the
   statistical-heterogeneity chapter (`results/headline/`). Provides a
   single-process sequential implementation with deterministic client
   iteration and bit-equivalent local objectives at $\mu = 0$.
-- **Flower (`run_one_flower.py` → `fl_flower/`)** — simulation
+- **Flower (`run_one_flower.py` → `runtimes/flower/`)** — simulation
   runtime. Used for (a) the **runtime-replication row** of the
   engineered headline (`results/flower_C0_baseline/`); (b) all
   **system-heterogeneity and partial-participation experiments**
@@ -190,12 +193,12 @@ section is the within-arm update-norm comparison.
 
 | Requirement | Location |
 |---|---|
-| FedAvg local objective: plain CE | `fl/local_train.py` (gated `if proximal_mu > 0`) |
-| FedProx local objective: CE + $(\mu / 2) \cdot \lVert w - w_g \rVert^2$ | `fl/local_train.py` |
-| `global_weights_frozen` is detached, not aliased | `fl/server_loop.py` `freeze_global_weights` (called once per round); `tests/test_fedprox_proximal_term.py:test_global_weights_frozen_is_not_aliased` |
+| FedAvg local objective: plain CE | `core/local_train.py` (gated `if proximal_mu > 0`) |
+| FedProx local objective: CE + $(\mu / 2) \cdot \lVert w - w_g \rVert^2$ | `core/local_train.py` |
+| `global_weights_frozen` is detached, not aliased | `runtimes/pytorch/server_loop.py` `freeze_global_weights` (called once per round); `tests/test_fedprox_proximal_term.py:test_global_weights_frozen_is_not_aliased` |
 | $\mu = 0$ ≡ FedAvg numerically | `tests/test_mu_zero_equals_fedavg.py` |
-| Aggregation is size-weighted | `fl/aggregation.py:weighted_average_state_dicts` |
-| Paired runs: same init, partition, dataloader RNG | `fl/server_loop.py` (`dataloader_generator_seed(seed, round, client)`) |
-| Test evaluated only at best-val checkpoint | `fl/server_loop.py` (argmax of `val_macro_f1`, evaluated once after training) |
+| Aggregation is size-weighted | `core/aggregation.py:weighted_average_state_dicts` |
+| Paired runs: same init, partition, dataloader RNG | `runtimes/pytorch/server_loop.py` (`dataloader_generator_seed(seed, round, client)`) |
+| Test evaluated only at best-val checkpoint | `runtimes/pytorch/server_loop.py` (argmax of `val_macro_f1`, evaluated once after training) |
 | Pure-PyTorch ↔ Flower equivalence at $\mu = 0$ | `experiments/verify_flower_equivalence.py`, `experiments/compare_equivalence_full_scale.py`, `tests/test_framework_provenance.py` |
 | Provenance ledger | `docs/provenance/result_traceability_matrix.csv` + `numerical_verification_sheet.txt` |

@@ -24,12 +24,12 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from fl_dermamnist.data.load import load_dermmnist
-from fl_dermamnist.fl.runtime_provenance import collect_runtime_provenance, utc_now_iso
+from fl_dermamnist.core.runtime_provenance import collect_runtime_provenance, utc_now_iso
 from fl_dermamnist.models import DermMNISTCNN
 
 
 def set_seed(seed: int) -> None:
-    # Match fl/server_loop.py:set_all_seeds so centralised runs are as
+    # Match runtimes/pytorch/server_loop.py:set_all_seeds so centralised runs are as
     # reproducible as the FL runs (audit P2 fix). Python's `random`
     # module is seeded too, even though centralised doesn't use it
     # directly, in case downstream sklearn or third-party utilities do.
@@ -43,7 +43,7 @@ def set_seed(seed: int) -> None:
 
 
 def evaluate(model, loader, device, num_classes: int = 7):
-    """Same metric set as fl/evaluation.py, with explicit `labels` so a
+    """Same metric set as core/evaluation.py, with explicit `labels` so a
     class absent from predictions still contributes 0 to macro-F1
     rather than being silently dropped (audit P2 fix)."""
     from sklearn.metrics import f1_score, accuracy_score, balanced_accuracy_score
