@@ -58,7 +58,13 @@ To get started with the code base, follow these steps.
 
     (or `pip install -e .` to install the `fl_dermamnist` package in editable mode).
 
-4. **Add the dataset:** place `dermamnist_64.npz` at the repository root (see `fl_dermamnist/data/load.py`).
+4. **Add the dataset:** from the repository root, fetch DermaMNIST at 64×64 (the loader resizes to 28×28):
+
+    ```
+    $ python -c "from medmnist import DermaMNIST; DermaMNIST(split='train', download=True, size=64, root='.')"
+    ```
+
+    This writes `dermamnist_64.npz` (~52 MB) into the repository root, where the loader expects it (see `fl_dermamnist/data/load.py`).
 
 ## Usage
 
@@ -66,7 +72,7 @@ All entrypoints run as modules from the repository root; the `infra/local/comman
 
 ### 1. Sanity checks (implementation guards)
 
-Verify FedProx(μ = 0) ≡ FedAvg, the proximal term, the FedNova normaliser, and provenance fields before trusting any result:
+Verify FedProx(μ = 0) ≡ FedAvg, the proximal term, and provenance fields before trusting any result (the FedNova normaliser, straggler, partition and seeding guards run in the full suite, `PYTHONPATH=. pytest fl_dermamnist/tests/`):
 
 ```
 $ bash infra/local/commands.sh sanity

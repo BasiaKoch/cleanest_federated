@@ -63,7 +63,7 @@ def main():
                     help="Keep small for CPU equivalence test")
     ap.add_argument("--partition", default="balanced_paired_7_clients")
     ap.add_argument("--npz-path",
-                    default="/Users/basiakoch/cleanest_federated/dermamnist_64.npz")
+                    default=str(Path(__file__).resolve().parents[2] / "dermamnist_64.npz"))
     ap.add_argument("--tolerance", type=float, default=0.005,
                     help="Max macro-F1 difference treated as equivalent")
     args = ap.parse_args()
