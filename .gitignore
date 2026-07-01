@@ -44,3 +44,12 @@ mnist_dermnist/logs/*.err
 /_gap_extract2.py
 /_gap_amplif.py
 /_parse_lit.py
+
+# LaTeX build outputs in the flat report bundle (the deliverables live at report/*.pdf)
+report/supporting/main.pdf
+report/supporting/executive_summary.pdf
+report/supporting/*.aux
+report/supporting/*.log
+report/supporting/*.bbl
+report/supporting/*.blg
+report/supporting/*.out
