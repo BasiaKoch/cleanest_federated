@@ -29,6 +29,7 @@ mnist_dermnist/logs/*.err
 *.swo
 .vscode/
 .idea/
+.Rhistory
 
 # --- Markdown notes (only README.md tracked) ---
 *.md

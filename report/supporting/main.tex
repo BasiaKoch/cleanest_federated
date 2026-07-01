@@ -1697,14 +1697,17 @@ freely re-obtainable through the pinned \texttt{medmnist} package; HAM10000 is
 released under CC~BY-NC~4.0.
 
 \paragraph{Environment.}
-Dependencies are pinned in \texttt{requirements.txt} (tested on Python~3.14); the
-package installs with \texttt{pip install -e .}\ from the repository root.
+Dependencies are pinned in \texttt{requirements.txt} (tested on Python~3.14) and
+install with \texttt{pip install -r requirements.txt} from the repository root
+(or \texttt{pip install -e .}\ for the \texttt{fl\_dermamnist} package in editable
+mode).
 
 \paragraph{Reproduction.}
 The report's tables and figures rebuild from the saved per-run artefacts without
-re-training. \texttt{bash infra/local/commands.sh sanity} runs the implementation
-guards (the FedProx $\mu=0\equiv$ FedAvg equivalence, the proximal term, the
-FedNova normaliser, and straggler handling), and
+re-training. \texttt{bash infra/local/commands.sh sanity} runs the core
+implementation guards (the FedProx $\mu=0\equiv$ FedAvg equivalence, the proximal
+term, and provenance fields; the FedNova normaliser, straggler, partition, and
+seeding guards run in the full \texttt{pytest} suite), and
 \texttt{bash infra/local/commands.sh analyse} regenerates the thesis tables and
 figures. Full hyperparameter sweeps were run on HPC via the
 \texttt{infra/slurm/submit\_*.sh} launchers and are costly to re-run; the saved
