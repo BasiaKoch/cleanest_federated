@@ -21,7 +21,7 @@ proportional to ||∇F_k(w^t)||₂ — so the RATIO
 is a sound HETEROGENEITY DIAGNOSTIC even though it is not Li 2020's
 exact B.
 
-For the thesis, we frame this honestly:
+Reported in the thesis as:
    "We use an update-norm-based heterogeneity proxy, computable from
     existing logs. The exact B-local dissimilarity of Li 2020 Theorem 4
     would require additional gradient logging; we leave that to future

@@ -317,19 +317,13 @@ def make_figures(summary: pd.DataFrame, deltas: pd.DataFrame, out_dir: Path) -> 
     if summary.empty:
         print("  (no data — skipping figures)")
         return
-    print("  TODO: implement figures once Stage A pilot results are on disk.")
-    print("  Expected outputs:")
-    print("    - figure_ladder_macro_f1_delta.{pdf,png}")
-    print("    - figure_ladder_rare_f1_delta.{pdf,png}")
-    print("    - figure_ladder_melanoma_recall_delta.{pdf,png}")
-    print("    - figure_update_norms_level4.{pdf,png}")
-    print("    - figure_confusion_level4.{pdf,png}")
+    print("  Ladder figures are not generated for the single-seed pilot.")
 
 
 def make_latex_tables(summary: pd.DataFrame, deltas: pd.DataFrame,
                       out_dir: Path) -> None:
     """Stub. Implement once data exists."""
-    print("  TODO: emit thesis_table_ladder.tex and thesis_table_deltas.tex.")
+    print("  Ladder LaTeX tables are not generated for the single-seed pilot.")
 
 
 # ---------------------------------------------------------------------

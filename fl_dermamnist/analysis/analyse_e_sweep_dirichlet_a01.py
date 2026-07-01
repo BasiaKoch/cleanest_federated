@@ -11,8 +11,7 @@ mechanism test (Li et al. 2020 MLSys, Fig. 4):
 
 Data sources:
   - fl_dermamnist/results/e_sweep_dirichlet_a01/  (this sweep)
-  - fl_dermamnist/results/dirichlet_a01/          (existing E=20 anchor;
-                                                    reused for free)
+  - fl_dermamnist/results/dirichlet_a01/          (existing E=20 anchor; reused)
 
 Outputs (all under e_sweep_dirichlet_a01/analysis/):
   1. headline_e_sweep.csv             — per (E, seed, algo) global metrics

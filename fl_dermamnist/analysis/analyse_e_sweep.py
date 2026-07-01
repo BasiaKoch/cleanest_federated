@@ -19,7 +19,7 @@ the baseline Δ is statistically indistinguishable from zero.
 
 Data sources:
   - fl_dermamnist/results/e_sweep/   (this sweep — new E values)
-  - fl_dermamnist/results/headline/  (10-seed E=20 anchor, reused free)
+  - fl_dermamnist/results/headline/  (10-seed E=20 anchor, reused)
 
 Outputs (all under e_sweep/analysis/):
   1. headline_e_sweep.csv             — per (E, seed, algo) global metrics
