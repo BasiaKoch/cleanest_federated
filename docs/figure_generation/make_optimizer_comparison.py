@@ -11,9 +11,9 @@ A single teal accent marks ONLY the mechanism that changes, and WHERE it acts:
     (c) FedNova -- work-normalised, tau-scaled updates     (aggregation)
 
 Formulas follow the report's Methods notation (main.tex):
-    FedAvg   w^{t+1} = sum_i (n_i/N) w_i^{t+1}
+    FedAvg   w^{t+1} = w^t + sum_i (n_i/N) d_i,   d_i = w_i^{t+1} - w^t
     FedProx  L_CE(w) + (mu/2) || w - w^t ||^2
-    FedNova  w^{t+1} = w^t + a_eff sum_i p_i d_i / a_i,   a_i = tau_i
+    FedNova  w^{t+1} = w^t + a_eff sum_i p_i d_i / a_i,   a_i = tau_i (m=0)
 Pure matplotlib mathtext (no LaTeX); vector PDF.
 """
 import os
@@ -94,14 +94,14 @@ def panel(ax, tag, *, accent_stage, mech_label, mech_eq, mech_sub=None):
 fig, axes = plt.subplots(1, 3, figsize=(11.4, 5.3))
 panel(axes[0], "(a) FedAvg", accent_stage="agg",
       mech_label="aggregation: sample-weighted",
-      mech_eq=r"$w^{t+1} = \sum_i \frac{n_i}{N}\, w_i^{t+1}$")
+      mech_eq=r"$w^{t+1} = w^{t} + \sum_i \frac{n_i}{N}\, d_i$")
 panel(axes[1], "(b) FedProx", accent_stage="local",
       mech_label="local objective: $+$ proximal term",
       mech_eq=r"$\mathcal{L}_{\mathrm{CE}}(w) + \frac{\mu}{2}\,\|w - w^{t}\|^{2}$")
 panel(axes[2], "(c) FedNova", accent_stage="agg",
       mech_label="aggregation: work-normalised",
       mech_eq=r"$w^{t+1} = w^{t} + a_{\mathrm{eff}} \sum_i p_i\, \frac{d_i}{a_i}$",
-      mech_sub=r"$a_i = \tau_i$  (effective local work)")
+      mech_sub=r"$a_i = \tau_i$ when $m{=}0$  (effective local work)")
 
 fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.02, wspace=0.07)
 HERE = os.path.dirname(os.path.abspath(__file__))

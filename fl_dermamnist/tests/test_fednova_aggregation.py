@@ -181,7 +181,7 @@ def test_aggregation_with_heterogeneous_tau():
 
 # =========================================================================
 # Mechanism-probe regression tests for τ-clip and server-momentum variants.
-# (Thesis §5.5 - random-τ FedNova failure mode probes.)
+# (Thesis §3.4 - random-τ FedNova failure mode probes.)
 # =========================================================================
 
 import flwr as fl

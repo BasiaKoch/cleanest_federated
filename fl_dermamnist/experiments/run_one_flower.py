@@ -91,19 +91,16 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--mu", type=float, default=0.0)
     # Per-client μ override. When set, takes precedence over --mu and
     # establishes a client-cid → μ mapping. Format: "0:0.01,1:0.0" sets
-    # μ = 0.01 on client 0 and μ = 0 on client 1. Used to test
-    # asymmetric-proximal-regularisation hypotheses (HAPI-FedProx
-    # [Springer 2024, DOI:10.1007/978-3-032-11733-5_17]; Yao et al.
-    # 2024 NeurIPS [arXiv:2410.08934] - "Effect of Personalization in
-    # FedProx" - proves the optimal μ depends on per-client
-    # heterogeneity). Any client cid not listed in the mapping inherits
-    # the global --mu value. Recorded in the output JSON metadata.
+    # μ = 0.01 on client 0 and μ = 0 on client 1. Used to test the
+    # (exploratory) hypothesis that an asymmetric, per-client proximal
+    # coefficient tracking per-client heterogeneity helps. Any client cid
+    # not listed in the mapping inherits the global --mu value. Recorded
+    # in the output JSON metadata.
     ap.add_argument("--mu-per-client", type=str, default=None,
                     help="Per-client μ override (e.g. '0:0.01,1:0.0'). "
                          "Overrides --mu for the specified client cids. "
-                         "Outside Li 2020 Thm 4's uniform-μ regime; "
-                         "covered by Yao et al. 2024 per-client minimax "
-                         "framework (arXiv:2410.08934).")
+                         "Outside Li 2020 Thm 4's uniform-μ regime "
+                         "(exploratory).")
     # Per-client learning-rate override. Tests whether the FedProx
     # advantage extends to asymmetric LR (extension of Li 2020 §5.2
     # which only varies local epochs). Format: '0:0.01,1:0.005' sets

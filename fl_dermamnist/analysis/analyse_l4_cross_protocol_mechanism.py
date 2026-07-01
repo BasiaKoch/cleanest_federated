@@ -20,7 +20,7 @@ L4 protocols included (all use partition two_client_90_10_rare_stress):
    - node-pinned variance isolation
    - Li 2020 §5.2 asymmetric (drop-stragglers protocol)
    - perfect-storm (Li 2020 canonical recipe at peak heterogeneity)
-   - asymmetric per-client μ (Yao 2024 ablation)
+   - asymmetric per-client μ ablation
    - asymmetric per-client LR (D1)
    - FedProx × weighted-CE (B2)
 

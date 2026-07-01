@@ -141,7 +141,7 @@ rather than establishing a universal optimiser ranking.
 
 \chapter*{Declaration}
 \addcontentsline{toc}{chapter}{Declaration}
-This thesis contains 6,862 words.
+This thesis contains 6,784 words.
 
 I declare that this thesis is original and is submitted as part of the requirements
 for the degree. Except where explicitly stated, it contains nothing which is the
@@ -568,8 +568,12 @@ update by its effective local work $\tau_i$ via the momentum-aware factor
 \]
 which reduces to $a_i = \tau_i$ when $m = 0$ (as under Regime~B). The server
 aggregates $d_i / a_i$ and scales the global step by
-$a_{\textrm{eff}} = \sum_i p_i a_i$; both FedNova's asymmetry regimes lie outside
-the stable-$\tau$ assumption of the original analysis.
+$a_{\textrm{eff}} = \sum_i p_i a_i$ (sample weights $p_i = n_i/N$, as in FedAvg). Wang et al.\ analyse FedNova under
+arbitrarily time-varying local work $\tau_i^{(t)}$, so
+\S\ref{sec:lr-asymmetry} probes it empirically in two such regimes: persistent
+learning-rate asymmetry (fixed $\tau_i$, the rare client's update weakened
+without being dropped) and random per-round straggling (randomly varying
+$\tau_i$).
 Figure~\ref{fig:optimizer-comparison} contrasts these three mechanisms against the
 shared federated-learning loop.
 
@@ -578,7 +582,7 @@ shared federated-learning loop.
 \includegraphics[width=\textwidth]{F_optimizer_comparison_triptych.pdf}
 \caption[How the three optimisers differ]{Minimal schematic comparison of the
 three federated optimisers. All three share the same structure --- broadcast the
-global model, train on each client, aggregate --- and differ only in the
+global model $w^{t}$, train on each client to obtain its update $d_i = w_i^{t+1} - w^{t}$, aggregate --- and differ only in the
 highlighted mechanism. FedAvg aggregates locally trained client models by
 sample-weighted averaging; FedProx keeps that aggregation but adds a proximal
 penalty to the \emph{local} objective, discouraging drift from the current global
@@ -606,7 +610,7 @@ Method   & Mechanism                                                & Main knob 
 \midrule
 FedAvg   & Sample-weighted aggregation; no drift control            & none beyond local SGD       & Rare-class client structurally under-weighted under quantity skew                       & §\ref{sec:statistical-heterogeneity}, §\ref{sec:li-straggler} \\
 FedProx  & FedAvg plus local proximal penalty $\tfrac{\mu}{2}\lVert w - w_{\textrm{global}}\rVert^{2}$ & $\mu$ (default $0.01$)      & $\mu$ inverted-$U$: too small $\approx$ FedAvg; too large over-constrains rare-class learning & §\ref{sec:mu-sensitivity}, §\ref{sec:li-straggler}            \\
-FedNova  & Sample-weighted aggregation of $\tau_i$-normalised local directions $d_i / a_i$ & client momentum $m$, local-step count $\tau_i$ & Fails under random per-round $\tau$ (outside the stable-$\tau$ assumption of \citep{wang2020fednova}) & §\ref{sec:lr-asymmetry}                          \\
+FedNova  & Sample-weighted aggregation of $\tau_i$-normalised local directions $d_i / a_i$ & client momentum $m$, local-step count $\tau_i$ & Empirically brittle under random per-round $\tau$ straggling in the rare-class regime (§\ref{sec:lr-asymmetry}) & §\ref{sec:lr-asymmetry}                          \\
 \bottomrule
 \end{tabular}%
 }
@@ -671,8 +675,9 @@ rare client's update magnitude \emph{without dropping it} and so separating the
 \emph{random-$\tau$ FedNova stress} runs on
 the 7-client engineered partition under Regime~A with random-straggler fraction
 $0.5$, $n = 10$ --- not an L4 experiment --- deliberately making $\tau_i$ a
-per-round random variable that violates the stable-$\tau$ assumption of
-\citet{wang2020fednova}.
+per-round random variable --- time-varying local work that
+\citet{wang2020fednova} analyse in principle, here stressed empirically
+together with extreme rare-class imbalance.
 
 
 \subsection{Loss-side interventions}
@@ -722,7 +727,7 @@ $\mu$ sensitivity                & 7-client balanced-paired                     
 Li-style four-condition          & 2-client L4 and L1 (control)                 & FedAvg/FedProx $\times$ drop/$\gamma$-inex, $n = 3$       & Isolate proximal-only from $\gamma$-inex contribution                         & §\ref{sec:li-straggler}                         \\
 Perfect-storm                    & 2-client L4, batch $10$, momentum $0$, $90\%$ random stragglers & FedAvg+drop vs FedProx+$\gamma$-inex ($\mu \in \{1.0, 0.01\}$), $n = 3$ & Stress demonstration of the four-condition ordering                        & §\ref{sec:li-straggler}                         \\
 LR asymmetry                     & 2-client L4, 6 ratios $1{:}1$ to $50{:}1$    & FedAvg, FedProx, FedNova, $n = 3$ per ratio              & FedNova robustness under deterministic LR skew                                & §\ref{sec:lr-asymmetry}                         \\
-FedNova random-$\tau$            & 7-client balanced-paired, $f_{\textrm{straggle}} = 0.5$ & FedNova vs system\_het\_random FA/FP, $n = 10$           & Random-$\tau$ stress outside Wang 2020's stable-$\tau$ assumption             & §\ref{sec:lr-asymmetry}                         \\
+FedNova random-$\tau$            & 7-client balanced-paired, $f_{\textrm{straggle}} = 0.5$ & FedNova vs system\_het\_random FA/FP, $n = 10$           & Random-$\tau$ straggler stress under rare-class imbalance             & §\ref{sec:lr-asymmetry}                         \\
 Loss-side correction             & 2-client L4                                  & FedAvg/FedProx $\times$ CE / weighted CE / focal, $n = 3$ & Test whether FedProx is a disguised class-imbalance corrector                & §\ref{sec:rare-class-collapse}                  \\
 Mechanism diagnostics            & cross-protocol pool of L4 runs               & update-norm trajectories, protocol-flip audit             & Drift-control mechanism evidence; reporting-protocol robustness               & §\ref{sec:mechanism-robustness}                  \\
 \bottomrule
@@ -1244,8 +1249,7 @@ superior (Table~\ref{tab:fednova-regime}).
 \small
 \caption{FedNova across the two system-heterogeneity regimes: persistent
 deterministic learning-rate asymmetry ($n=3$) versus random per-round $\tau$
-stragglers ($n=10$, outside the stable-$\tau$ assumption of
-\citet{wang2020fednova}). Test macro-F1; the mechanism reading is given in the
+stragglers ($n=10$). Test macro-F1; the mechanism reading is given in the
 text.}
 \label{tab:fednova-regime}
 \begin{tabular}{p{0.22\linewidth}p{0.32\linewidth}p{0.38\linewidth}}
@@ -1253,7 +1257,7 @@ text.}
 FedNova regime & Result & Interpretation \\
 \midrule
 Persistent LR asymmetry & macro-F1 holds $0.49$--$0.53$ across 1:1--50:1 & Empirically robust; robustness from work-normalised ($\tau$) aggregation \\
-Random-$\tau$ stragglers & macro-F1 $= 0.237 \pm 0.094$; 3/10 majority-only at best-val, 9/10 by the final validation round (no final test saved) & $\tau$-normalisation amplifies noisy partial updates (outside Wang 2020) \\
+Random-$\tau$ stragglers & macro-F1 $= 0.237 \pm 0.094$; 3/10 majority-only at best-val, 9/10 by the final validation round (no final test saved) & $\tau$-normalisation amplifies noisy partial updates (empirical; cause left to future work) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1562,8 +1566,9 @@ benchmark and this simulated protocol --- that the straggler-regime benefit is
 carried mainly by inexact-update acceptance rather than by the proximal term, an
 attribution to the FedProx-plus-$\gamma$-inexact protocol as configured here
 rather than a claim that the method underperforms; and for FedNova
-\citep{wang2020fednova} the random-$\tau$ collapse is consistent with operating
-outside its stable-work assumption, not with a flaw in its analysis. No result
+\citep{wang2020fednova} --- whose analysis explicitly covers time-varying
+local work --- the random-$\tau$ collapse is an empirical brittleness in this
+small, rare-class-imbalanced regime, not a flaw in that analysis. No result
 here should be read as refuting these analyses. The clinical reading stays
 cautious: rare lesions collapsing into melanocytic nevi is the shared failure
 mode, but DermaMNIST is a $28 \times 28$ benchmark, so this is clinically

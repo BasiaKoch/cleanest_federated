@@ -1,7 +1,8 @@
 """Experiment A1 - B-local dissimilarity proxy from existing update-norm logs.
 
-Li 2020 Theorem 4 (FedProx, MLSys) assumes bounded B-local dissimilarity:
-   B²(w) = max_k ||∇F_k(w)||² / ||∇F(w)||²
+Li 2020's convergence analysis (FedProx, MLSys) assumes bounded B-local
+dissimilarity, defined as an expectation over clients:
+   E_k[ ||∇F_k(w)||² ] <= B²(w) * ||∇F(w)||²
 Nobody has empirically measured B(t) across heterogeneity levels on a
 medical-FL benchmark and correlated it with the FedProx win/loss
 direction. Yuan & Li (arXiv:2206.05187, NeurIPS 2022) removed the
@@ -23,7 +24,7 @@ exact B.
 
 Reported in the thesis as:
    "We use an update-norm-based heterogeneity proxy, computable from
-    existing logs. The exact B-local dissimilarity of Li 2020 Theorem 4
+    existing logs. The exact B-local dissimilarity of Li 2020
     would require additional gradient logging; we leave that to future
     work."
 
@@ -209,7 +210,7 @@ axB.set_title(f"(b) Higher B → FedProx advantage? "
 axB.grid(True, alpha=0.25, linestyle="--", linewidth=0.5)
 axB.spines["top"].set_visible(False); axB.spines["right"].set_visible(False)
 
-fig.suptitle("B-dissimilarity proxy from update-norm logs — proxy for Li 2020 Theorem 4 quantity",
+fig.suptitle("B-dissimilarity proxy from update-norm logs — proxy for the Li 2020 B-dissimilarity quantity",
              fontsize=11.5, fontweight="bold", y=1.02)
 for ext in ("pdf", "png"):
     fig.savefig(OUT_FIG / f"F_b_dissimilarity_proxy.{ext}")

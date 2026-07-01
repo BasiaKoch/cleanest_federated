@@ -113,7 +113,7 @@ class PairedFedNovaStrategy(FedAvg):
         client's `tau_i` is replaced by `tau_clip_min` *only* in the
         normaliser computation (the partial parameter delta still enters
         aggregation unchanged). This is a 1/τ-amplification mitigation
-        proposed for random-τ straggler regimes; see the thesis §5.5
+        proposed for random-τ straggler regimes; see the thesis §3.4
         discussion. Default 0 = OFF (byte-identical to FedNova).
     server_momentum : float, optional
         Heavy-ball server-side momentum coefficient β applied to the

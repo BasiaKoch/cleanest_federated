@@ -137,7 +137,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--log-update-norms", action="store_true",
                     help="Capture per-(round, client) L2 update norm and "
                          "write client_update_norms_*.csv alongside the JSON.")
-    # --- Mechanism probes for random-τ FedNova failure (thesis §5.5). ---
+    # --- Mechanism probes for random-τ FedNova failure (thesis §3.4). ---
     ap.add_argument("--tau-clip-min", type=int, default=0,
                     help="Lower clamp on tau_i used in the FedNova normaliser "
                          "denominator. 0 disables (default). NOTE tau_i is the "

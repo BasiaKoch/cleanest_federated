@@ -15,11 +15,9 @@ checkpoint, (b) the question is about reporting protocol, not
 generalisation, and (c) staying on val isolates the question cleanly.
 
 Sources of the gap:
-  - "Not All FL Algorithms Are Created Equal" (Charles et al.,
-    arXiv:2403.17287, 2024) §3 explicitly identifies that training
-    instability and reporting protocols are under-studied:
-    "performance stability across clients and training instability
-    are under-reported in the FL benchmarking literature."
+  - Per-client performance stability and training instability are
+    under-reported in the FL benchmarking literature, so the choice of
+    reporting checkpoint/protocol can materially change conclusions.
   - FLamby (arXiv:2210.04620, NeurIPS 2022) acknowledges that
     best-val is a common alternative but does not quantify
     protocol sensitivity.
@@ -314,7 +312,7 @@ axB.grid(True, axis="y", alpha=0.25, linestyle="--", linewidth=0.5)
 axB.spines["top"].set_visible(False); axB.spines["right"].set_visible(False)
 
 fig.suptitle("Reporting-protocol sensitivity audit "
-             "— Charles et al. 2024 (arXiv:2403.17287) framing",
+             "— cross-protocol sign-change (flip) incidence",
              fontsize=11.5, fontweight="bold", y=1.02)
 for ext in ("pdf", "png"):
     fig.savefig(OUT_FIG / f"F_protocol_flip_rates.{ext}")

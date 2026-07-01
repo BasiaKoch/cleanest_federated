@@ -1,23 +1,14 @@
-"""Experiment C1 - Training-instability replication on medical FL.
+"""Experiment C1 - Exploratory training-instability diagnostic on medical FL.
 
-Replicates the training-instability framework of Charles et al. 2024
-("Not All FL Algorithms Are Created Equal," arXiv:2403.17287) on
-DermaMNIST, which their paper does NOT evaluate. They define training
-instability as the std of test accuracy over the final 10 rounds of
-training. We compute the same metric on val macro-F1 (test is only
-available at the best-val checkpoint in our setup) across all our
-existing runs.
+An exploratory, non-load-bearing diagnostic (report §3.6). Training
+instability is measured as the standard deviation of validation macro-F1
+over the final K rounds (test is only available at the best-val checkpoint
+in our setup), computed across all existing runs.
 
-Why this is a contribution:
-  - Charles et al. 2024 §3.1 identifies training stability as
-    under-reported on medical-FL with class imbalance
-  - Their evaluation is on CIFAR/FEMNIST with ≥10 clients
-  - The 2-client medical-FL case is absent from their table
-  - We extend their cross-method instability comparison to medical data
-
-Expected to replicate two of their findings on DermaMNIST:
-  1. FedProx is MORE stable than FedAvg under symmetric protocol
-  2. FedNova is LESS stable than FedAvg under unequal-E
+It compares the round-to-round stability of FedAvg, FedProx, and FedNova
+under the symmetric and unequal-E protocols, examining two questions:
+  1. Is FedProx more stable than FedAvg under the symmetric protocol?
+  2. Is FedNova less stable than FedAvg under unequal-E (its target regime)?
 
 Output:
   - training_instability_summary.csv : per-run + per-(algo,partition) std
@@ -41,7 +32,7 @@ OUT_FIG = REPO_ROOT / "fl_dermamnist/results/thesis_ready/figures"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_FIG.mkdir(parents=True, exist_ok=True)
 
-K = 10  # window for instability (matches Charles 2024 §3.2)
+K = 10  # window (final K rounds) for the std-based instability metric
 
 
 # ----------------------------------------------------------------
@@ -139,7 +130,7 @@ print(f"Wrote {OUT_DIR/'training_instability_runs.csv'}  ({len(df_runs)} runs)")
 print()
 print("=" * 80)
 print("HEADLINE 1: Training instability under SYMMETRIC protocol")
-print("(Replicates Charles 2024 Finding: FedProx more stable than FedAvg)")
+print("(Exploratory: is FedProx more stable than FedAvg under the symmetric protocol?)")
 print("=" * 80)
 sym = df_runs[(~df_runs["unequal_E"]) & (~df_runs["drop_stragglers"])]
 sym_summary = sym.groupby(["partition", "algorithm"]).agg(
@@ -155,7 +146,7 @@ print(sym_summary.to_string(index=False))
 print()
 print("=" * 80)
 print("HEADLINE 2: Training instability under UNEQUAL-E (FedNova target regime)")
-print("(Replicates Charles 2024 Takeaway 10: 'FedNova is unstable')")
+print("(Exploratory: is FedNova less stable than FedAvg in its target regime?)")
 print("=" * 80)
 ueE = df_runs[(df_runs["unequal_E"]) & (~df_runs["drop_stragglers"])]
 ueE_summary = ueE.groupby(["partition", "algorithm"]).agg(
@@ -258,7 +249,7 @@ if len(fn_data) > 0:
     axB.grid(True, axis="y", alpha=0.25, linestyle="--", linewidth=0.5)
     axB.spines["top"].set_visible(False); axB.spines["right"].set_visible(False)
 
-fig.suptitle("Training instability — replication of Charles et al. 2024 (arXiv:2403.17287) on DermaMNIST 2-client medical FL",
+fig.suptitle("Training instability (exploratory diagnostic) — FedAvg / FedProx / FedNova on DermaMNIST",
              fontsize=11.5, fontweight="bold", y=1.02)
 for ext in ("pdf", "png"):
     fig.savefig(OUT_FIG / f"F_training_instability.{ext}")

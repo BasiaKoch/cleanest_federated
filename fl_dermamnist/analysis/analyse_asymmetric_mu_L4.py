@@ -14,10 +14,10 @@ Headline question: does setting μ = 0 on the small specialist client
 (condition 3) recover the vascular-class F1 that symmetric FedProx
 (condition 2) collapses?
 
-Theoretical anchor: Yao et al. 2024 (NeurIPS, arXiv:2410.08934)
-predicts per-client μ should track per-client heterogeneity.
-Client 1 has the highest heterogeneity (class-disjoint, all-rare-classes),
-so Yao's prediction is that μ_1 should be SMALL (zero or near-zero).
+Hypothesis (exploratory): an asymmetric, per-client proximal coefficient μ
+that tracks per-client heterogeneity may help. Client 1 has the highest
+heterogeneity (class-disjoint, all-rare-classes), so we test whether μ_1
+should be SMALL (zero or near-zero) while the anchor keeps μ_0 > 0.
 
 Outputs:
   - asymmetric_mu_L4_summary.csv  (long format with 3-seed mean ± SD)
@@ -140,10 +140,10 @@ if len(sym) and len(asy):
         print(f"  DIRECTION test: anchor-large vs anchor-small vascular F1  = {d_dir:+.4f}  "
               f"(pooled SD = {pooled_dsd:.4f})")
         if d_dir > 2 * pooled_dsd:
-            print(f"    → direction MATTERS (Yao 2024 prediction supported on this task)")
+            print(f"    → direction MATTERS (asymmetric per-client μ helps on this task)")
         elif abs(d_dir) <= pooled_dsd:
             print(f"    → direction does NOT matter (any reduction in average μ has the effect; "
-                  f"undermines the Yao 2024-style 'per-client μ tracks heterogeneity' claim)")
+                  f"the 'per-client μ tracks heterogeneity' hypothesis is not supported here)")
         else:
             print(f"    → directional effect is weak (within 1-2 SD)")
 
@@ -209,7 +209,7 @@ axB.set_ylim(0, 1.0)
 axB.grid(True, axis="y", alpha=0.25, linestyle="--", linewidth=0.5)
 axB.spines["top"].set_visible(False); axB.spines["right"].set_visible(False)
 
-fig.suptitle("Asymmetric per-client μ on L4 (two_client_90_10_rare_stress)  —  ablation of Yao et al. 2024 (arXiv:2410.08934)",
+fig.suptitle("Asymmetric per-client μ on L4 (two_client_90_10_rare_stress)  —  proximal-coefficient direction ablation",
              fontsize=11, fontweight="bold", y=1.03)
 for ext in ("pdf", "png"):
     fig.savefig(OUT_FIG / f"F_asymmetric_mu_L4.{ext}")

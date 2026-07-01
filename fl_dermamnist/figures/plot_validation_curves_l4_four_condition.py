@@ -1,7 +1,7 @@
 """
 Generate F_val_curves_l4_four_condition.pdf -- single-panel version of the
 Li 2020 §5.2 four-condition validation macro-F1 trajectories. This is the
-main-text figure for §5.4; the perfect-storm Panel B (previously the
+main-text figure for §3.3; the perfect-storm Panel B (previously the
 second subplot of F_val_curves_extreme_gaps.pdf) is appendix-only per the
 build guide and is preserved in the original two-panel PDF.
 

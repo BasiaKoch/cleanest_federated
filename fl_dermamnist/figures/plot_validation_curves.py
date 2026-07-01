@@ -223,7 +223,7 @@ for label, stem, color in asym_stems:
         curves.append(dict(df=pd.read_csv(f), label=label, color=color,
                            linewidth=1.3, alpha=0.7,
                            sel_round=_selected_round(f)))
-plot_curves(curves, "Asymmetric per-client μ on L4 — validation macro-F1 (3 seeds, Yao 2024 ablation)",
+plot_curves(curves, "Asymmetric per-client μ on L4 — validation macro-F1 (3 seeds, direction ablation)",
             "F_val_curves_asymmetric_mu", ylim=(0.0, 0.65))
 
 
