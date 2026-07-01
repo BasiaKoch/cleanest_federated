@@ -1,6 +1,6 @@
 #!/bin/bash
 # All commands for the fl_dermamnist FedAvg/FedProx thesis pipeline.
-# Run from the repository root: /Users/basiakoch/cleanest_federated
+# Run from the repository root.
 #
 # Dispatcher usage:
 #   bash infra/local/commands.sh <step>

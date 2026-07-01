@@ -3,7 +3,7 @@
 
 dataset:
   name: dermmnist
-  npz_path: /Users/basiakoch/cleanest_federated/dermamnist_64.npz
+  npz_path: dermamnist_64.npz   # relative to the repository root
   image_size: 28              # downsampled from the 64x64 npz at load time
 
 model:

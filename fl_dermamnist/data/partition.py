@@ -1161,7 +1161,7 @@ def _load_dermmnist_labels(npz_path: str | Path) -> np.ndarray:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--npz", default="/Users/basiakoch/cleanest_federated/dermamnist_64.npz",
+    ap.add_argument("--npz", default=str(Path(__file__).resolve().parents[2] / "dermamnist_64.npz"),
                     help="Path to dermamnist .npz file")
     ap.add_argument("--mode",
                     choices=["simple_pathological_3_clients",
