@@ -1,5 +1,5 @@
 """
-Generate F_val_curves_extreme_gaps.pdf — validation macro-F1 trajectories
+Generate F_val_curves_extreme_gaps.pdf - validation macro-F1 trajectories
 for the two experiments showing the largest FedAvg vs FedProx differences:
 
   Panel A: Li 2020 §5.2 four-condition decomposition (Δ up to +0.115)
@@ -51,7 +51,7 @@ fig, (axA, axB) = plt.subplots(1, 2, figsize=(14, 5.0),
                                 gridspec_kw=dict(wspace=0.22))
 
 # ----------------------------------------------------------------------
-# Panel A — Li 2020 §5.2 four-condition decomposition
+# Panel A - Li 2020 §5.2 four-condition decomposition
 # ----------------------------------------------------------------------
 LI = RESULTS / "li2020_asymmetric_L4"
 SEEDS = ("42", "123", "456")
@@ -83,7 +83,7 @@ axA.set_title("(A) Four-condition decomposition at L4  ($\\Delta$ up to $+0.115$
               loc="left", fontweight="bold", fontsize=11, pad=8)
 
 # ----------------------------------------------------------------------
-# Panel B — Perfect-storm L4 (90% random stragglers)
+# Panel B - Perfect-storm L4 (90% random stragglers)
 # ----------------------------------------------------------------------
 PS = RESULTS / "fedprox_perfect_storm_L4"
 

@@ -1,4 +1,4 @@
-"""Partition-design visualisation — F5.
+"""Partition-design visualisation - F5.
 
 Produces a single figure showing how each of the 4 statistical-heterogeneity
 partition designs distributes the 7 DermaMNIST classes across the 7 clients.
@@ -7,10 +7,10 @@ This figure is referenced by the §Results "Statistical heterogeneity"
 section as the motivation for each partition design.
 
 Layout: 2x2 grid of class-distribution heatmaps.
-  (a) IID partition           — control / theoretical null
-  (b) Dirichlet alpha=0.1     — literature-standard non-IID
-  (c) Specialist (1-of-7)     — singleton ownership; pairing-lever check
-  (d) Balanced paired (engineered) — every minority class held by exactly two clients
+  (a) IID partition           - control / theoretical null
+  (b) Dirichlet alpha=0.1     - literature-standard non-IID
+  (c) Specialist (1-of-7)     - singleton ownership; pairing-lever check
+  (d) Balanced paired (engineered) - every minority class held by exactly two clients
 
 Each panel:
   Rows    = 7 clients (C0 ... C6)

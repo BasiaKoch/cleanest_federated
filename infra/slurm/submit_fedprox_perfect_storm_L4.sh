@@ -1,5 +1,5 @@
 #!/bin/bash
-# Experiment 11 — FedProx "perfect-storm" L4: literature-canonical setting
+# Experiment 11 - FedProx "perfect-storm" L4: literature-canonical setting
 # in which FedProx is predicted to win by the largest margin.
 #
 # Motivation. A literature review of the conditions under which FedProx
@@ -26,7 +26,7 @@
 #       → Use batch_size = 10.
 #
 #   (3) momentum = 0.9 (footgun).
-#       Li 2020 §5.1: "we employ SGD as a local solver for FedProx" —
+#       Li 2020 §5.1: "we employ SGD as a local solver for FedProx" -
 #       plain SGD, no momentum. Momentum compounds with the proximal
 #       pull across steps; none of the cited FedProx-favourable papers
 #       use it. The Flower reference baseline likewise uses no momentum.
@@ -42,7 +42,7 @@
 #
 #   (5) No asymmetric protocol.
 #       Without --drop-stragglers, FedAvg keeps the same partial
-#       updates FedProx does — neutralising the protocol asymmetry that
+#       updates FedProx does - neutralising the protocol asymmetry that
 #       drives the 22% headline. Li 2020 §5.2 specifically frames the
 #       comparison as: FedAvg drops stragglers (its native protocol);
 #       FedProx aggregates partial work (its native γ-inexact protocol).
@@ -55,17 +55,17 @@
 # partition (NIID-Bench Table III, FMNIST #C=1: largest transferable
 # FedProx-over-FedAvg gap in the published literature at +17.7 pp).
 #
-# Design — 3 conditions × 3 seeds = 9 jobs on L4:
+# Design - 3 conditions × 3 seeds = 9 jobs on L4:
 #
 #   Cond | Algorithm | μ    | bs | mom | Stragglers     | Drop?       | Role
 #   -----+-----------+------+----+-----+----------------+-------------+----------------------
-#    1   | FedAvg    |  —   | 10 | 0.0 | random, f=0.9  | YES (drop)  | Li-2020 FA arm
+#    1   | FedAvg    |  -   | 10 | 0.0 | random, f=0.9  | YES (drop)  | Li-2020 FA arm
 #    2   | FedProx   | 1.0  | 10 | 0.0 | random, f=0.9  | NO (keep)   | ⭐ Li-2020 FP arm
 #    3   | FedProx   | 0.01 | 10 | 0.0 | random, f=0.9  | NO (keep)   | μ ablation
 #
 # Headline pair (1, 2) is the canonical Li-2020 FedAvg-vs-FedProx
 # comparison reproduced on DermaMNIST. Pair (2, 3) isolates the μ
-# choice — tells you whether μ = 1.0 vs μ = 0.01 matters in this
+# choice - tells you whether μ = 1.0 vs μ = 0.01 matters in this
 # regime, with all other hyperparameters held fixed.
 #
 # Cross-reference: thesis-baseline data (FedAvg μ=0, FedProx μ=0.01 at

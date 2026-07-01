@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runpod addendum — provenance re-runs for dirichlet_a01.
+# Runpod addendum - provenance re-runs for dirichlet_a01.
 #
 # A second-pass audit found 4 dirichlet_a01 JSONs with valid macro_f1
 # values but inconsistent JSON provenance metadata (missing `framework`,

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Experiment 10 — Li 2020 §5.2 asymmetric protocol on L4 ("FedProx wins" setting).
+# Experiment 10 - Li 2020 §5.2 asymmetric protocol on L4 ("FedProx wins" setting).
 #
 # This experiment reproduces the conditions under which Li et al. 2020
 # (FedProx, MLSys, arXiv:1812.06127) explicitly claim FedProx wins by
@@ -25,14 +25,14 @@
 #                  doesn't push the global model off-manifold. Rare-class
 #                  signal survives.
 #
-# Design — 4 conditions × 3 seeds = 12 jobs:
+# Design - 4 conditions × 3 seeds = 12 jobs:
 #
 #   #  Algorithm      Stragglers    Drop?   Why
 #   ----------------------------------------------------------------
 #   1  FedAvg         none (E=20)   n/a     Baseline (current thesis #)
 #   2  FedAvg         C1=5          DROP    Li 2020 §5.2 FedAvg arm
 #   3  FedProx μ=0.01 C1=5          KEEP    Li 2020 §5.2 FedProx arm
-#   4  FedProx μ=0.01 C1=5          DROP    Control — isolates protocol
+#   4  FedProx μ=0.01 C1=5          DROP    Control - isolates protocol
 #                                            from algorithm
 #
 # Headline reading: gap (2 → 3) is the Li 2020 §5.2 protocol effect on
@@ -43,7 +43,7 @@
 #   - It IS Li 2020's §5.2 protocol, not a contrived setup.
 #   - The failure mode is mechanically obvious (FedAvg can't learn classes
 #     it never sees).
-#   - Condition 4 controls for "protocol vs algorithm" — if 3 ≫ 4, the
+#   - Condition 4 controls for "protocol vs algorithm" - if 3 ≫ 4, the
 #     advantage is from γ-inexact handling (FedProx's mechanism), not the
 #     algorithm name.
 #   - Baseline condition 1 anchors to existing thesis hyperparameters.

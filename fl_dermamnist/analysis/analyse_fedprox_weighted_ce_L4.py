@@ -1,4 +1,4 @@
-"""Experiment B2 — FedProx × class-weighted-CE 2x2 analysis.
+"""Experiment B2 - FedProx × class-weighted-CE 2x2 analysis.
 
 Tests whether FedProx (drift damping via proximal term) and
 class-weighted CE (loss-side rebalancing) are SUBSTITUTES,
@@ -21,7 +21,7 @@ Decomposition:
   combined_effect  = E[(d) - (a)]       benefit of stacking
   interaction      = combined - (loss_effect + algo_effect)
                      ~ 0  -> additive  (complement)
-                     < 0  -> SUB-additive (substitutes — diminishing returns)
+                     < 0  -> SUB-additive (substitutes - diminishing returns)
                      > 0  -> SUPER-additive (synergistic)
 
 Output:
@@ -150,7 +150,7 @@ else:
 print(f"  Verdict: {verdict}")
 
 # ----------------------------------------------------------------
-# 4. Figure: 2-panel — macro-F1 dot plot + per-class breakdown
+# 4. Figure: 2-panel - macro-F1 dot plot + per-class breakdown
 # ----------------------------------------------------------------
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10,
                      "savefig.dpi": 300, "savefig.bbox": "tight"})

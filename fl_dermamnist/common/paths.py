@@ -7,7 +7,7 @@ is moved to a different directory depth).
 
 Repo-root resolution order:
   1. ``$FED_REPO_ROOT`` if set;
-  2. otherwise this file's own location — ``fl_dermamnist/common/paths.py``,
+  2. otherwise this file's own location - ``fl_dermamnist/common/paths.py``,
      i.e. two parents up is the repository root. Because this module lives at a
      fixed location inside the package, the result is independent of where any
      *caller* script sits.

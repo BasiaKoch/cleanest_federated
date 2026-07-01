@@ -4,8 +4,8 @@ Existing model names must not be displaced when new ones are added; this is
 a registry-based dispatch.
 
 Variant naming convention:
-    "dermmnist_cnn"    — headline GroupNorm CNN, used for all primary results.
-    "dermmnist_cnn_bn" — BatchNorm variant, used for the architecture ablation
+    "dermmnist_cnn"    - headline GroupNorm CNN, used for all primary results.
+    "dermmnist_cnn_bn" - BatchNorm variant, used for the architecture ablation
                          (see ``fl_dermamnist.scripts.runpod_arch_ablation_bn``).
 """
 from __future__ import annotations

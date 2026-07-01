@@ -77,7 +77,7 @@ def main():
                           "fl_dermamnist/results/system_het_random",
                           expected_files=20)
 
-    # FedNova C2 — documented failure mode
+    # FedNova C2 - documented failure mode
     fednova_c2 = report_condition("C2 FedNova (KNOWN FAILURE MODE — Issue 2)",
                                    "fl_dermamnist/results/system_het_random_fednova",
                                    expected_files=10)

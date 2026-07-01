@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local-epoch (E) sweep on Dirichlet α=0.1 — canonical FedProx-mechanism test.
+# Local-epoch (E) sweep on Dirichlet α=0.1 - canonical FedProx-mechanism test.
 #
 # Direct replication of the methodology in Li et al. 2020 MLSys, "Federated
 # Optimization in Heterogeneous Networks" (FedProx), §5.2 / Figure 4: sweep
@@ -12,7 +12,7 @@
 #
 # Partition: dirichlet_alpha01_7_clients (Hsu, Qi, Brown 2019; α=0.1 is the
 # severe-non-IID NIID-Bench standard from Li, Diao, Chen, He 2022 ICDE).
-# Severe but not engineered — defends against the "engineered partition
+# Severe but not engineered - defends against the "engineered partition
 # favours FedProx" reviewer critique.
 #
 # Reuses the 10 existing E=20 paired datapoints in
@@ -42,7 +42,7 @@ REPO_ROOT=${REPO_ROOT:-/home/bk489/federated_clean/cleanest_federated}
 MU=0.01
 PARTITION=dirichlet_alpha01_7_clients
 OUT_DIR=fl_dermamnist/results/e_sweep_dirichlet_a01
-# --log-update-norms is essential here — the mechanism plot needs per-(round,
+# --log-update-norms is essential here - the mechanism plot needs per-(round,
 # client) update-norm trajectories to show drift growing with E under FedAvg
 # while FedProx restrains it.
 EXTRA_ARGS="--log-update-norms"

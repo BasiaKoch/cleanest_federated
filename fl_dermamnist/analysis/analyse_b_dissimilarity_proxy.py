@@ -1,4 +1,4 @@
-"""Experiment A1 — B-local dissimilarity proxy from existing update-norm logs.
+"""Experiment A1 - B-local dissimilarity proxy from existing update-norm logs.
 
 Li 2020 Theorem 4 (FedProx, MLSys) assumes bounded B-local dissimilarity:
    B²(w) = max_k ||∇F_k(w)||² / ||∇F(w)||²
@@ -16,7 +16,7 @@ proxy, we use the existing per-(round, client) update norms
    ||Δw_k(t)|| = ||w_k^{t+1} - w^t||₂
 which already exist in client_update_norms_*.csv across all our
 runs. For small learning rate and few local epochs, this is
-proportional to ||∇F_k(w^t)||₂ — so the RATIO
+proportional to ||∇F_k(w^t)||₂ - so the RATIO
    B_proxy²(t) = max_k ||Δw_k(t)||² / mean_k ||Δw_k(t)||²
 is a sound HETEROGENEITY DIAGNOSTIC even though it is not Li 2020's
 exact B.
@@ -160,7 +160,7 @@ if len(gaps_df) >= 3:
     print(f"Pearson  r = {pe_r:+.3f}  (p = {pe_p:.3f})")
 
 # ----------------------------------------------------------------
-# 3. Figure: 2-panel — B-proxy trajectories + correlation
+# 3. Figure: 2-panel - B-proxy trajectories + correlation
 # ----------------------------------------------------------------
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10,
                      "savefig.dpi": 300, "savefig.bbox": "tight"})
@@ -191,7 +191,7 @@ axA.legend(loc="upper right", frameon=False, fontsize=8)
 axA.grid(True, alpha=0.25, linestyle="--", linewidth=0.5)
 axA.spines["top"].set_visible(False); axA.spines["right"].set_visible(False)
 
-# Panel B: correlation — mean B-proxy vs FedProx−FedAvg gap
+# Panel B: correlation - mean B-proxy vs FedProx−FedAvg gap
 for _, row in gaps_df.iterrows():
     color = LEVEL_COLORS.get(row["level"], "#666")
     axB.scatter(row["mean_b_proxy"], row["delta_macro_f1"],

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Phase 3 Experiment P1 — FedNova LR-invariance dose-response.
+# Phase 3 Experiment P1 - FedNova LR-invariance dose-response.
 #
 # Extends D1 with 3 extreme LR ratios (10:1, 20:1, 50:1) on L4 to:
 #   (a) find the breaking point of FedNova's LR-asymmetry absorption
@@ -15,11 +15,11 @@
 #   - Wang 2020 (FedNova, arXiv:2007.07481) proves correction only for
 #     unequal τ_i; never instantiates per-client LR as a heterogeneity axis
 #   - FedACS (arXiv:2505.11304, 2025): explicitly enumerates τ_i, dataset
-#     size, compute — but NOT per-client LR
+#     size, compute - but NOT per-client LR
 #   - FedLALR (arXiv:2309.09719, 2023): proposes per-client adaptive LR
 #     but doesn't benchmark FedAvg/FedProx/FedNova reaction
 #
-# Design — 3 new LR ratios × 3 algos × 3 seeds = 27 jobs on L4:
+# Design - 3 new LR ratios × 3 algos × 3 seeds = 27 jobs on L4:
 #
 #   New LR pairs (C0:C1):
 #     (0.01, 0.001)   ratio 10:1
@@ -53,7 +53,7 @@ DRY_RUN="${DRY_RUN:-0}"
 
 FLOWER_TPL="$REPO_ROOT/infra/slurm/slurm_template_flower.sh"
 FEDNOVA_TPL="$REPO_ROOT/infra/slurm/slurm_template_fednova.sh"
-# Same output directory as D1 — additive
+# Same output directory as D1 - additive
 OUTDIR="fl_dermamnist/results/asymmetric_lr_L4"
 mkdir -p "$REPO_ROOT/$OUTDIR"
 

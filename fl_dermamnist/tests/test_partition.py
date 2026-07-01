@@ -197,7 +197,7 @@ def test_balanced_paired_every_minority_class_in_at_least_two_clients():
     np.random.default_rng(0).shuffle(labels)
     clients, _ = balanced_paired_7_clients(labels, seed=42)
     for c in range(NUM_CLASSES):
-        if c == 5:   # mel_nevi background — present everywhere
+        if c == 5:   # mel_nevi background - present everywhere
             continue
         owners = sum(1 for cl in clients
                      if any(int(labels[i]) == c for i in cl))
@@ -348,7 +348,7 @@ def test_two_client_stress_seeds_shuffle_within_class():
 
     Because the partition is class-disjoint and consumes 100% of each
     class, the SET of sample indices on each client is identical across
-    seeds — only the order within each client's index list changes.
+    seeds - only the order within each client's index list changes.
     This is the invariant we care about for paired-fair runs: the same
     seed yields the same dataloader iteration order, so FedAvg and
     FedProx see the same batches in the same order.
@@ -358,7 +358,7 @@ def test_two_client_stress_seeds_shuffle_within_class():
     b, _ = two_client_90_10_rare_stress(labels, seed=123)
     # Sample memberships are identical (consequence of class-disjoint + full-class consumption).
     assert set(a[0]) == set(b[0]) and set(a[1]) == set(b[1])
-    # But order differs — seed actually affects the per-class shuffle.
+    # But order differs - seed actually affects the per-class shuffle.
     assert a[0] != b[0] or a[1] != b[1], \
         "seed-42 and seed-123 produced identical within-class orderings"
 
@@ -494,7 +494,7 @@ def test_level0_is_class_stratified(real_dermmnist_labels):
         c1_count = sum(1 for i in clients[1] if real_dermmnist_labels[i] == cls)
         total = c0_count + c1_count
         if total < 2:
-            continue   # tiny class — skip stratification check
+            continue   # tiny class - skip stratification check
         # ceil/floor allowed: |c0 - c1| should be ≤ 1.
         assert abs(c0_count - c1_count) <= 1, \
             f"class {cls}: C0={c0_count}, C1={c1_count} not ceil/floor split"
@@ -603,7 +603,7 @@ def test_ladder_quantity_skew_is_monotone(real_dermmnist_labels):
         shares.append((tag, len(c[1]) / sum(len(x) for x in c)))
     # Monotone non-increasing with a 1% slack for parity-rounding
     # disagreements between levels (L0 ceils on C0, L2 ceils on total
-    # so L2's C1 share is 50.01% vs L0's 49.96% — a 0.05% nuisance).
+    # so L2's C1 share is 50.01% vs L0's 49.96% - a 0.05% nuisance).
     SLACK = 0.01
     for (a_tag, a), (b_tag, b) in zip(shares, shares[1:]):
         assert a + SLACK >= b, (

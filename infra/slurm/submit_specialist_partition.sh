@@ -6,7 +6,7 @@
 # FedProx advantage is specifically a paired-co-training phenomenon or a
 # more general label-skew benefit. Same 10 paired seeds, same federation
 # (K=7, C=1.0, R=150, E=20), same model, same optimiser, same μ=0.01,
-# same Flower runtime — only the partition function changes from
+# same Flower runtime - only the partition function changes from
 # balanced_paired_7_clients (each minority class held by TWO clients) to
 # specialist_7_clients (each minority class held by ONE client). The
 # specialist partition is engineered to match balanced_paired's per-

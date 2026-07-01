@@ -1,20 +1,20 @@
-"""Statistical-heterogeneity analysis — thesis-grade pipeline.
+"""Statistical-heterogeneity analysis - thesis-grade pipeline.
 
 Consumes:
-    results/headline/                — pure-PyTorch headline (PRIMARY)
-    results/flower_C0_baseline/      — Flower replication of headline
-    results/iid/                     — IID falsification check
-    results/dirichlet_a01/           — Dirichlet α=0.1 (literature non-IID)
-    results/specialist_partition/    — specialist (pairing-lever)
-    results/centralised/             — pure-PyTorch upper bound
+    results/headline/                - pure-PyTorch headline (PRIMARY)
+    results/flower_C0_baseline/      - Flower replication of headline
+    results/iid/                     - IID falsification check
+    results/dirichlet_a01/           - Dirichlet α=0.1 (literature non-IID)
+    results/specialist_partition/    - specialist (pairing-lever)
+    results/centralised/             - pure-PyTorch upper bound
 
 Produces:
-    results/thesis_ready/data/statistical_heterogeneity_results.json   — every number
-    results/thesis_ready/tables/T01_headline_summary.tex               — Table 1 (LaTeX)
-    results/thesis_ready/tables/T02_per_class_holm.tex                 — Table 2
-    results/thesis_ready/tables/T03_cross_runtime.tex                  — Table 3
-    results/thesis_ready/tables/T04_partition_dose_response.tex        — Table 4
-    results/thesis_ready/tables/T05_federation_tax.tex                 — Table 5
+    results/thesis_ready/data/statistical_heterogeneity_results.json   - every number
+    results/thesis_ready/tables/T01_headline_summary.tex               - Table 1 (LaTeX)
+    results/thesis_ready/tables/T02_per_class_holm.tex                 - Table 2
+    results/thesis_ready/tables/T03_cross_runtime.tex                  - Table 3
+    results/thesis_ready/tables/T04_partition_dose_response.tex        - Table 4
+    results/thesis_ready/tables/T05_federation_tax.tex                 - Table 5
     Plus a clean human-readable text report printed to stdout.
 
 Methodology
@@ -469,7 +469,7 @@ Partition & FedAvg mean & FedProx mean & Mean $\Delta$ & $p$ & FedProx wins \\
 
 
 def latex_table_federation_tax(rows: list[dict]) -> str:
-    """Table 5: federation tax — FL macro_f1 vs centralised."""
+    """Table 5: federation tax - FL macro_f1 vs centralised."""
     body_rows = []
     for r in rows:
         body_rows.append(

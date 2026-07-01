@@ -1,6 +1,6 @@
 """Tiny YAML config loader for fl_dermamnist.
 
-Kept intentionally minimal — no schema, no deep-merging chains. Just load the
+Kept intentionally minimal - no schema, no deep-merging chains. Just load the
 YAML, return a plain dict. Code that consumes it is responsible for `.get(...)`
 defaults and validation.
 """

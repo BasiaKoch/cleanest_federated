@@ -1,4 +1,4 @@
-"""Experiment 11 — FedProx perfect-storm L4 analysis.
+"""Experiment 11 - FedProx perfect-storm L4 analysis.
 
 Reads 9 runs at
   fl_dermamnist/results/fedprox_perfect_storm_L4/
@@ -11,7 +11,7 @@ node_pinned_L4/ if present) for the "configuration gap" diagnostic.
 
 Outputs:
   - perfect_storm_L4_summary.csv
-  - F_fedprox_perfect_storm_L4.{pdf,png} — 2-panel
+  - F_fedprox_perfect_storm_L4.{pdf,png} - 2-panel
 """
 from __future__ import annotations
 

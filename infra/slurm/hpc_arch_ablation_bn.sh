@@ -9,7 +9,7 @@
 # (adds DermMNISTCNN_BN + --model-variant flag). This script aborts if
 # the flag is absent from the runner's CLI.
 #
-# Outputs go to fl_dermamnist/results/arch_ablation_bn/ — a separate
+# Outputs go to fl_dermamnist/results/arch_ablation_bn/ - a separate
 # directory from the GroupNorm headline so the two variants cannot be
 # mixed. Filenames also carry an '_arch-bn' tag.
 #

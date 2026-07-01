@@ -1,4 +1,4 @@
-"""Experiment C1 — Training-instability replication on medical FL.
+"""Experiment C1 - Training-instability replication on medical FL.
 
 Replicates the training-instability framework of Charles et al. 2024
 ("Not All FL Algorithms Are Created Equal," arXiv:2403.17287) on
@@ -45,7 +45,7 @@ K = 10  # window for instability (matches Charles 2024 §3.2)
 
 
 # ----------------------------------------------------------------
-# Experiment scan registry — which directories define which "regime"
+# Experiment scan registry - which directories define which "regime"
 # (symmetric vs unequal-E)
 # ----------------------------------------------------------------
 SOURCES = [
@@ -150,7 +150,7 @@ sym_summary = sym.groupby(["partition", "algorithm"]).agg(
 print(sym_summary.to_string(index=False))
 
 # ----------------------------------------------------------------
-# 3. Headline 2: Unequal-E protocol — FedNova stability
+# 3. Headline 2: Unequal-E protocol - FedNova stability
 # ----------------------------------------------------------------
 print()
 print("=" * 80)
@@ -198,7 +198,7 @@ fig, (axA, axB) = plt.subplots(1, 2, figsize=(13.5, 5.5),
 
 COLORS = {"fedavg": "#7FBF94", "fedprox": "#3D5A80", "fednova": "#C9A227"}
 
-# Panel A: symmetric protocol — algorithm comparison per partition
+# Panel A: symmetric protocol - algorithm comparison per partition
 sym_pivot = sym_summary.pivot(index="partition", columns="algorithm", values="mean_std").fillna(0)
 partitions_A = sym_pivot.index.tolist()
 algos_A = ["fedavg", "fedprox", "fednova"]

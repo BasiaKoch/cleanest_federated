@@ -7,13 +7,13 @@
 # by SLURM and no compute is wasted on guaranteed failures.
 #
 # Submission order (highest professor-priority first):
-#   1. perfect-storm L4         (9 jobs)  — "FedProx clearly wins" experiment
-#   2. Li 2020 §5.2 asymmetric  (12 jobs) — asymmetric protocol replication
-#   3. node-pinned L4           (6 jobs)  — variance isolation
-#   4. extended-rounds L3       (6 jobs)  — convergence fix
-#   5. FedNova × equal/unequal-E (12 jobs) — mechanism decomposition
-#   6. asymmetric per-client μ  (12 jobs) — Yao 2024 ablation
-#   7. μ-sweep ladder           (12 jobs) — μ sensitivity
+#   1. perfect-storm L4         (9 jobs)  - "FedProx clearly wins" experiment
+#   2. Li 2020 §5.2 asymmetric  (12 jobs) - asymmetric protocol replication
+#   3. node-pinned L4           (6 jobs)  - variance isolation
+#   4. extended-rounds L3       (6 jobs)  - convergence fix
+#   5. FedNova × equal/unequal-E (12 jobs) - mechanism decomposition
+#   6. asymmetric per-client μ  (12 jobs) - Yao 2024 ablation
+#   7. μ-sweep ladder           (12 jobs) - μ sensitivity
 #
 # Total: 69 jobs queued, gated behind one diagnostic.
 #

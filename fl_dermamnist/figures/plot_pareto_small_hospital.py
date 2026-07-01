@@ -1,4 +1,4 @@
-"""Pareto scatter — Client 0 specialty F1 vs Client 1 specialty F1.
+"""Pareto scatter - Client 0 specialty F1 vs Client 1 specialty F1.
 
 Compresses the entire small-hospital federation story into a single
 2D plot. Each training regime becomes one point; the axes show mean

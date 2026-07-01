@@ -15,7 +15,7 @@ Definitions (mirroring `fl_flower/strategy_fednova.py`):
     contribution_norm = a_eff * p_i * ||delta_i|| / a_i      [client's share of the step]
     amp_vs_fedavg     = a_eff / a_i                          [weight inflation vs FedAvg]
 
-IMPORTANT — what is measured vs reconstructed:
+IMPORTANT - what is measured vs reconstructed:
   * raw_update_norm (||delta_i||), tau, n_samples  -> DIRECTLY LOGGED (client side).
   * a_i, a_eff, contribution_norm, amp_vs_fedavg   -> RECONSTRUCTED offline from tau
     + the per‑seed client momentum read from the run JSON (unless an

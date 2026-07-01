@@ -4,18 +4,18 @@ Reads test_at_best_*.json + history_*.csv + test_predictions_*.npz +
 (optionally) client_update_norms_*.csv from
 ``fl_dermamnist/results/two_client_90_10_rare_stress/`` and writes:
 
-  1. partition_class_counts.csv       — clients × classes table
-  2. partition_heatmap.png            — same, as a normalised heatmap
-  3. headline_metrics.csv             — per-seed FedAvg vs FedProx global metrics
-  4. per_class_f1.csv                 — per-seed, per-class F1 for both algos
-  5. per_class_delta.csv              — FedProx − FedAvg per class (per seed + mean)
-  6. per_class_recall_precision.csv   — derived from saved predictions
-  7. per_class_delta_bar.png          — bar plot of FedProx − FedAvg per class
-  8. learning_curves.png              — val_macro_f1 vs round, paired
-  9. confusion_matrix_fedavg_s<seed>.png   — confusion matrix per seed × algo
+  1. partition_class_counts.csv       - clients × classes table
+  2. partition_heatmap.png            - same, as a normalised heatmap
+  3. headline_metrics.csv             - per-seed FedAvg vs FedProx global metrics
+  4. per_class_f1.csv                 - per-seed, per-class F1 for both algos
+  5. per_class_delta.csv              - FedProx − FedAvg per class (per seed + mean)
+  6. per_class_recall_precision.csv   - derived from saved predictions
+  7. per_class_delta_bar.png          - bar plot of FedProx − FedAvg per class
+  8. learning_curves.png              - val_macro_f1 vs round, paired
+  9. confusion_matrix_fedavg_s<seed>.png   - confusion matrix per seed × algo
      confusion_matrix_fedprox_s<seed>.png
- 10. update_norm_per_client.png       — if --log-update-norms was set
- 11. summary.json                     — single rolled-up summary
+ 10. update_norm_per_client.png       - if --log-update-norms was set
+ 11. summary.json                     - single rolled-up summary
 
 Works with as few as one (FedAvg, FedProx) paired seed (pilot) and scales
 to multi-seed runs. The script is read-only on results/ and the dataset.
@@ -54,7 +54,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS_DIR = REPO_ROOT / "fl_dermamnist" / "results" / "two_client_90_10_rare_stress"
 DEFAULT_NPZ = REPO_ROOT / "dermamnist_64.npz"
 
-# DermMNIST training-set class counts — used both as a sanity check and to
+# DermMNIST training-set class counts - used both as a sanity check and to
 # label the heatmap.
 TRAIN_CLASS_COUNTS = {0: 228, 1: 359, 2: 769, 3: 80, 4: 779, 5: 4693, 6: 99}
 

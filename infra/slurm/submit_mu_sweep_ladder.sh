@@ -1,5 +1,5 @@
 #!/bin/bash
-# μ-sweep across the heterogeneity ladder — STAGE A pilot (one seed).
+# μ-sweep across the heterogeneity ladder - STAGE A pilot (one seed).
 #
 # Tests the hypothesis from the discussion of the ladder result that
 # FedProx's μ = 0.01 is miscalibrated for these DermaMNIST partitions.

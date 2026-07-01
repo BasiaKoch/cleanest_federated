@@ -69,7 +69,7 @@ def test_normaliser_monotonic_in_tau():
         )
 
 
-# ---------- Test 2: sign convention — identical client updates ---------------
+# ---------- Test 2: sign convention - identical client updates ---------------
 
 def _compute_fednova_update(anchor, client_new_params, client_taus, client_ns, m):
     """Pure-Python reference of the FedNova aggregate.
@@ -103,7 +103,7 @@ def test_sign_convention_identical_client_updates():
     n_clients = 4
     client_new = [common_update for _ in range(n_clients)]
     client_taus = [10, 10, 10, 10]                    # all the same
-    client_ns = [100, 200, 150, 300]                  # different sizes — to exercise weighting
+    client_ns = [100, 200, 150, 300]                  # different sizes - to exercise weighting
 
     for m in [0.0, 0.5, 0.9]:
         new_global, a_eff = _compute_fednova_update(
@@ -181,7 +181,7 @@ def test_aggregation_with_heterogeneous_tau():
 
 # =========================================================================
 # Mechanism-probe regression tests for τ-clip and server-momentum variants.
-# (Thesis §5.5 — random-τ FedNova failure mode probes.)
+# (Thesis §5.5 - random-τ FedNova failure mode probes.)
 # =========================================================================
 
 import flwr as fl

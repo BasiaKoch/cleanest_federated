@@ -1,4 +1,4 @@
-"""Experiment B — Asymmetric per-client μ on L4 analysis.
+"""Experiment B - Asymmetric per-client μ on L4 analysis.
 
 Reads the 12 runs at
   fl_dermamnist/results/asymmetric_mu_L4/

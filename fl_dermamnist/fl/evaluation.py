@@ -1,4 +1,4 @@
-"""Global evaluation helpers — macro-F1, balanced accuracy, per-class F1, loss.
+"""Global evaluation helpers - macro-F1, balanced accuracy, per-class F1, loss.
 
 Same signature as the rest of the project. Used for both the round-by-round
 validation pass and the single final-test pass at the best-val checkpoint.

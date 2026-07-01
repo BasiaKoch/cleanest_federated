@@ -1,4 +1,4 @@
-"""DermMNIST loader — reads the 64×64 npz and (optionally) resizes to 28×28.
+"""DermMNIST loader - reads the 64×64 npz and (optionally) resizes to 28×28.
 
 Returns `(train_ds, val_ds, test_ds)` with deterministic transforms. Labels
 are returned as torch long scalars (not `[N,1]`).

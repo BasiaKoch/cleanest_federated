@@ -44,7 +44,7 @@ def test_proximal_gradient_equals_mu_times_diff() -> None:
     """
     torch.manual_seed(0)
     in_dim, out_dim, batch_size = 4, 3, 8
-    mu = 0.137  # deliberately not a round number — guards against off-by-half bugs
+    mu = 0.137  # deliberately not a round number - guards against off-by-half bugs
 
     model = nn.Linear(in_dim, out_dim, bias=True)
 
@@ -131,7 +131,7 @@ def test_global_weights_frozen_is_not_aliased() -> None:
     Failure mode this catches: if the implementation drifts to
     ``return list(model.parameters())`` (no clone, no detach), then the
     proximal term collapses to (μ/2)·||w − w||² = 0 and FedProx silently
-    degenerates to FedAvg — exactly the bug the algorithm exists to avoid.
+    degenerates to FedAvg - exactly the bug the algorithm exists to avoid.
     """
     torch.manual_seed(2)
     model = nn.Linear(5, 4, bias=True)

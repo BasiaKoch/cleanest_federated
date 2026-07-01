@@ -1,4 +1,4 @@
-"""Experiment 3 — FedNova × equal-vs-unequal local epochs analysis.
+"""Experiment 3 - FedNova × equal-vs-unequal local epochs analysis.
 
 Reads the 12 runs at
   fl_dermamnist/results/fednova_unequal_E/L{3,4}_<partition>/

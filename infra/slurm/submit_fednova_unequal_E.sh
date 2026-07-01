@@ -1,5 +1,5 @@
 #!/bin/bash
-# Experiment 3 — FedNova × equal-vs-unequal local epochs (mechanism toggle).
+# Experiment 3 - FedNova × equal-vs-unequal local epochs (mechanism toggle).
 #
 # Separates two mechanisms that "FedProx helps" usually conflates:
 #   (i) drift damping via the proximal term (FedProx)

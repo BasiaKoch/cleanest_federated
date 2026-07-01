@@ -15,7 +15,7 @@ so each output carries enough context to reconstruct the run later:
 
 Defensive design: every git call has its own try/except, so a job that
 runs from a tarball with no .git/ directory does not crash inside the
-provenance helper — it just records ``git_commit=None``, ``git_dirty=None``.
+provenance helper - it just records ``git_commit=None``, ``git_dirty=None``.
 The HPC environment may or may not have git available; the runner must
 not depend on it.
 """
@@ -78,7 +78,7 @@ def collect_runtime_provenance(
     ----------
     run_started_at : str
         ISO-8601 timestamp captured at the start of the run (caller's
-        responsibility — typically the first line of ``main()``).
+        responsibility - typically the first line of ``main()``).
     run_finished_at : str, optional
         ISO-8601 timestamp at end of run. If None, captured here via
         :func:`utc_now_iso`.

@@ -9,7 +9,7 @@ paired (same-seed) comparison vs the baseline arm (wins/losses + Wilcoxon).
 
 Arm name -> directory: results/system_het_random_fednova_<arm>/
 Each arm dir holds one test_at_final_*_s<seed>.json and test_at_best_*_s<seed>.json
-per seed (older pre-instrumentation runs have only test_at_best — handled).
+per seed (older pre-instrumentation runs have only test_at_best - handled).
 
 Usage:
     python -m fl_dermamnist.scripts.analyse_mechanism_fork \

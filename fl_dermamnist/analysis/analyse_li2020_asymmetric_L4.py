@@ -1,4 +1,4 @@
-"""Experiment 10 — Li 2020 §5.2 asymmetric protocol analysis ("FedProx wins").
+"""Experiment 10 - Li 2020 §5.2 asymmetric protocol analysis ("FedProx wins").
 
 Reads 12 runs at
   fl_dermamnist/results/li2020_asymmetric_L4/
@@ -12,14 +12,14 @@ mechanism reading:
   - Condition 4: FedProx + drop-stragglers (control)
 
 Key reported quantities:
-  - Headline gap (3 − 2)   — the Li 2020 §5.2 protocol effect
-  - Algorithm gap (3 − 4)  — γ-inexact handling effect, isolating algorithm
+  - Headline gap (3 − 2)   - the Li 2020 §5.2 protocol effect
+  - Algorithm gap (3 − 4)  - γ-inexact handling effect, isolating algorithm
   - Protocol-only effect (1 − 2 on FedAvg, 1 − 3 on FedProx)
-  - Per-class F1 — especially rare classes that FedAvg+drop destroys
+  - Per-class F1 - especially rare classes that FedAvg+drop destroys
 
 Outputs:
   - li2020_asymmetric_L4_summary.csv
-  - F_li2020_asymmetric_L4.{pdf,png} — 2-panel (macro-F1 + per-class)
+  - F_li2020_asymmetric_L4.{pdf,png} - 2-panel (macro-F1 + per-class)
 """
 from __future__ import annotations
 

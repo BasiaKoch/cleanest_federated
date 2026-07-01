@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runpod addendum — 3 missing/broken FedNova C2 jobs to complete the
+# Runpod addendum - 3 missing/broken FedNova C2 jobs to complete the
 # system_het_random_fednova sweep to 10 paired seeds.
 #
 # What's added:
@@ -16,7 +16,7 @@
 #     (b) Provides a potential counter-example: s8675309 under the seed
 #         fix MIGHT recover, giving direct evidence that the previous
 #         collapse was not purely algorithmic.
-#     (c) s123 and s789 must be run regardless — they were never produced.
+#     (c) s123 and s789 must be run regardless - they were never produced.
 #
 # Run AFTER `runpod_resubmit_missing.sh` AND `runpod_addendum_provenance.sh`
 # have both completed, so this isn't a third concurrent Flower simulation

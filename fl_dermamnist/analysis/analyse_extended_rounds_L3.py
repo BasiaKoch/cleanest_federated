@@ -1,4 +1,4 @@
-"""Extended-rounds 3-seed L3 — convergence-truncation analysis.
+"""Extended-rounds 3-seed L3 - convergence-truncation analysis.
 
 Reads the 6 runs at
   fl_dermamnist/results/extended_rounds_L3/test_at_best_{fedavg,fedprox}_mu*_E20_s{42,123,456}.json

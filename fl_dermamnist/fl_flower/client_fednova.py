@@ -1,4 +1,4 @@
-"""FedNova NumPyClient — normalised aggregation for heterogeneous local steps.
+"""FedNova NumPyClient - normalised aggregation for heterogeneous local steps.
 
 Implements the algorithm of Wang et al. (2020), "Tackling the Objective
 Inconsistency Problem in Heterogeneous Federated Optimization" (NeurIPS).
@@ -146,7 +146,7 @@ class FlClientFedNova(fl.client.NumPyClient):
                       for p in self.model.parameters()]
         delta = [a - p for a, p in zip(anchor, new_params)]
 
-        # Mechanism diagnostic — L2 norm of (post-training - anchor),
+        # Mechanism diagnostic - L2 norm of (post-training - anchor),
         # computed in float64 for numerical stability. Reported in the
         # fit metrics so the strategy / runner can capture per (round,
         # client) when --log-update-norms is set.

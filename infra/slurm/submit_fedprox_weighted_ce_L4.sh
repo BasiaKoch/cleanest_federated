@@ -1,5 +1,5 @@
 #!/bin/bash
-# Experiment B2 — FedProx × class-weighted-CE 2×2 ablation on L4.
+# Experiment B2 - FedProx × class-weighted-CE 2×2 ablation on L4.
 #
 # Tests whether FedProx and inverse-frequency class-weighted CE are
 # SUBSTITUTES, COMPLEMENTS, or NON-ADDITIVE on partition-induced
@@ -8,7 +8,7 @@
 # vs FedAvg but never test FedProx × weighted-CE compositionality
 # on partition-induced imbalance.
 #
-# Design — 2×2 × 3 seeds = 12 jobs:
+# Design - 2×2 × 3 seeds = 12 jobs:
 #
 #   Algorithm × Loss
 #   FedAvg  + standard CE          (baseline)

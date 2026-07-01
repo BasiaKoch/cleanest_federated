@@ -9,8 +9,8 @@
 # which reduces to a_i = tau_i at m = 0 (vanilla SGD). Clients running
 # fewer local steps then no longer contribute disproportionately small
 # updates after the size-weighted aggregation. (Earlier drafts of this
-# comment used a_i = (1 - m^{tau_i}) / (1 - m) — the last element of the
-# series, not its L1 norm — which is the wrong normaliser under m > 0;
+# comment used a_i = (1 - m^{tau_i}) / (1 - m) - the last element of the
+# series, not its L1 norm - which is the wrong normaliser under m > 0;
 # see fl_dermamnist/fl_flower/strategy_fednova.py for the implementation.)
 # The thesis FedAvg-vs-FedProx system-het sweep covers the proximal-anchor
 # mechanism; this script adds FedNova as the direct competitor.

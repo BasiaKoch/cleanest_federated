@@ -1,11 +1,11 @@
 #!/bin/bash
-# Engineered 2-client 90/10 rare-class stress test — FedAvg vs FedProx.
+# Engineered 2-client 90/10 rare-class stress test - FedAvg vs FedProx.
 #
 # Deliberately stressful partition designed to expose FedAvg's failure
 # mode under combined quantity- AND label-skew, the regime where the
 # FedProx proximal term has the largest theoretical room to help.
-# Client 0 (~86%) holds every COMMON class in full — nevi (5), benign
-# keratosis (2), actinic (0), basal (1) — and ZERO of the three
+# Client 0 (~86%) holds every COMMON class in full - nevi (5), benign
+# keratosis (2), actinic (0), basal (1) - and ZERO of the three
 # critical/rare classes melanoma (4), dermatofibroma (3), vascular (6).
 # Client 1 (~14%) holds 100% of melanoma + dermato + vascular and
 # nothing else. The class-disjoint design maximises the sample-count-
@@ -36,7 +36,7 @@ MU=0.01
 PARTITION=two_client_90_10_rare_stress
 OUT_DIR=fl_dermamnist/results/two_client_90_10_rare_stress
 # --log-update-norms emits per-(round, client) client_update_norms_*.csv
-# beside the JSON — the per-round update-norm diagnostic used under stress.
+# beside the JSON - the per-round update-norm diagnostic used under stress.
 EXTRA_ARGS="--log-update-norms"
 
 MODE=${MODE:-pilot}

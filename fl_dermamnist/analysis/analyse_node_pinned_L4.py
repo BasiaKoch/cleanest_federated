@@ -1,4 +1,4 @@
-"""Node-pinned 3-seed L4 — variance isolation analysis.
+"""Node-pinned 3-seed L4 - variance isolation analysis.
 
 Reads the 6 runs at
   fl_dermamnist/results/node_pinned_L4/test_at_best_{fedavg,fedprox}_mu*_E20_s{42,123,456}.json

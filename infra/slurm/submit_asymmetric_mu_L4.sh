@@ -1,5 +1,5 @@
 #!/bin/bash
-# Experiment B — Asymmetric per-client μ on L4.
+# Experiment B - Asymmetric per-client μ on L4.
 #
 # Motivation. The single-seed L4 finding shows the entire FedProx-vs-FedAvg
 # macro-F1 deficit (Δ = -0.026) is concentrated in ONE class (vascular
@@ -7,23 +7,23 @@
 # or equal on 6 of 7 classes; it just suppresses the rare class that the
 # small client (Client 1, 10% of data) holds exclusively.
 #
-# Hypothesis. The uniform μ = 0.01 over-regularises Client 1 — whose
+# Hypothesis. The uniform μ = 0.01 over-regularises Client 1 - whose
 # update direction is most divergent from the global anchor BECAUSE
 # Client 1 is the specialist site. Setting μ_1 = 0 (no proximal anchor
 # on the small specialist) while keeping μ_0 = 0.01 (anchor the
 # dominant client) should recover vascular-class signal without
 # sacrificing common-class wins.
 #
-# Literature positioning. This is NOT novel — it's an ablation of:
+# Literature positioning. This is NOT novel - it's an ablation of:
 #   - Yao et al. 2024 (NeurIPS, arXiv:2410.08934, "Effect of
-#     Personalization in FedProx") — proves the OPTIMAL μ depends on
+#     Personalization in FedProx") - proves the OPTIMAL μ depends on
 #     per-client heterogeneity. Theoretical justification for per-client μ.
 #   - HAPI-FedProx (Springer 2024, DOI:10.1007/978-3-032-11733-5_17)
-#     — adapts μ per client via a local-vs-global heterogeneity index.
+#     - adapts μ per client via a local-vs-global heterogeneity index.
 #     Closest direct precedent.
-#   - FedPBS (arXiv:2603.13909) — selectively applies the proximal
+#   - FedPBS (arXiv:2603.13909) - selectively applies the proximal
 #     correction by client batch size (effectively per-client μ).
-# DISTINCT from Ditto / pFedMe / APFL / FedAMP — those train a
+# DISTINCT from Ditto / pFedMe / APFL / FedAMP - those train a
 # client-specific model; we vary only the local regularisation strength
 # on a single shared global model.
 #
@@ -39,7 +39,7 @@
 #   1. FedAvg                          0.0       0.0     no proximal anchor
 #   2. Symmetric FedProx               0.01      0.01    baseline (suspect: hurts vascular)
 #   3. Asymmetric "anchor-large" ⭐    0.01      0.0     anchor dominant, free specialist
-#   4. Asymmetric "anchor-small" CTL   0.0       0.01    REVERSE control — direction matters
+#   4. Asymmetric "anchor-small" CTL   0.0       0.01    REVERSE control - direction matters
 #
 # The 4-th condition is the critical control. Without it, condition 3
 # vs condition 1 is confounded with "any reduction in average μ helps".

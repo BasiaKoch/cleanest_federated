@@ -1,9 +1,9 @@
 #!/bin/bash
-# Extended-rounds 3-seed L3 — convergence-truncation fix.
+# Extended-rounds 3-seed L3 - convergence-truncation fix.
 #
 # The single-seed L3 result has FedProx's best-val round = 150 = the
 # final round of training. That means FedProx hadn't plateaued when we
-# stopped it. Reporting "FedProx loses at L3" off this run is unfair —
+# stopped it. Reporting "FedProx loses at L3" off this run is unfair -
 # it's an under-training artefact, not an algorithmic one.
 #
 # Fix: re-run L3 only, both methods, 3 seeds, with --num-rounds 250.
@@ -18,7 +18,7 @@
 #
 # All on L3 (two_client_70_30_rare_enriched) partition, E=20, 250 rounds,
 # μ=0.01 for FedProx. Walk-clock budget: at 4060s for 150 rounds (FedProx
-# at L4 on A100), 250 rounds ≈ 6,800s ≈ 1.9 h — comfortably within the
+# at L4 on A100), 250 rounds ≈ 6,800s ≈ 1.9 h - comfortably within the
 # template's 8 h cap.
 #
 # Outputs land in a separate directory so they don't clobber the

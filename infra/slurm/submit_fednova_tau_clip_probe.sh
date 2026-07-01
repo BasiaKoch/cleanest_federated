@@ -8,7 +8,7 @@
 # added `--tau-clip-min 320` flag. `tau_i` in FedNova is the number of
 # local SGD STEPS (= local_epochs × batches_per_epoch), not epochs;
 # for balanced_paired_7_clients (~1001 samples/client) with batch=32,
-# batches_per_epoch ≈ 32, so 320 ≈ 10 epochs of work — i.e. E_max // 2
+# batches_per_epoch ≈ 32, so 320 ≈ 10 epochs of work - i.e. E_max // 2
 # expressed in the correct step units. The clamp replaces tau_i with
 # 320 in the FedNova normaliser denominator when tau_i < 320; partial
 # parameter deltas still enter aggregation unchanged.

@@ -1,4 +1,4 @@
-"""Tests for DermMNISTCNN — architecture, GroupNorm-only, shape, and
+"""Tests for DermMNISTCNN - architecture, GroupNorm-only, shape, and
 selection through the config factory."""
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def test_uses_groupnorm_not_batchnorm():
 
 
 def test_groupnorm_num_groups_match_spec():
-    """GroupNorm(4, 32), (8, 64), (16, 128), (16, 256) — in order."""
+    """GroupNorm(4, 32), (8, 64), (16, 128), (16, 256) - in order."""
     m = DermMNISTCNN()
     expected = [(4, 32), (8, 64), (16, 128), (16, 256)]
     actual = [(gn.num_groups, gn.num_channels)

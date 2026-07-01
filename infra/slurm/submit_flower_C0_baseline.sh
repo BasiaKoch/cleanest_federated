@@ -1,5 +1,5 @@
 #!/bin/bash
-# PRIMARY HEADLINE SWEEP — Flower runtime, FedAvg + FedProx + FedNova,
+# PRIMARY HEADLINE SWEEP - Flower runtime, FedAvg + FedProx + FedNova,
 # balanced_paired_7_clients, 10 paired seeds.
 #
 # Why this is now the primary headline (2026-05-21):
@@ -8,8 +8,8 @@
 # as the cross-runtime validation reference (its 10 paired seeds are
 # the baseline against which submit_equivalence_check.sh verifies
 # Flower-vs-PyTorch equivalence at the two extreme-Δ seeds). The
-# canonical numeric headline going forward — including the FedNova
-# arm needed for the three-algorithm comparison — is produced by this
+# canonical numeric headline going forward - including the FedNova
+# arm needed for the three-algorithm comparison - is produced by this
 # script and lives in fl_dermamnist/results/flower_C0_baseline/.
 #
 # Hyperparameters match the legacy headline exactly:

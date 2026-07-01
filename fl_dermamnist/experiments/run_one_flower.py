@@ -1,9 +1,9 @@
-"""Flower-framework entry point — paired-fair FedAvg / FedProx on DermaMNIST.
+"""Flower-framework entry point - paired-fair FedAvg / FedProx on DermaMNIST.
 
 Mirrors the CLI of `run_one.py` exactly, but routes through Flower's
 `flwr.simulation.start_simulation` runtime. The produced results are
 equivalent (within floating-point noise) to those from the pure-PyTorch
-runner — both implement the same FedAvg and FedProx mathematics; they
+runner - both implement the same FedAvg and FedProx mathematics; they
 differ only in the orchestration framework around the per-round
 broadcast / local-train / aggregate cycle.
 
@@ -94,8 +94,8 @@ def build_parser() -> argparse.ArgumentParser:
     # μ = 0.01 on client 0 and μ = 0 on client 1. Used to test
     # asymmetric-proximal-regularisation hypotheses (HAPI-FedProx
     # [Springer 2024, DOI:10.1007/978-3-032-11733-5_17]; Yao et al.
-    # 2024 NeurIPS [arXiv:2410.08934] — "Effect of Personalization in
-    # FedProx" — proves the optimal μ depends on per-client
+    # 2024 NeurIPS [arXiv:2410.08934] - "Effect of Personalization in
+    # FedProx" - proves the optimal μ depends on per-client
     # heterogeneity). Any client cid not listed in the mapping inherits
     # the global --mu value. Recorded in the output JSON metadata.
     ap.add_argument("--mu-per-client", type=str, default=None,
@@ -155,8 +155,8 @@ def build_parser() -> argparse.ArgumentParser:
                     default="ce")
     ap.add_argument("--focal-gamma", type=float, default=2.0)
     # Architecture-normalization variant (architecture ablation).
-    # 'gn' (default) = DermMNISTCNN with GroupNorm — the headline.
-    # 'bn' = DermMNISTCNN_BN with BatchNorm — the FL-unfriendly ablation
+    # 'gn' (default) = DermMNISTCNN with GroupNorm - the headline.
+    # 'bn' = DermMNISTCNN_BN with BatchNorm - the FL-unfriendly ablation
     #         that probes the BN-running-stats × non-IID interaction
     #         (cf. Li et al. 2021 FedBN). Results saved with an
     #         '_arch-bn' filename tag so they cannot be mixed with the
@@ -180,14 +180,14 @@ def build_parser() -> argparse.ArgumentParser:
                          "from FedAvg aggregation. Implements Li et al. "
                          "2020 §5.2 asymmetric protocol. Default off "
                          "(both algorithms see identical client subsets).")
-    # Mechanism diagnostic — writes client_update_norms_*.csv beside the JSON.
+    # Mechanism diagnostic - writes client_update_norms_*.csv beside the JSON.
     ap.add_argument("--log-update-norms", action="store_true",
                     help="Capture per-(round, client) L2 update norm "
                          "||w_k^{t+1} - w^t||_2 and write to a sibling CSV. "
                          "Off by default; clients always compute and return "
                          "the value in fit metrics, but the runner only "
                          "materialises the CSV when this flag is set.")
-    # Save model weights at the best-val checkpoint — needed by
+    # Save model weights at the best-val checkpoint - needed by
     # downstream local-adaptation / personalised-FL baselines
     # (Yu et al. 2022, Collins et al. 2021). Off by default so the
     # headline outputs are unchanged; turn on for the small-hospital
@@ -497,7 +497,7 @@ def main():
     # passed it to start_simulation(). On Cambridge's ampere cluster, that
     # produced "RuntimeError: Failed to start GCS" failures across many
     # compute nodes. Reverting to Flower's default ray.init() (no
-    # ray_init_args passed) — which is what previous successful runs (e.g.
+    # ray_init_args passed) - which is what previous successful runs (e.g.
     # the existing engineered partition results) used. Ray reads RAY_TMPDIR
     # from the environment exported by the SLURM template, which has been
     # sufficient for the working historical configuration.
@@ -521,7 +521,7 @@ def main():
     # When --drop-stragglers is set, the strategy also emits per-round
     # n_kept and n_dropped via aggregate_fit's returned metrics. Persist
     # these so the history CSV records how many clients were filtered
-    # at each round — necessary for thesis-defensibility of the
+    # at each round - necessary for thesis-defensibility of the
     # asymmetric protocol claim (cf. Li 2020 §5.2).
     n_kept_by_round: Dict[int, int] = {}
     n_dropped_by_round: Dict[int, int] = {}
@@ -561,12 +561,12 @@ def main():
     # produced under C=1.0 retain their existing names and don't break the
     # already-collected headline data.
     c_tag = "" if abs(args.fraction_fit - 1.0) < 1e-9 else f"_C{args.fraction_fit}"
-    # Architecture-variant tag — only emitted for non-default ('bn') so that
+    # Architecture-variant tag - only emitted for non-default ('bn') so that
     # the existing 'gn' headline filenames are unchanged for back-compat.
     arch_tag = "" if args.model_variant == "gn" else f"_arch-{args.model_variant}"
-    # Asymmetric-straggler-protocol tag — only when stragglers are dropped.
+    # Asymmetric-straggler-protocol tag - only when stragglers are dropped.
     drop_tag = "_drop" if args.drop_stragglers else ""
-    # Per-client-μ tag — only when asymmetric μ is in effect. Encodes the
+    # Per-client-μ tag - only when asymmetric μ is in effect. Encodes the
     # mapping in the filename so it cannot be silently mixed with
     # symmetric-μ runs in downstream analysis. Format: "_muPC-c0m0.01-c1m0.0".
     if mu_per_client_map is not None:
@@ -576,7 +576,7 @@ def main():
         )
     else:
         muc_tag = ""
-    # Per-client-lr tag — only when asymmetric LR is in effect.
+    # Per-client-lr tag - only when asymmetric LR is in effect.
     if lr_per_client_map is not None:
         lrc_tag = "_lrPC-" + "-".join(
             f"c{cid}lr{lr_per_client_map[cid]}"
@@ -584,7 +584,7 @@ def main():
         )
     else:
         lrc_tag = ""
-    # Loss-type tag — only when loss differs from default 'ce'. This was
+    # Loss-type tag - only when loss differs from default 'ce'. This was
     # missing in earlier versions and caused B2 (FedProx × weighted-CE)
     # runs to overwrite each other within the same (algorithm, seed)
     # pair. The tag prevents that collision.
@@ -657,7 +657,7 @@ def main():
             "system_het": sh_cfg.to_dict(),
             "elapsed_s": elapsed,            # legacy field name
             "wall_clock_seconds": elapsed,   # canonical (audit fix)
-            # Runtime provenance (CP3.2 / Rank-4 patch — git SHA,
+            # Runtime provenance (CP3.2 / Rank-4 patch - git SHA,
             # hostname, torch/python versions, timestamps, etc.)
             **collect_runtime_provenance(run_started_at),
         }, f, indent=2)

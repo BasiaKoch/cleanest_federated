@@ -6,10 +6,10 @@
 # headline sweep, so the system-heterogeneity effect can be isolated by
 # comparing within-pair Δ to the headline Δ (= +0.027, p = 0.020).
 #
-#   C1 "fixed_stragglers"  — clients 5 and 6 always do E=5 (the rest do E=20).
+#   C1 "fixed_stragglers"  - clients 5 and 6 always do E=5 (the rest do E=20).
 #                            Simpler design; client identities of stragglers
 #                            are deterministic.
-#   C2 "random_stragglers" — each round, 50% of clients are randomly designated
+#   C2 "random_stragglers" - each round, 50% of clients are randomly designated
 #                            stragglers with E_i ~ Uniform[1, 19]; others do E=20.
 #                            Follows Li et al. (2020) §5.2 exactly.
 set -uo pipefail
@@ -41,8 +41,8 @@ submit() {
 n_c1_submitted=0
 n_c2_submitted=0
 
-# === C1: Fixed stragglers (DESCRIPTIVE ONLY — confounded) ============
-# NOTE: C1 is confounded — clients 5,6 are structurally tied to the
+# === C1: Fixed stragglers (DESCRIPTIVE ONLY - confounded) ============
+# NOTE: C1 is confounded - clients 5,6 are structurally tied to the
 # melanoma/nevi class mechanism in balanced_paired_7_clients. C5 holds
 # the second melanoma-pair (389 melanoma + 49 vascular + 670 nevi);
 # C6 is the nevi-only generalist (673 nevi). Making C5 a permanent
@@ -69,7 +69,7 @@ done
 #   • Stragglers perform E_i ~ Uniform{1, 2, ..., 19} local epochs.
 #   • Non-stragglers perform E = 20 local epochs.
 #   • Straggler identity ROTATES per round (seed-deterministic).
-# Selection is independent of class composition — no structural
+# Selection is independent of class composition - no structural
 # coupling with the per-class mechanism that drives the headline.
 # C2 is the primary system-heterogeneity condition; H2 = Δ_C2 - Δ_C0
 # is the inferentially primary test (see analyse_system_het.py).

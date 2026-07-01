@@ -1,7 +1,7 @@
 #!/bin/bash
 # Submit the robustness-check sweeps to SLURM:
-#   - Dirichlet-alpha = 0.1 (standard severe non-IID, Hsu 2019) — 20 jobs
-#   - IID falsification control (FedProx should not significantly differ from FedAvg) — 20 jobs
+#   - Dirichlet-alpha = 0.1 (standard severe non-IID, Hsu 2019) - 20 jobs
+#   - IID falsification control (FedProx should not significantly differ from FedAvg) - 20 jobs
 #
 # Same 10 seeds, E=20, R=150 as the headline sweep. Total: ~40 jobs ~50 GPU-h.
 # Runtime: Flower 1.x simulation framework (slurm_template_flower.sh).

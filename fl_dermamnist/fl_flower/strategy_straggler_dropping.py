@@ -1,4 +1,4 @@
-"""StragglerDroppingFedAvg — Li et al. 2020 §5.2 FedAvg protocol.
+"""StragglerDroppingFedAvg - Li et al. 2020 §5.2 FedAvg protocol.
 
 The original FedProx paper (Li, Sahu, Talwalkar, Smith; MLSys 2020) §5.2
 evaluates FedProx against FedAvg under an **asymmetric** aggregation
@@ -32,7 +32,7 @@ Edge cases
   update for that round (the global model is unchanged until the
   next round produces at least one non-straggler).
 - If no clients are stragglers (e.g., under uniform compute mode),
-  the strategy behaves exactly like Flower's ``FedAvg`` — the filter
+  the strategy behaves exactly like Flower's ``FedAvg`` - the filter
   is a no-op.
 
 This strategy is intentionally limited to FedAvg-style aggregation.
@@ -59,7 +59,7 @@ DIFFERENT client subsets per round. If FedProx wins, the win
 decomposes into two sources:
   (a) FedProx sees more clients per round (those that FedAvg drops);
   (b) the proximal anchor stabilises γ-inexact updates.
-The pure proximal effect is given by the symmetric arm — FedProx vs
+The pure proximal effect is given by the symmetric arm - FedProx vs
 FedAvg with both algorithms seeing all clients (``system_het_random/``
 in this codebase). The asymmetric vs symmetric contrast isolates the
 straggler-handling component, while the symmetric arm isolates the

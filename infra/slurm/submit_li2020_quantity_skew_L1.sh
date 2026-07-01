@@ -1,11 +1,11 @@
 #!/bin/bash
-# Phase 3 Experiment P2 — Cross-partition replication of Li 2020 §5.2
+# Phase 3 Experiment P2 - Cross-partition replication of Li 2020 §5.2
 # decomposition on L1 (quantity-only skew, JS = 0.0).
 #
 # The original Li 2020 §5.2 4-condition factorial was run on L4 (severe
 # 90/10 class-disjoint). To establish cross-partition INVARIANCE of the
 # γ-inexact-attribution mechanism, we replicate the SAME factorial on
-# L1 (quantity 86/14 but no class skew — every class on both clients).
+# L1 (quantity 86/14 but no class skew - every class on both clients).
 #
 # Literature gap (MIDL / MELBA target):
 #   - No 2024-2026 paper repeats Li 2020 §5.2 decomposition with the
@@ -15,7 +15,7 @@
 #   - NIID-Bench (Li 2022, arXiv:2102.02079) does not separate γ-inexact
 #     handling from proximal anchoring
 #
-# Design — 4 conditions × 3 seeds on L1 = 12 jobs:
+# Design - 4 conditions × 3 seeds on L1 = 12 jobs:
 #
 #   #  Algorithm      Stragglers      Drop?       Role
 #   ---------------------------------------------------------------

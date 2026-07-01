@@ -84,7 +84,7 @@ def local_train(
             out = model(x)
             loss = criterion(out, y)
 
-            # PROXIMAL TERM BRANCH — gated on μ>0 so μ=0 path is bit-identical to FedAvg
+            # PROXIMAL TERM BRANCH - gated on μ>0 so μ=0 path is bit-identical to FedAvg
             if proximal_mu > 0:
                 prox = torch.zeros((), device=device)
                 for w, w_g in zip(model.parameters(), global_weights_frozen):

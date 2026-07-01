@@ -9,9 +9,9 @@
 # config; the second half ("fixed_stragglers"/"random_stragglers" with the
 # extras) was parsed as a missing command. The 12 affected JobIDs were:
 #
-#   29504637–29504641  system_het_fixed (C1)  — 5 jobs
-#   29504643–29504647  system_het_random (C2) — 5 jobs
-#   29504648, 29504649 system_het_random_fednova — 2 jobs
+#   29504637–29504641  system_het_fixed (C1)  - 5 jobs
+#   29504643–29504647  system_het_random (C2) - 5 jobs
+#   29504648, 29504649 system_het_random_fednova - 2 jobs
 #
 # All 12 were scancel'd before this script ran. This file re-submits them
 # correctly with proper system-het arguments.

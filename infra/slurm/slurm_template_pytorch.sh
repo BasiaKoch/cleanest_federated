@@ -10,7 +10,7 @@
 #SBATCH --output=/home/bk489/federated_clean/cleanest_federated/fl_dermamnist/logs/%x_%j.out
 #SBATCH --error=/home/bk489/federated_clean/cleanest_federated/fl_dermamnist/logs/%x_%j.err
 
-# Pure-PyTorch SLURM template — wraps `fl_dermamnist.experiments.run_one`,
+# Pure-PyTorch SLURM template - wraps `fl_dermamnist.experiments.run_one`,
 # the sequential server-loop reference runner that produces the
 # pure-PyTorch headline data (results/headline/). Mirrors the CLI of
 # slurm_template_flower.sh so the same args work.

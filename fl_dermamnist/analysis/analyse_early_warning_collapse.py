@@ -1,4 +1,4 @@
-"""Experiment B1 — Early-warning detector for rare-class collapse.
+"""Experiment B1 - Early-warning detector for rare-class collapse.
 
 A simple-but-novel question: can we predict, from EARLY-ROUND (round 20)
 features alone, whether a federated training run will end with one or

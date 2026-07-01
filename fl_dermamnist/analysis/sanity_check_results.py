@@ -1,4 +1,4 @@
-"""Stage A — data-integrity sanity check across every result directory.
+"""Stage A - data-integrity sanity check across every result directory.
 
 Before any inferential test runs, verify the data is not pathological:
 
@@ -7,7 +7,7 @@ Before any inferential test runs, verify the data is not pathological:
      fl_dermamnist.fl.provenance.canonicalise_framework).
   3. No JSON has a pathological macro_f1 (< 0.05 = silent training
      failure; > 0.98 = data leak).
-  4. selected_round (best-val round) ranges across runs — not always 1
+  4. selected_round (best-val round) ranges across runs - not always 1
      (early stopping) and not always 150 (never-improved). A reasonable
      distribution = training actually converged.
   5. Required provenance fields populated in every canonical-runtime
@@ -61,7 +61,7 @@ EXPECTED = {
 # Macro-F1 thresholds: below this = suspicious (silent failure).
 MACRO_F1_FLOOR = 0.05
 # Above this = suspicious (probable data leak; DermaMNIST is not solvable
-# this well at 28x28 with this model — centralised tops out around 0.56).
+# this well at 28x28 with this model - centralised tops out around 0.56).
 MACRO_F1_CEILING = 0.95
 
 # Required provenance fields for canonical-runtime JSONs (post-CP3.2).
@@ -73,7 +73,7 @@ REQUIRED_PROVENANCE_FIELDS = (
 )
 
 
-# Filename parser — matches every queued sweep's stem.
+# Filename parser - matches every queued sweep's stem.
 _STEM = re.compile(
     r"test_at_best_"
     r"(?P<algo>fedavg|fedprox|fednova)"
@@ -151,7 +151,7 @@ def _check_directory(name: str, expected: int | None) -> tuple[int, list[str]]:
         if isinstance(sr, int):
             selected_rounds.append(sr)
 
-        # Provenance fields (canonical-runtime JSONs only — legacy is exempt)
+        # Provenance fields (canonical-runtime JSONs only - legacy is exempt)
         if not is_legacy:
             for field in REQUIRED_PROVENANCE_FIELDS:
                 if field not in doc:

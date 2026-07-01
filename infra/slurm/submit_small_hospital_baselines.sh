@@ -1,5 +1,5 @@
 #!/bin/bash
-# Small-hospital case-study baselines — submits all eight jobs to SLURM
+# Small-hospital case-study baselines - submits all eight jobs to SLURM
 # with proper dependency ordering. Each job is its own sbatch
 # allocation; the fine-tuning jobs (which depend on the federated
 # checkpoints) use --dependency=afterok so they only launch after the

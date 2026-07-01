@@ -57,7 +57,7 @@ WILCOXON_CI_POSITION_N10_ALPHA05 = 9
 RESULTS_DIR    = results_root()
 SPECIALIST_DIR = RESULTS_DIR / "specialist_partition"
 # Default: compare against the headline directory (currently the legacy
-# pure-PyTorch data — see results/headline/README_PROVENANCE.md). To
+# pure-PyTorch data - see results/headline/README_PROVENANCE.md). To
 # compare against the new Flower-runtime headline once it lands, pass:
 #   --paired-dir fl_dermamnist/results/flower_C0_baseline
 PAIRED_DIR     = RESULTS_DIR / "headline"
@@ -113,7 +113,7 @@ def exact_wilcoxon_ci(x: np.ndarray, k: int = WILCOXON_CI_POSITION_N10_ALPHA05) 
 
     For n = 10 paired observations, two-sided α = 0.05, the CI bounds are
     the ``k``-th smallest and ``k``-th largest Walsh averages (1-indexed).
-    For other n this function still applies — pass the appropriate ``k``
+    For other n this function still applies - pass the appropriate ``k``
     from the Wilcoxon critical-value table.
     """
     wa = np.sort(walsh_averages(x))

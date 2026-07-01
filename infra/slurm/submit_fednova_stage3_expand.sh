@@ -6,7 +6,7 @@
 # Per §5: "Expand only the winning/discriminating arms to 10 seeds... Do NOT
 # expand every arm; expand the arm(s) that move the needle and the baseline."
 #
-# Pilot verdict (analysed 2026-06-07): tauclip320 is the standout arm — the
+# Pilot verdict (analysed 2026-06-07): tauclip320 is the standout arm - the
 # only intervention that structurally changes the amplification factor
 # (a_eff/a_i: ~37x -> ~1.9x; client 6 dominates 0/750 rounds vs ~5% in every
 # other arm) and the closest to the pre-registered STRONG bar (final macro-F1
@@ -19,7 +19,7 @@
 # NOTE: baseline is expanded too (not just reused from the pre-existing n=10
 # `results/system_het_random_fednova/`) because that directory predates the
 # §4 instrumentation (no test_at_final / collapse_round / aggregation_client_diag
-# — the very columns §9's Wilcoxon tests and §10's F1-F7 figures need), AND
+# - the very columns §9's Wilcoxon tests and §10's F1-F7 figures need), AND
 # because a reproducibility check found 3/5 overlapping seeds give different
 # numbers across the two commits (2ab422b vs c9ffe4d, both git-dirty). Building
 # a single self-consistent instrumented n=10 baseline avoids that confound.
@@ -29,7 +29,7 @@
 # These land in the SAME output dirs as the pilot (keyed by seed -> no
 # collisions), giving a fully-paired, fully-instrumented n=10 for both arms.
 #
-# SAFETY: DRY-RUN by default — prints the sbatch commands and DOES NOT submit.
+# SAFETY: DRY-RUN by default - prints the sbatch commands and DOES NOT submit.
 # To actually submit on the cluster:   DRY_RUN=0 bash infra/slurm/submit_fednova_stage3_expand.sh
 set -uo pipefail
 
@@ -41,7 +41,7 @@ SEEDS=(456 999 2024 161803 789)
 
 COMMON="--batch-size 32 --straggler-fraction 0.5 --log-update-norms"
 
-# Arms to expand (index-aligned) — ONLY the winning arm + baseline, per §5.
+# Arms to expand (index-aligned) - ONLY the winning arm + baseline, per §5.
 ARM_NAMES=(baseline tauclip320)
 ARM_FLAGS=(
   "--momentum 0.9"

@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # ----------------------------------------------------------------------------
-# 1. Sanity test — FedProx(μ=0) == FedAvg
+# 1. Sanity test - FedProx(μ=0) == FedAvg
 # ----------------------------------------------------------------------------
 sanity_test() {
   PYTHONPATH=. python -m pytest \

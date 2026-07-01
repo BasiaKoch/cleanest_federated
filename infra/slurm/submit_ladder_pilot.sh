@@ -1,5 +1,5 @@
 #!/bin/bash
-# Heterogeneity-ladder STAGE A pilot — one seed, all five levels.
+# Heterogeneity-ladder STAGE A pilot - one seed, all five levels.
 #
 # Submits 13 SLURM jobs (or fewer with --dry-run / SKIP_FEDNOVA):
 #

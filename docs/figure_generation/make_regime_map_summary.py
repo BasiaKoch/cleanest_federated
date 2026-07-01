@@ -25,7 +25,7 @@ plt.rcParams.update({
 TEAL = "#7FA89B"    # preserved / competitive / rescue / robust   ✓
 SAND = "#DCC68C"    # fragile / no extra gain                     ~
 CLAY = "#C68B77"    # collapse / brittle                          ✗
-GREY = "#EFEFEF"    # not tested in this thesis                   — (recessive)
+GREY = "#EFEFEF"    # not tested in this thesis                   - (recessive)
 EDGE, TXT, DIM = "#9a9a9a", "#222222", "#9a9a9a"
 CAT = {"good": (TEAL, "✓"), "part": (SAND, "~"), "bad": (CLAY, "✗"), "nt": (GREY, "—")}
 

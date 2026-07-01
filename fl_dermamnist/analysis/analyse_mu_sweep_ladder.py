@@ -1,12 +1,12 @@
-"""μ-sweep across the heterogeneity ladder — Stage A pilot analysis.
+"""μ-sweep across the heterogeneity ladder - Stage A pilot analysis.
 
 Reads the 12 FedProx runs at
   fl_dermamnist/results/mu_sweep_ladder/L{0,2,4}_<partition>/
        test_at_best_fedprox_mu{0.001,0.01,0.1,1.0}_E20_s42.json
 
 and produces:
-  1. mu_sweep_summary.csv     — long-format table (level × μ × metrics)
-  2. mu_sweep_pivot.csv        — μ × level macro-F1 grid (for the thesis table)
+  1. mu_sweep_summary.csv     - long-format table (level × μ × metrics)
+  2. mu_sweep_pivot.csv        - μ × level macro-F1 grid (for the thesis table)
   3. F_mu_sweep_ladder.{pdf,png}
        (a) macro-F1 vs μ, one line per level (log-x); FedAvg shown as dashed reference
        (b) Δ vs FedAvg at each (μ, level), bar grid

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local-epoch (E) sweep on balanced_paired_7_clients — canonical FedProx
+# Local-epoch (E) sweep on balanced_paired_7_clients - canonical FedProx
 # mechanism test on the partition where the FedProx advantage is already
 # established (headline Δ macro-F1 ≈ +0.027 at E=20, n=10 paired seeds).
 #
@@ -29,7 +29,7 @@ REPO_ROOT=${REPO_ROOT:-/home/bk489/federated_clean/cleanest_federated}
 OUT_DIR=fl_dermamnist/results/e_sweep
 PARTITION=balanced_paired_7_clients
 MU=0.01
-# --log-update-norms is essential — half the mechanism evidence comes from
+# --log-update-norms is essential - half the mechanism evidence comes from
 # the per-(round, client) drift trajectories faceted by E.
 EXTRA_ARGS="--log-update-norms"
 

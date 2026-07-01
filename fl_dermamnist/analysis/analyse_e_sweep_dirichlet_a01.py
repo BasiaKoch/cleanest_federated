@@ -1,4 +1,4 @@
-"""Analyse the local-epoch (E) sweep on Dirichlet α=0.1 — FedProx mechanism test.
+"""Analyse the local-epoch (E) sweep on Dirichlet α=0.1 - FedProx mechanism test.
 
 Direct replication-style analysis of the canonical FedProx-paper §5.2
 mechanism test (Li et al. 2020 MLSys, Fig. 4):
@@ -14,14 +14,14 @@ Data sources:
   - fl_dermamnist/results/dirichlet_a01/          (existing E=20 anchor; reused)
 
 Outputs (all under e_sweep_dirichlet_a01/analysis/):
-  1. headline_e_sweep.csv             — per (E, seed, algo) global metrics
-  2. delta_vs_E.csv                   — paired Δ per (E, seed) + means + SEM
-  3. delta_vs_E_curve.png             — THE figure: Δ macro-F1 vs E, CI band
-  4. loss_curves_by_E.png             — train/val loss faceted by E
+  1. headline_e_sweep.csv             - per (E, seed, algo) global metrics
+  2. delta_vs_E.csv                   - paired Δ per (E, seed) + means + SEM
+  3. delta_vs_E_curve.png             - THE figure: Δ macro-F1 vs E, CI band
+  4. loss_curves_by_E.png             - train/val loss faceted by E
                                         (FedAvg instability check at high E)
-  5. update_norm_by_E.png             — per-client drift trajectories, faceted by E
-  6. per_class_delta_at_E_max.png     — where the advantage concentrates at max E
-  7. summary.json                     — rolled-up numbers + Wilcoxon p per E
+  5. update_norm_by_E.png             - per-client drift trajectories, faceted by E
+  6. per_class_delta_at_E_max.png     - where the advantage concentrates at max E
+  7. summary.json                     - rolled-up numbers + Wilcoxon p per E
 """
 from __future__ import annotations
 
@@ -201,7 +201,7 @@ def _plot_delta_vs_E(deltas: pd.DataFrame, summary: pd.DataFrame, out: Path) -> 
 
 
 def _plot_loss_curves_by_E(runs: List[Dict], out: Path) -> None:
-    """Validation-loss curves faceted by E — diagnoses FedAvg instability."""
+    """Validation-loss curves faceted by E - diagnoses FedAvg instability."""
     es = sorted({r["E"] for r in runs})
     if not es:
         return

@@ -9,7 +9,7 @@ For each run we compute:
     val_macro_F1 at round 150 (the final round)
     Drop = peak − final
 
-Aggregating across 10 seeds gives the mean "post-peak drop" — a measure of how
+Aggregating across 10 seeds gives the mean "post-peak drop" - a measure of how
 much each algorithm overfits between the best and final round.
 
 Reads:   fl_dermamnist/results/headline/history_*.csv

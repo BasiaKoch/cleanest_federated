@@ -53,7 +53,7 @@ if [ ! -f "$REPO_ROOT/dermamnist_64.npz" ]; then
     exit 2
 fi
 
-# Per-job Ray session dir — see slurm_template_flower.sh for rationale.
+# Per-job Ray session dir - see slurm_template_flower.sh for rationale.
 export RAY_TMPDIR="/tmp/ray-${SLURM_JOB_ID:-$$}"
 mkdir -p "$RAY_TMPDIR"
 trap 'rm -rf "$RAY_TMPDIR"' EXIT
@@ -64,7 +64,7 @@ import torch
 print(f"Preflight OK: flwr={flwr.__version__}, torch={torch.__version__}")
 PY
 
-# Retry loop — see slurm_template_flower.sh for rationale.
+# Retry loop - see slurm_template_flower.sh for rationale.
 RETRY_MAX=3
 SUCCESS=0
 for attempt in $(seq 1 $RETRY_MAX); do

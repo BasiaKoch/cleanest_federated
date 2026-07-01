@@ -12,7 +12,7 @@
 #SBATCH --output=/home/bk489/federated_clean/cleanest_federated/fl_dermamnist/logs/ray_diag_%j.out
 #SBATCH --error=/home/bk489/federated_clean/cleanest_federated/fl_dermamnist/logs/ray_diag_%j.err
 
-# Diagnostic — does Ray work AT ALL on a compute node with the unique-port
+# Diagnostic - does Ray work AT ALL on a compute node with the unique-port
 # fix? This 5-minute batch job runs the same minimal Ray sanity check the
 # interactive Step 2 would run, but doesn't require an interactive shell.
 # Submit it and check the log when it finishes; you don't need to babysit.

@@ -4,7 +4,7 @@
 # Background: the original hpc_mu_sweep.sh submission landed 3 of 9 jobs
 # successfully and 6 hit a transient CUDA-busy error at
 # `model_builder().to(device)` (the first GPU access). The SLURM template's
-# 3-attempt retry loop with 90s sleep was not enough to recover — those
+# 3-attempt retry loop with 90s sleep was not enough to recover - those
 # jobs landed on a heavily contended Ampere node.
 #
 # This script is idempotent: it checks the disk and resubmits only the

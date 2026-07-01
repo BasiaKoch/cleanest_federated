@@ -22,17 +22,17 @@ from matplotlib.patches import FancyBboxPatch, FancyArrowPatch, Arc
 plt.rcParams.update({
     "font.family": "DejaVu Sans",
     "mathtext.fontset": "dejavusans",
-    "pdf.fonttype": 42,   # embed TrueType — crisp, selectable text in the PDF
+    "pdf.fonttype": 42,   # embed TrueType - crisp, selectable text in the PDF
 })
 
 # --- restrained palette: greyscale + ONE teal accent ("update only") ---------
 INK       = "#1b1b1b"   # primary text
 EDGE      = "#454b54"   # client outlines
 CLIENT_FC = "#f5f6f8"   # client fill
-SERVER_EC = "#33415c"   # server outline (slate — reads as the coordinator)
+SERVER_EC = "#33415c"   # server outline (slate - reads as the coordinator)
 SERVER_FC = "#eaeef4"   # server fill
 GREY      = "#7a828c"   # broadcast path (neutral)
-ACCENT    = "#11806a"   # return / model-update path (teal) — the central message
+ACCENT    = "#11806a"   # return / model-update path (teal) - the central message
 DATA_EC   = "#9aa1a9"   # dashed private-data enclosure
 MUTE      = "#4d555e"   # secondary labels
 WBOX = dict(boxstyle="round,pad=0.16", fc="white", ec="none", alpha=0.95)

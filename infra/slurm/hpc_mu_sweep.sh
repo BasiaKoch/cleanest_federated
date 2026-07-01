@@ -9,7 +9,7 @@
 # -----------------------------
 # The headline significant result is on pure-PyTorch. The Flower runtime
 # attenuates effects ~75% across all conditions, so a Flower μ-sweep would
-# just show small flat effects at every μ — not a defense of the headline.
+# just show small flat effects at every μ - not a defense of the headline.
 # This sweep adds direct evidence that pure-PyTorch FedProx is not at a
 # knife-edge maximum at μ=0.01.
 #
@@ -50,7 +50,7 @@ SEEDS=(42 123 456)
 cd "$REPO"
 
 # Pure-PyTorch path uses dataloader_generator_seed (from seeding.py) but
-# NOT numpy_legacy_seed — server_loop.py does not call np.random.seed per
+# NOT numpy_legacy_seed - server_loop.py does not call np.random.seed per
 # (round, cid), so the 32-bit mask is unnecessary on this path.
 # We sanity-check by verifying the seeding helper import is in place.
 if ! grep -q "from fl_dermamnist.fl.seeding import dataloader_generator_seed" \

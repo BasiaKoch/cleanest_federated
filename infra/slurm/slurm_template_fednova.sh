@@ -22,7 +22,7 @@
 # gpu-q-19 was added on 2026-06-07 after jobs 30218952/30218953 (mechanism-fork
 # pilot, serverlr03 arm, seeds 42/123) failed all 3 retry attempts there with
 # "RuntimeError: CUDA driver initialization failed, you might not have a CUDA
-# gpu" — a node-local GPU/driver problem the retry loop cannot work around.
+# gpu" - a node-local GPU/driver problem the retry loop cannot work around.
 # Drop entries once the nodes are confirmed clean by HPC ops.
 
 # SLURM template for one FedNova run, mirroring slurm_template_flower.sh.
@@ -44,8 +44,8 @@ source "$VENV_DIR/bin/activate"
 
 # CRITICAL Ray fix (2026-06-07): clear the module-injected LD_LIBRARY_PATH
 # (Intel oneAPI MPI / libfabric / UCX from the 2024-06 CSD3 spack module set).
-# Those libraries break Ray's GCS startup — "RuntimeError: Failed to start GCS,
-# Last 0 lines of error files" with an empty gcs_server.out — which killed every
+# Those libraries break Ray's GCS startup - "RuntimeError: Failed to start GCS,
+# Last 0 lines of error files" with an empty gcs_server.out - which killed every
 # FedNova/Flower job. Confirmed by ray_gcs_probe.sh: ray.init() FAILS with
 # LD_LIBRARY_PATH set and SUCCEEDS with it unset, while torch CUDA is unaffected
 # (it's a self-contained cu128 pip wheel). Single-node Flower/Ray needs none of
@@ -66,11 +66,11 @@ if [ ! -f "$REPO_ROOT/dermamnist_64.npz" ]; then
     exit 2
 fi
 
-# Per-job Ray session dir — IDENTICAL Ray-launch handling to the PROVEN
+# Per-job Ray session dir - IDENTICAL Ray-launch handling to the PROVEN
 # slurm_template_system_het.sh / slurm_template_flower.sh, i.e. the templates
 # that produced the working system_het / headline CSVs on this HPC. The full
 # Ray contract those runs relied on is: bare ray.init() in the runner (NO
-# ray_init_args — an explicit ray_init_args dict caused "Failed to start GCS"
+# ray_init_args - an explicit ray_init_args dict caused "Failed to start GCS"
 # across nodes; see run_one_flower.py:496 and ray_diagnostic.sh) + a per-SLURM-
 # job RAY_TMPDIR exported here so ray.init() reads it from the environment.
 # (Reverted from the earlier ray_log_save trap to match the proven path byte
@@ -80,12 +80,12 @@ mkdir -p "$RAY_TMPDIR"
 trap 'rm -rf "$RAY_TMPDIR"' EXIT
 
 # Preflight import check. Use `python -c` (not a heredoc) so it does NOT
-# depend on the compute node being able to create a heredoc temp file —
+# depend on the compute node being able to create a heredoc temp file -
 # the gpu-q-31/gpu-q-32 failures were node-local /tmp problems, and a
 # heredoc preflight could itself fail to stage on a degraded node.
 python -c 'import flwr, torch; print(f"Preflight OK: flwr={flwr.__version__}, torch={torch.__version__}")'
 
-# Retry loop — see slurm_template_flower.sh for rationale.
+# Retry loop - see slurm_template_flower.sh for rationale.
 RETRY_MAX=3
 SUCCESS=0
 for attempt in $(seq 1 $RETRY_MAX); do

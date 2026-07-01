@@ -1,4 +1,4 @@
-"""Experiment E1 — Protocol-flip audit.
+"""Experiment E1 - Protocol-flip audit.
 
 Re-analyses every (experiment × condition × seed) cell under three
 reporting protocols and quantifies how often the FedProx-vs-FedAvg
@@ -245,7 +245,7 @@ for exp, grp in df_flips.groupby("experiment"):
     print(f"  {exp:<35} : {nf}/{n} flips ({rate*100:>4.0f}%), avg max-protocol-Δ = {avg_diff:.4f}")
 
 # ----------------------------------------------------------------
-# 4. Compact pivot — Δ per protocol per experiment (means across seeds)
+# 4. Compact pivot - Δ per protocol per experiment (means across seeds)
 # ----------------------------------------------------------------
 pivot = df_flips.groupby("experiment").agg(
     n_seeds=("seed", "count"),

@@ -14,7 +14,7 @@ Three mechanism hypotheses tested:
   H2: FedProx's proximal anchor disproportionately suppresses the small
       client's already-attenuated updates (||Δw_1|| under FedProx <
       ||Δw_1|| under FedAvg, with the gap widening as LR_1 shrinks)
-  H3: Per-class survival differs — FedNova preserves all classes,
+  H3: Per-class survival differs - FedNova preserves all classes,
       FedAvg/FedProx lose rare-class signal as LR asymmetry grows
 
 Outputs:

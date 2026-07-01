@@ -1,4 +1,4 @@
-"""Tests for DermMNISTCNN_BN — the BatchNorm architecture-ablation variant.
+"""Tests for DermMNISTCNN_BN - the BatchNorm architecture-ablation variant.
 
 Mirrors test_dermmnist_cnn.py but inverts the normalisation expectations:
 the BN variant MUST use BatchNorm2d and MUST NOT use GroupNorm, and is

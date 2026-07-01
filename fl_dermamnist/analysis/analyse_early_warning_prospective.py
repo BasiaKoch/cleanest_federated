@@ -1,4 +1,4 @@
-"""Phase 3 Experiment P3 — Prospective validation of the collapse detector.
+"""Phase 3 Experiment P3 - Prospective validation of the collapse detector.
 
 The original Finding 11 (analyse_early_warning_collapse.py) used
 within-mix cross-validation, which is LEAKY (the same experiment
@@ -8,7 +8,7 @@ publishability, we need:
   (b) Comparison to the trivial-baseline (single-feature threshold)
   (c) Operational cost-savings curve
 
-Held-out family: ALL μ-sensitivity runs (mu_sweep_ladder/) — these
+Held-out family: ALL μ-sensitivity runs (mu_sweep_ladder/) - these
 are the cleanest "unseen" experimental regime because the μ
 sensitivity sweep tests a different question than the rest of the
 data (perfect-storm, Li 2020 §5.2, etc.).

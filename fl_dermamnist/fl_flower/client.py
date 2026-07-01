@@ -160,7 +160,7 @@ class FlClient(fl.client.NumPyClient):
                 y = y.to(self.device).view(-1).long()
                 optimizer.zero_grad()
                 loss = self.criterion(self.model(x), y)
-                # GATED — μ=0 path is bit-identical to plain CE (no overhead).
+                # GATED - μ=0 path is bit-identical to plain CE (no overhead).
                 if self.proximal_mu > 0:
                     prox = torch.zeros((), device=self.device)
                     for w, w_g in zip(self.model.parameters(), global_params):
@@ -171,7 +171,7 @@ class FlClient(fl.client.NumPyClient):
                 total_loss += float(loss.item())
                 n_batches += 1
 
-        # Mechanism diagnostic — L2 norm of (post-training - anchor), computed
+        # Mechanism diagnostic - L2 norm of (post-training - anchor), computed
         # over all trainable parameters before the server aggregates. Cheap
         # (one pass over params); returned as a scalar in the fit metrics
         # so the strategy / runner can capture it per (round, client) when

@@ -61,7 +61,7 @@ PY
     echo ""
 }
 
-# (a) current environment (expected: RAY FAILED — reproduces the bug)
+# (a) current environment (expected: RAY FAILED - reproduces the bug)
 ray_try "current-env"
 
 # (b) LD_LIBRARY_PATH stripped (keeps PATH, conda, CUDA_VISIBLE_DEVICES intact)

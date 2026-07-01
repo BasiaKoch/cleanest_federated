@@ -1,7 +1,7 @@
 #!/bin/bash
 # Recovery script for 9 jobs that hit CUDA-busy crashes during today's
 # resubmission batch (2026-05-22). Each crash exited code 1:0 in 18-36
-# seconds during the runner's first .to(device) call — transient HPC GPU
+# seconds during the runner's first .to(device) call - transient HPC GPU
 # contention, not a code bug.
 #
 # Missing jobs grouped by sweep:
@@ -16,7 +16,7 @@
 #
 # Each retry has an independent chance of hitting the same CUDA-busy
 # pattern; if any of these fail again, re-run this script. Sleep between
-# sbatches is intentional (3s) — gives the scheduler time to spread
+# sbatches is intentional (3s) - gives the scheduler time to spread
 # allocations across nodes instead of bursting onto one node.
 set -euo pipefail
 

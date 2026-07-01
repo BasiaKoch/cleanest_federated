@@ -39,7 +39,7 @@ CLASS_NAMES = [
 RARE_CLASS_IDX = (3, 4, 6)
 RARE_CLASS_LABELS = {3: "Dermatofibroma", 4: "Melanoma", 6: "Vascular lesions"}
 
-# Categorical palette — one colour per *predicted* class, with the
+# Categorical palette - one colour per *predicted* class, with the
 # correct (rare) classes at higher saturation so a "correct prediction"
 # segment stands out within each stack.
 PRED_COLORS = [

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Partial-participation sweep — the second canonical axis of system
+# Partial-participation sweep - the second canonical axis of system
 # heterogeneity in the FL literature, complementing the local-epoch
 # heterogeneity already covered by submit_system_het.sh (C0/C1/C2).
 #
@@ -43,7 +43,7 @@
 # for fraction-fit.
 #   • Partition: balanced_paired_7_clients (engineered, as used by
 #     the engineered-partition system-het sweeps)
-#   • Algorithms: FedAvg (μ=0.0), FedProx (μ=0.01) — FedNova excluded
+#   • Algorithms: FedAvg (μ=0.0), FedProx (μ=0.01) - FedNova excluded
 #     per current thesis scope.
 #   • Seeds: 42 123 456 789 999 2024 31337 8675309 161803 271828
 #     (same paired-seed protocol as all other sweeps in this thesis).

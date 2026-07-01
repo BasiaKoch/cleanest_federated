@@ -1,7 +1,7 @@
 """Descriptive peek at the system-heterogeneity sweep progress.
 
 Reports per-(condition, algorithm) macro-F1 mean ± std at whatever
-n is currently on disk. NOT an inferential analysis — no paired
+n is currently on disk. NOT an inferential analysis - no paired
 Wilcoxon, no H2 contrast, no significance claim. Useful when the
 sweeps are still in flight and you want to see "are they finishing
 at plausible numbers?" without biasing the eventual canonical

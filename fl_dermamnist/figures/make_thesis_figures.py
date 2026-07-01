@@ -4,11 +4,11 @@ balanced_paired E-sweep pilot.
 Three multi-panel figures, each grouping closely related findings:
 
   thesis_fig_A_mechanism.png
-    A1) Per-client drift (update-norm) trajectories — engineered 2-client,
+    A1) Per-client drift (update-norm) trajectories - engineered 2-client,
         E=20, seed=42. Smoothed (rolling mean). Shows the proximal term
         restraining the dominant client more than the specialist.
     A2) Mechanism dormancy at E=1 (balanced_paired, seed=42): per-client
-        mean drift FedAvg vs FedProx bars — they are essentially equal,
+        mean drift FedAvg vs FedProx bars - they are essentially equal,
         confirming μ has nothing to do at E=1.
 
   thesis_fig_B_per_class.png
@@ -19,9 +19,9 @@ Three multi-panel figures, each grouping closely related findings:
 
   thesis_fig_C_honesty.png
     C1) Per-seed Δ macro-F1 at E=20 on balanced_paired (n=3): individual
-        points + mean — shows the high seed-to-seed variance.
+        points + mean - shows the high seed-to-seed variance.
     C2) Engineered 2-client (single seed) vs balanced_paired (mean of 3
-        seeds) Δ macro-F1 at E=20, μ=0.01 — illustrates that the engineered
+        seeds) Δ macro-F1 at E=20, μ=0.01 - illustrates that the engineered
         partition shows a larger directional signal than the headline.
 
 All figures saved under results/thesis_figures/. Read-only on results/.
@@ -59,7 +59,7 @@ CLASS_LABEL = {
 
 
 def _load_eng_pilot():
-    """Single-seed engineered pilot — returns (preds, history, norms) per algo."""
+    """Single-seed engineered pilot - returns (preds, history, norms) per algo."""
     out = {}
     for algo in ("fedavg", "fedprox"):
         suffix = "mu0.0_E20_s42" if algo == "fedavg" else "mu0.01_E20_s42"
@@ -73,7 +73,7 @@ def _load_eng_pilot():
 
 
 def _load_esweep_e1():
-    """E=1 balanced_paired pilot — returns history + norms per algo."""
+    """E=1 balanced_paired pilot - returns history + norms per algo."""
     out = {}
     for algo in ("fedavg", "fedprox"):
         suffix = "mu0.0_E1_s42" if algo == "fedavg" else "mu0.01_E1_s42"
@@ -85,7 +85,7 @@ def _load_esweep_e1():
 
 
 def _load_headline_E20():
-    """Headline balanced_paired E=20 — seeds 42/123/456 paired."""
+    """Headline balanced_paired E=20 - seeds 42/123/456 paired."""
     pairs = []
     for seed in (42, 123, 456):
         try:
@@ -103,7 +103,7 @@ def _load_headline_E20():
 
 
 # ============================================================================
-# FIGURE A — MECHANISM (drift trajectories + E=1 dormancy)
+# FIGURE A - MECHANISM (drift trajectories + E=1 dormancy)
 # ============================================================================
 
 def fig_A_mechanism(eng, e1):
@@ -144,7 +144,7 @@ def fig_A_mechanism(eng, e1):
     axL.legend(loc="upper right", fontsize=8, framealpha=0.9)
     axL.grid(alpha=0.3)
 
-    # ----- A2: mechanism dormancy at E=1 — bar chart by client -----
+    # ----- A2: mechanism dormancy at E=1 - bar chart by client -----
     e1_means = {algo: e1[algo]["norms"].groupby("client_id")["update_norm"].mean()
                 for algo in ("fedavg", "fedprox")}
     n_clients = max(len(e1_means["fedavg"]), len(e1_means["fedprox"]))
@@ -176,7 +176,7 @@ def fig_A_mechanism(eng, e1):
 
 
 # ============================================================================
-# FIGURE B — PER-CLASS STORY (Δ F1 + recall vs precision)
+# FIGURE B - PER-CLASS STORY (Δ F1 + recall vs precision)
 # ============================================================================
 
 def fig_B_per_class(eng):
@@ -264,7 +264,7 @@ def fig_B_per_class(eng):
 
 
 # ============================================================================
-# FIGURE C — EFFECT-SIZE HONESTY (seed variance + partition comparison)
+# FIGURE C - EFFECT-SIZE HONESTY (seed variance + partition comparison)
 # ============================================================================
 
 def fig_C_honesty(eng, headline):

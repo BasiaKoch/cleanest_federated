@@ -10,7 +10,7 @@ aggregation is specifically designed to address.
 The local client is `FlClientFedNova` (in `fl_dermamnist/fl_flower/`),
 which is identical to the standard `FlClient` except that it reports
 `tau` (the local SGD step count) via the fit-metrics dict so the
-strategy can compute the momentum-aware normaliser — the L1 norm of
+strategy can compute the momentum-aware normaliser - the L1 norm of
 the cumulative-momentum series (Wang et al. 2020, §3.3):
 
     a_i = sum_{j=1..tau_i} (1 - m^j) / (1 - m)
@@ -337,7 +337,7 @@ def main():
     client_resources = ({"num_cpus": 1, "num_gpus": 1.0 / num_clients}
                         if device_str == "cuda" else {"num_cpus": 1, "num_gpus": 0.0})
 
-    # Use Flower's default ray.init() — RAY_TMPDIR from the SLURM template
+    # Use Flower's default ray.init() - RAY_TMPDIR from the SLURM template
     # is sufficient for the historical working configuration (see
     # submit_two_client_90_10_rare_stress.sh and the existing results that
     # were generated this way).
@@ -374,7 +374,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     sh_tag = "" if args.system_het_mode == "uniform" else f"_sh-{args.system_het_mode}"
     c_tag = "" if abs(args.fraction_fit - 1.0) < 1e-9 else f"_C{args.fraction_fit}"
-    # Per-client-lr tag — prevents filename collision when --lr-per-client
+    # Per-client-lr tag - prevents filename collision when --lr-per-client
     # varies the LR per client. Without this tag, asymmetric-LR FedNova
     # runs overwrite symmetric-LR runs within the same seed.
     if lr_per_client_map is not None:
@@ -389,7 +389,7 @@ def main():
     tc_tag = f"_tauclip{args.tau_clip_min}" if args.tau_clip_min > 0 else ""
     sm_tag = (f"_smom{args.server_momentum:g}"
               if args.server_momentum > 0.0 else "")
-    # Server-LR tag — keeps server-lr probe outputs from overwriting the
+    # Server-LR tag - keeps server-lr probe outputs from overwriting the
     # baseline (server_lr=1.0 ⇒ empty tag ⇒ byte-identical filenames).
     slr_tag = (f"_slr{args.server_lr:g}"
                if abs(args.server_lr - 1.0) > 1e-12 else "")
@@ -450,7 +450,7 @@ def main():
             "system_het": sh_cfg.to_dict(),
             "elapsed_s": elapsed,            # legacy field name
             "wall_clock_seconds": elapsed,   # canonical (audit fix)
-            # Runtime provenance (CP3.2 / Rank-4 patch — git SHA,
+            # Runtime provenance (CP3.2 / Rank-4 patch - git SHA,
             # hostname, torch/python versions, timestamps, etc.)
             **collect_runtime_provenance(run_started_at),
         }, f, indent=2)

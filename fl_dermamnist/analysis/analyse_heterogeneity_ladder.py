@@ -75,7 +75,7 @@ CLASS_NAMES = [
 RARE_CLASS_INDICES = (3, 4, 6)  # dermato, melanoma, vascular
 MELANOMA_IDX = 4
 
-# Ladder spec — kept in sync with submit_ladder_pilot.sh.
+# Ladder spec - kept in sync with submit_ladder_pilot.sh.
 LADDER = [
     ("L0", "two_client_50_50_stratified_iid",          "IID control",       0.0,  0.0),
     ("L1", "two_client_86_14_quantity_only_stratified","Quantity-only",     1.0,  0.0),

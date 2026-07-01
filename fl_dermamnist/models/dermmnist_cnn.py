@@ -1,4 +1,4 @@
-"""DermMNISTCNN — headline FedAvg/FedProx model.
+"""DermMNISTCNN - headline FedAvg/FedProx model.
 
 Architecture:
     Conv(3 → 32)   + GroupNorm(4, 32)   + ReLU + MaxPool
@@ -10,7 +10,7 @@ Architecture:
     Linear(128 → 7)
 
 GroupNorm (not BatchNorm) is used because BN's per-batch statistics diverge
-across heterogeneous federated clients — its running buffers leak distribution
+across heterogeneous federated clients - its running buffers leak distribution
 information between rounds and bias the aggregated model. GroupNorm has no
 running statistics and is computed independently per sample, making it the
 recommended normalization for FL (see Hsieh et al. 2020 "The Non-IID Data

@@ -1,5 +1,5 @@
 #!/bin/bash
-# pre_submission_check.sh — verify everything is ready for HPC submission.
+# pre_submission_check.sh - verify everything is ready for HPC submission.
 #
 # Runs the same checks both locally (before committing to a long queue)
 # and on the HPC login node (before sbatch). Exits 0 only if every check
@@ -97,7 +97,7 @@ else:
     print(v)
 \""
 
-# 5. CUDA (informational only; does not fail if absent — local checks
+# 5. CUDA (informational only; does not fail if absent - local checks
 # typically run on CPU machines)
 echo -n "  [cuda_visibility               ] "
 python -c "import torch; print('CUDA' if torch.cuda.is_available() else 'cpu-only')" 2>/dev/null || echo "(torch import failed; see above)"

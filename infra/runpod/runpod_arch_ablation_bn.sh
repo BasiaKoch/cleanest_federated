@@ -15,7 +15,7 @@
 #   - Same hyperparameters as the headline (E=20, R=150, lr=0.01, m=0.9, B=32).
 #   - All runs use --model-variant bn so the runner instantiates
 #     DermMNISTCNN_BN (BatchNorm2d in place of GroupNorm).
-#   - Outputs saved to fl_dermamnist/results/arch_ablation_bn/ — a separate
+#   - Outputs saved to fl_dermamnist/results/arch_ablation_bn/ - a separate
 #     directory from the headline so the two variants cannot be mixed in
 #     downstream analysis. Filenames additionally carry an '_arch-bn' tag
 #     so a stray file can always be identified as BN-variant.

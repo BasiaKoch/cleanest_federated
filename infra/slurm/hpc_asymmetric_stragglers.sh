@@ -1,5 +1,5 @@
 #!/bin/bash
-# Cambridge HPC SLURM submission — Li 2020 §5.2 asymmetric straggler protocol.
+# Cambridge HPC SLURM submission - Li 2020 §5.2 asymmetric straggler protocol.
 #
 # WHAT THIS SUBMITS
 # -----------------
@@ -7,7 +7,7 @@
 #          under random_stragglers (4 of 7 clients per round at E in {1..19}).
 # Outputs to fl_dermamnist/results/system_het_random_asymmetric/.
 #
-# WHY ONLY FEDAVG (and not FedProx) — RUN-TIME EQUIVALENCE
+# WHY ONLY FEDAVG (and not FedProx) - RUN-TIME EQUIVALENCE
 # ---------------------------------------------------------
 # The FedProx arm of the Li 2020 §5.2 comparison is FedProx with
 # --drop-stragglers=False on the SAME partition + same straggler schedule.
@@ -61,7 +61,7 @@ OUT=fl_dermamnist/results/system_het_random_asymmetric
 E=20
 PAIRED=balanced_paired_7_clients
 
-# Paired-seed protocol — same 10 seeds as the headline + system_het sweeps
+# Paired-seed protocol - same 10 seeds as the headline + system_het sweeps
 SEEDS=(42 123 456 789 999 2024 31337 161803 271828 8675309)
 
 cd "$REPO"

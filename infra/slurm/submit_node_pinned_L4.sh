@@ -1,10 +1,10 @@
 #!/bin/bash
-# Node-pinned 3-seed L4 — variance isolation experiment.
+# Node-pinned 3-seed L4 - variance isolation experiment.
 #
 # Tests whether the L4 FedProx-vs-FedAvg deficit observed at single seed
 # (FedAvg 0.518, FedProx 0.492, Δ = -0.026) is a real algorithmic effect
 # or an artefact of cross-node CUDA non-determinism. The original ladder
-# pilot ran FedAvg on gpu-q-13 and FedProx on gpu-q-40 — different
+# pilot ran FedAvg on gpu-q-13 and FedProx on gpu-q-40 - different
 # physical GPUs, same nominal seed. The cross-run macro-F1 spread on
 # seed 42 across HPC nodes is ≈ 0.04, larger than the algorithm gap.
 #
@@ -37,7 +37,7 @@
 #
 # Note on the node choice: gpu-q-13 was where the original FedAvg run
 # succeeded at L4. If that node is congested or unavailable, point
-# NODELIST at any single ampere node — the experiment's only requirement
+# NODELIST at any single ampere node - the experiment's only requirement
 # is that all 6 jobs share the same physical hardware.
 set -uo pipefail
 

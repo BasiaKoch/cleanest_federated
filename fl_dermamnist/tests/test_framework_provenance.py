@@ -57,7 +57,7 @@ def test_every_alias_resolves_to_a_canonical_entry() -> None:
     """An alias key MUST map to a value already in CANONICAL_FRAMEWORKS.
 
     A typo on the value side would let callers produce a non-canonical
-    label by passing a valid alias — exactly the failure mode the alias
+    label by passing a valid alias - exactly the failure mode the alias
     table exists to prevent.
     """
     for alias, target in FRAMEWORK_ALIASES.items():

@@ -1,20 +1,20 @@
-"""Analyse the Li 2020 §5.2 asymmetric straggler protocol — 3-arm decomposition.
+"""Analyse the Li 2020 §5.2 asymmetric straggler protocol - 3-arm decomposition.
 
 The Li et al. 2020 §5.2 comparison is widely cited as the canonical
 FedProx-wins-clearly result, but it conflates two effects that this
 script disentangles:
 
-  Arm 1 — FedAvg --drop-stragglers
+  Arm 1 - FedAvg --drop-stragglers
            reads from results/system_het_random_asymmetric/
            filenames end with '_drop_s<seed>.json'
            provenance: drop_stragglers=True
 
-  Arm 2 — FedAvg without drop (= mu=0 FedProx, includes partial work)
+  Arm 2 - FedAvg without drop (= mu=0 FedProx, includes partial work)
            reads from results/system_het_random/
            filenames end with '_s<seed>.json' (no _drop tag)
            provenance: drop_stragglers=False
 
-  Arm 3 — FedProx mu=0.01 (includes partial work, with proximal anchor)
+  Arm 3 - FedProx mu=0.01 (includes partial work, with proximal anchor)
            reads from results/system_het_random/
            provenance: drop_stragglers=False (algorithm=fedprox)
 
@@ -61,7 +61,7 @@ PT_DIR   = "fl_dermamnist/results/headline"
 _ASYM_FEDAVG_PAT = re.compile(
     r"test_at_best_fedavg_mu0\.0_E20_sh-random_stragglers_drop_s(?P<seed>\d+)\.json"
 )
-# SYMMETRIC directory — no _drop tag permitted.
+# SYMMETRIC directory - no _drop tag permitted.
 _SYM_PAT = re.compile(
     r"test_at_best_(?P<algo>fedavg|fedprox)_mu[0-9.]+_E20"
     r"_sh-random_stragglers_s(?P<seed>\d+)\.json"
@@ -137,7 +137,7 @@ def load_sym(algo: str) -> dict:
 
 
 def load_pt(algo: str) -> dict:
-    """Pure-PyTorch headline (no system-het) — for cross-runtime reference."""
+    """Pure-PyTorch headline (no system-het) - for cross-runtime reference."""
     out = {}
     if not os.path.isdir(PT_DIR):
         return out

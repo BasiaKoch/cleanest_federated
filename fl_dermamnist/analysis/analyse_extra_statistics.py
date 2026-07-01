@@ -2,7 +2,7 @@
 
   1. Sign test (independent of magnitude / normality assumptions)
   2. Hodges-Lehmann estimate of paired difference (median of Walsh averages)
-  3. Leave-one-seed-out (LOSO) Wilcoxon — does the result survive removing any
+  3. Leave-one-seed-out (LOSO) Wilcoxon - does the result survive removing any
      single seed, especially the largest positive contributor?
   4. Holm-Bonferroni-corrected per-class p-values
 

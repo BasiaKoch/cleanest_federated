@@ -1,4 +1,4 @@
-"""Convergence-curve plots — multi-panel-style multi-panel figures.
+"""Convergence-curve plots - multi-panel-style multi-panel figures.
 
 Produces 4 figures using a clean multi-panel layout suitable for
 federated-learning result reporting:
@@ -27,7 +27,7 @@ Outputs to:
     results/thesis_ready/figures/F4_partition_convergence.{pdf,png}
 
 Visual style:
-    comparable-thesis-inspired palette — soft mint-green for FedAvg, dark blue for
+    comparable-thesis-inspired palette - soft mint-green for FedAvg, dark blue for
     FedProx, warm brown for FedNova, deep slate for centralised reference.
     Mean ± SEM bands across 10 paired seeds (more rigorous than the
     single-seed plots typical in MPhil-scale FL theses, which lack

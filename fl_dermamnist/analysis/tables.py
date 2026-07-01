@@ -82,7 +82,7 @@ def _discover(results_dir: Path) -> pd.DataFrame:
 
 
 def _rank_biserial(diffs: np.ndarray) -> float:
-    """Effect size for paired signed-rank — interpretable on [-1, 1]."""
+    """Effect size for paired signed-rank - interpretable on [-1, 1]."""
     d = diffs[diffs != 0]
     if len(d) == 0:
         return float("nan")

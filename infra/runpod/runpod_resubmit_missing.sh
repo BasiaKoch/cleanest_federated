@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runpod sequential runner — finalises the missing/corrupted jobs across
+# Runpod sequential runner - finalises the missing/corrupted jobs across
 # the Flower-runtime sweeps after the seeding.py fix landed.
 #
 # Idempotent: each job is skipped if its test_at_best_*.json already exists
@@ -185,7 +185,7 @@ echo "==== Block 4/4 : statistical-het bad-s8675309 reruns (5 jobs, ~3.8h) ===="
 # iid (2 jobs)
 run_flower fedavg  0.0  8675309 fl_dermamnist/results/iid                  iid_7_clients               uniform ""
 run_flower fedprox 0.01 8675309 fl_dermamnist/results/iid                  iid_7_clients               uniform ""
-# dirichlet_alpha01 (1 job — fedavg s8675309 is already valid on disk)
+# dirichlet_alpha01 (1 job - fedavg s8675309 is already valid on disk)
 run_flower fedprox 0.01 8675309 fl_dermamnist/results/dirichlet_a01        dirichlet_alpha01_7_clients uniform ""
 # specialist (2 jobs)
 run_flower fedavg  0.0  8675309 fl_dermamnist/results/specialist_partition specialist_7_clients        uniform ""

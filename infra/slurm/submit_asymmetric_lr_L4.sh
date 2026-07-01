@@ -1,10 +1,10 @@
 #!/bin/bash
-# Experiment D1 — Asymmetric learning-rate protocol on L4 (NOVEL extension).
+# Experiment D1 - Asymmetric learning-rate protocol on L4 (NOVEL extension).
 #
 # Extends Li 2020 §5.2 from *asymmetric local epochs* to *asymmetric
 # learning rates*. Tests whether the FedProx-vs-FedNova mechanism
 # distinction (drift-damping vs objective-inconsistency correction)
-# extends to LR asymmetry — a regime where Wang 2020's FedNova theory
+# extends to LR asymmetry - a regime where Wang 2020's FedNova theory
 # does NOT directly apply (FedNova proves correction for unequal τ_i
 # only).
 #
@@ -18,12 +18,12 @@
 #     varies per-client efficiency but the LR-asymmetry FedProx vs
 #     FedNova mechanism comparison is absent from the FL literature.
 #
-# Design — 3 LR-ratio × 3 algorithms × 3 seeds = 27 jobs on L4:
+# Design - 3 LR-ratio × 3 algorithms × 3 seeds = 27 jobs on L4:
 #
 #   LR pairs (C0, C1):
-#     (0.01, 0.01)   ratio 1:1  — symmetric baseline
-#     (0.01, 0.005)  ratio 2:1  — moderate LR asymmetry
-#     (0.01, 0.002)  ratio 5:1  — severe LR asymmetry
+#     (0.01, 0.01)   ratio 1:1  - symmetric baseline
+#     (0.01, 0.005)  ratio 2:1  - moderate LR asymmetry
+#     (0.01, 0.002)  ratio 5:1  - severe LR asymmetry
 #
 #   Algorithms:
 #     FedAvg                 (no drift control)

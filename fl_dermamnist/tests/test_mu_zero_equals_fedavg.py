@@ -11,7 +11,7 @@ off entirely (`if proximal_mu > 0:`). With identical:
 …the two runs should produce numerically identical per-round metrics AND
 final aggregated state_dicts.
 
-We test this directly on synthetic data — no DermMNIST dependency — to keep
+We test this directly on synthetic data - no DermMNIST dependency - to keep
 the test deterministic and fast (<5s).
 """
 from __future__ import annotations

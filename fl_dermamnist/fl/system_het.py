@@ -1,4 +1,4 @@
-"""System heterogeneity utilities — per-client per-round local-epoch schedules.
+"""System heterogeneity utilities - per-client per-round local-epoch schedules.
 
 The original FedProx motivation (Li et al., 2020, MLSys) was system
 heterogeneity: clients have heterogeneous compute capability, so cannot all

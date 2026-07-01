@@ -10,7 +10,7 @@
 #SBATCH --output=/home/bk489/federated_clean/cleanest_federated/fl_dermamnist/logs/%x_%j.out
 #SBATCH --error=/home/bk489/federated_clean/cleanest_federated/fl_dermamnist/logs/%x_%j.err
 
-# Single-process SLURM template — generic wrapper for non-federated
+# Single-process SLURM template - generic wrapper for non-federated
 # PyTorch jobs (local-only baselines, fine-tuning, centralised training,
 # etc.). Does NOT use Flower or Ray, so it side-steps the GCS-startup
 # issues seen with the federated runs. Reuses the same retry-on-CUDA-busy

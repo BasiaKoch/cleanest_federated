@@ -73,7 +73,7 @@ def _avg_confusion_across_seeds(npz_paths: list[Path]) -> np.ndarray:
 
 
 # ----------------------------------------------------------------
-# Figure A: D1 LR asymmetry — where do rare-class inputs go?
+# Figure A: D1 LR asymmetry - where do rare-class inputs go?
 # Layout: 3 cols (FedAvg, FedProx, FedNova) × 2 rows (1:1 symmetric, 5:1 asymmetric)
 # ----------------------------------------------------------------
 print("=" * 80)
@@ -89,7 +89,7 @@ def _d1_files(algo: str, mu_str: str, lr_pc: str | None) -> list[Path]:
     files = []
     for seed in SEEDS:
         if lr_pc is None:
-            # Symmetric — no lr-per-client tag
+            # Symmetric - no lr-per-client tag
             f = D1_DIR / f"test_predictions_{algo}_mu{mu_str}_E20_s{seed}.npz"
         else:
             f = D1_DIR / f"test_predictions_{algo}_mu{mu_str}_E20_lrPC-{lr_pc}_s{seed}.npz"
@@ -148,7 +148,7 @@ plt.close(fig)
 print(f"Wrote {OUT_FIG/'F_l4_confusion_d1_5_1.pdf'}")
 
 # ----------------------------------------------------------------
-# Figure B: Four-condition L4 — 4 conditions side by side
+# Figure B: Four-condition L4 - 4 conditions side by side
 # ----------------------------------------------------------------
 print()
 print("=" * 80)

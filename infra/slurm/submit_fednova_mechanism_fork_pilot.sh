@@ -30,7 +30,7 @@
 #
 # Compute: 5 arms x 5 seeds = 25 runs x ~14 min on A100 ~= 6 GPU-h.
 #
-# SAFETY: DRY-RUN by default — prints the sbatch commands and DOES NOT submit.
+# SAFETY: DRY-RUN by default - prints the sbatch commands and DOES NOT submit.
 # To actually submit on the cluster:   DRY_RUN=0 bash infra/slurm/submit_fednova_mechanism_fork_pilot.sh
 set -uo pipefail
 

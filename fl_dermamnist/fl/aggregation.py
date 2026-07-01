@@ -17,7 +17,7 @@ def weighted_average_state_dicts(
     """Compute weighted average over a list of state_dicts.
 
     For floating-point tensors, applies the size-weighted convex combination.
-    For integer buffers (rare but possible — GroupNorm has none, our model has
+    For integer buffers (rare but possible - GroupNorm has none, our model has
     none, so this is defensive), takes the value from the FIRST client
     (deterministic fallback).
     """

@@ -140,10 +140,10 @@ def main():
         "lr": args.lr, "momentum": args.momentum, "batch_size": args.batch_size,
         "device": args.device, "elapsed_s": elapsed,
         **test_metrics,
-        # Runtime provenance (CP3.2 / Rank-4 patch — git SHA, hostname,
+        # Runtime provenance (CP3.2 / Rank-4 patch - git SHA, hostname,
         # torch/python versions, timestamps, etc.) Note: centralised is
         # not federated, so no framework / runner_script field is
-        # required — the "regime": "centralised" key already identifies
+        # required - the "regime": "centralised" key already identifies
         # this path.
         **collect_runtime_provenance(run_started_at),
     }

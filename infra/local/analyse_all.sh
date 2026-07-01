@@ -1,5 +1,5 @@
 #!/bin/bash
-# analyse_all.sh — dispatch analysis for every populated thesis result
+# analyse_all.sh - dispatch analysis for every populated thesis result
 # directory in the current experiment matrix.
 #
 # Workflow:

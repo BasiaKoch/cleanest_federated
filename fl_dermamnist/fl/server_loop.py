@@ -50,7 +50,7 @@ def set_all_seeds(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    # Deterministic algorithms — slightly slower but correct
+    # Deterministic algorithms - slightly slower but correct
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -135,7 +135,7 @@ def run_fl(
     `test_metrics` (computed only at the best-val checkpoint).
 
     Args:
-        cfg: FLConfig — every algorithmic setting comes from here.
+        cfg: FLConfig - every algorithmic setting comes from here.
         model_builder: zero-arg callable that returns a fresh model. The SAME
                        seed before constructing the global model AND the same
                        builder must be used across paired FedAvg/FedProx runs.
@@ -151,7 +151,7 @@ def run_fl(
     # doesn't perturb the paired-seed protocol.
     criterion = _build_criterion(cfg, train_labels, device)
 
-    # 1) GLOBAL MODEL INITIALIZATION — single source of randomness, IDENTICAL
+    # 1) GLOBAL MODEL INITIALIZATION - single source of randomness, IDENTICAL
     # for any pair of (FedAvg, FedProx) runs that share cfg.seed.
     global_model = model_builder().to(device)
 
@@ -159,7 +159,7 @@ def run_fl(
     if num_clients == 0:
         raise ValueError("client_indices is empty")
 
-    # 2) CLIENT SAMPLING SCHEDULE — paired across algorithms via a dedicated RNG.
+    # 2) CLIENT SAMPLING SCHEDULE - paired across algorithms via a dedicated RNG.
     # Use a derived RNG so it doesn't interfere with PyTorch RNG that drives
     # parameter init/dropout.
     sampling_rng = np.random.default_rng(seed=cfg.seed + 9_000_001)
@@ -191,7 +191,7 @@ def run_fl(
 
     # ------------------------------------------------------------------ rounds
     for r in range(1, cfg.num_rounds + 1):
-        # 3) FREEZE GLOBAL — snapshot global params for the proximal term and
+        # 3) FREEZE GLOBAL - snapshot global params for the proximal term and
         # also as the "starting point" each sampled client loads.
         global_weights_frozen = freeze_global_weights(global_model)   # ONCE per round
         global_state = copy.deepcopy(global_model.state_dict())
@@ -199,7 +199,7 @@ def run_fl(
         # Sampled clients for this round
         sampled = sampled_per_round[r - 1]
 
-        # 4) LOCAL TRAINING — paired loaders per (seed, round, cid).
+        # 4) LOCAL TRAINING - paired loaders per (seed, round, cid).
         local_state_dicts: List[Dict[str, torch.Tensor]] = []
         local_weights_for_agg: List[int] = []
         round_train_losses: List[float] = []
@@ -220,7 +220,7 @@ def run_fl(
                 batch_size=min(cfg.batch_size, max(1, len(client_subset))),
                 shuffle=True,
                 generator=gen,
-                num_workers=0,         # deterministic — single process
+                num_workers=0,         # deterministic - single process
                 drop_last=False,
             )
 
@@ -239,7 +239,7 @@ def run_fl(
                 lr=cfg.lr,
                 momentum=cfg.momentum,
                 weight_decay=cfg.weight_decay,
-                # GATED — μ=0 path is identical to plain FedAvg by construction.
+                # GATED - μ=0 path is identical to plain FedAvg by construction.
                 proximal_mu=float(cfg.mu),
                 global_weights_frozen=(global_weights_frozen if cfg.mu > 0 else None),
                 device=device,
@@ -251,7 +251,7 @@ def run_fl(
             round_train_losses.append(stats["train_loss"])
             round_train_sizes.append(len(client_indices[cid]))
 
-            # 4b) DRIFT DIAGNOSTIC — L2 norm of (post-training - anchor),
+            # 4b) DRIFT DIAGNOSTIC - L2 norm of (post-training - anchor),
             # computed over all floating-point parameter tensors. Computed
             # BEFORE aggregation so each client's reading reflects its own
             # drift, not the post-averaged residual. Gated on cfg.log_update_norms
@@ -271,11 +271,11 @@ def run_fl(
                     "local_epochs": int(client_local_epochs),
                 })
 
-        # 5) AGGREGATION — weighted by client dataset size
+        # 5) AGGREGATION - weighted by client dataset size
         new_global_state = weighted_average_state_dicts(local_state_dicts, local_weights_for_agg)
         global_model.load_state_dict(new_global_state)
 
-        # 6) VALIDATION — every round
+        # 6) VALIDATION - every round
         val = evaluate(global_model, val_loader, device, num_classes=cfg.num_classes)
 
         # Weighted train loss (size-weighted across sampled clients)
@@ -299,7 +299,7 @@ def run_fl(
             row[f"val_f1_class_{c}"] = float(f1c)
         history_rows.append(row)
 
-        # 7) BEST-VAL CHECKPOINTING — never tune on test
+        # 7) BEST-VAL CHECKPOINTING - never tune on test
         if val["macro_f1"] > best_val_macro_f1:
             best_val_macro_f1 = val["macro_f1"]
             best_state_dict = copy.deepcopy(global_model.state_dict())
@@ -379,7 +379,7 @@ def save_run_outputs(
     un_df = result.get("update_norms")
     if un_df is not None and len(un_df) > 0:
         un_df.to_csv(out / f"client_update_norms_{stem}.csv", index=False)
-    # Best-val test metrics (single row) — include full provenance
+    # Best-val test metrics (single row) - include full provenance
     if result["test_metrics"] is not None:
         payload = {
             **result["test_metrics"],
@@ -387,7 +387,7 @@ def save_run_outputs(
             "system_het_schedule_summary":
                 result.get("system_het_schedule_summary"),
         }
-        # Provenance fields not carried by FLConfig — partition, image
+        # Provenance fields not carried by FLConfig - partition, image
         # size, dataset path, framework, loss choice. Set by the caller.
         if extra_metadata:
             for k, v in extra_metadata.items():

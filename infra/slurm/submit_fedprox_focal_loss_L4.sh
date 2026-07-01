@@ -1,5 +1,5 @@
 #!/bin/bash
-# Phase 3 Experiment P4 — Extend FedProx × loss compositionality 2×3
+# Phase 3 Experiment P4 - Extend FedProx × loss compositionality 2×3
 # with focal loss column.
 #
 # B2 established that FedProx is INERT on top of weighted-CE
@@ -8,14 +8,14 @@
 #
 # Literature gap (DeCaF short paper / paper section target):
 #   - The 2026 Confusion-Calibrated CE paper (S095070512600239X) verbally
-#     states "FedProx remains class-agnostic" — but doesn't empirically
+#     states "FedProx remains class-agnostic" - but doesn't empirically
 #     isolate this across loss families
 #   - FedLC (arXiv:2209.00189, 2022) tests logit calibration vs FedAvg
-#     only — no FedProx interaction
+#     only - no FedProx interaction
 #   - FedIIC (MICCAI 2023, doi 10.1007/978-3-031-43895-0_65) addresses
 #     class imbalance but uses a specialised loss, not FedProx
 #
-# Design — 6 new runs (extends B2's 12 to 2×3 = 18 total):
+# Design - 6 new runs (extends B2's 12 to 2×3 = 18 total):
 #
 #   Add Focal-γ=2 column to the existing 2×2:
 #     {FedAvg, FedProx} × {Focal-γ2} × 3 seeds = 6 jobs
@@ -44,7 +44,7 @@ SEEDS=(42 123 456)
 DRY_RUN="${DRY_RUN:-0}"
 
 FLOWER_TPL="$REPO_ROOT/infra/slurm/slurm_template_flower.sh"
-# Same output dir as B2 — the filename-collision fix means new files
+# Same output dir as B2 - the filename-collision fix means new files
 # will have a "_loss-focal" tag distinct from CE / weighted-CE
 OUTDIR="fl_dermamnist/results/fedprox_weighted_ce_L4"
 mkdir -p "$REPO_ROOT/$OUTDIR"

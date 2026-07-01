@@ -41,7 +41,7 @@ def test_no_submit_script_references_deleted_slurm_template() -> None:
     """No submit_*.sh may reference the deleted pure-PyTorch template.
 
     The check uses a negative-lookahead regex so that ``slurm_template_*.sh``
-    (the Flower templates) are NOT flagged — only the literal bare
+    (the Flower templates) are NOT flagged - only the literal bare
     filename ``slurm_template.sh`` triggers a violation.
     """
     pat = re.compile(r"slurm_template\.sh(?![_a-zA-Z])")

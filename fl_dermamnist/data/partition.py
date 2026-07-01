@@ -55,7 +55,7 @@ CLASS_NAMES: Tuple[str, ...] = (
 NUM_CLASSES = len(CLASS_NAMES)
 
 
-# Mode 1 — pathological split: each client gets a fixed set of classes ONLY.
+# Mode 1 - pathological split: each client gets a fixed set of classes ONLY.
 SIMPLE_PATHOLOGICAL_3_CLIENTS: Tuple[Tuple[int, ...], ...] = (
     (5, 4),         # client 0
     (2, 1, 0),      # client 1
@@ -63,12 +63,12 @@ SIMPLE_PATHOLOGICAL_3_CLIENTS: Tuple[Tuple[int, ...], ...] = (
 )
 
 
-# Mode 5 — fully paired balanced partition.
+# Mode 5 - fully paired balanced partition.
 #
 # Refinement of Mode 3 (balanced_specialist_7_clients) in which EVERY minority
 # class is owned by exactly two clients, eliminating singleton specialists.
 # Designed to maximise FedProx's expected advantage: the proximal term only
-# delivers gains when multiple clients carry the same class but disagree —
+# delivers gains when multiple clients carry the same class but disagree -
 # under the previous mode, half the rare classes had a single owner, denying
 # FedProx the mechanism it needs.
 #
@@ -85,11 +85,11 @@ BALANCED_PAIRED_7_CLIENTS_SPEC: List[Dict] = [
 ]
 
 
-# Mode 6 — specialist (one-client-per-minority-class) partition.
+# Mode 6 - specialist (one-client-per-minority-class) partition.
 #
 # Sister partition to BALANCED_PAIRED_7_CLIENTS, intended to defuse the
 # "engineered partition favours FedProx" reviewer objection. Every minority
-# class is owned by EXACTLY ONE client — no co-trained pairs. nevi is
+# class is owned by EXACTLY ONE client - no co-trained pairs. nevi is
 # distributed across the six specialty clients in unequal shares so that
 # every client's total n_i matches the corresponding client in
 # BALANCED_PAIRED_7_CLIENTS_SPEC EXACTLY, and a single nevi-only generalist
@@ -112,14 +112,14 @@ SPECIALIST_7_CLIENTS_SPEC: List[Dict] = [
 ]
 
 
-# Mode 7 — engineered 2-client 90/10 rare-class stress test.
+# Mode 7 - engineered 2-client 90/10 rare-class stress test.
 # Two-client, class-disjoint partition (~86/14) for the L4 mechanism
 # experiments: rare-class signal is concentrated entirely on the minority client.
 #
-#   Client 0 (~86%): the four common classes in full — melanocytic_nevi (5),
+#   Client 0 (~86%): the four common classes in full - melanocytic_nevi (5),
 #     benign_keratosis-like (2), actinic_keratoses (0), basal_cell_carcinoma (1);
 #     no melanoma, dermatofibroma, or vascular_lesions.
-#   Client 1 (~14%): 100% of the three low-count classes — melanoma (4),
+#   Client 1 (~14%): 100% of the three low-count classes - melanoma (4),
 #     dermatofibroma (3), vascular_lesions (6); none of Client 0's classes.
 #
 # Every class lives on exactly one client, so the majority client carries no
@@ -130,16 +130,16 @@ SPECIALIST_7_CLIENTS_SPEC: List[Dict] = [
 # Per-class allocations are hardcoded and validated at runtime against the
 # DermaMNIST training-set counts (228+359+769+80+779+4693+99 = 7007).
 TWO_CLIENT_90_10_RARE_STRESS_SPEC: List[Dict] = [
-    # Client 0 — general hospital, common-class dominated, NO rare/critical.
+    # Client 0 - general hospital, common-class dominated, NO rare/critical.
     {"id": 0, "name": "general_hospital_dominant",
      "per_class": {0: 228, 1: 359, 2: 769, 5: 4693}},
-    # Client 1 — rare-specialist, holds 100% of melanoma + dermato + vascular.
+    # Client 1 - rare-specialist, holds 100% of melanoma + dermato + vascular.
     {"id": 1, "name": "rare_specialist",
      "per_class": {3: 80, 4: 779, 6: 99}},
 ]
 
 
-# Mode 4 — quantity-skewed specialist 7 clients.
+# Mode 4 - quantity-skewed specialist 7 clients.
 #
 # Realistic medical referral network: 3 size-skewed hospital-style clients
 # (C0–C2) hold most of the volume but share several common classes; 4 small
@@ -167,7 +167,7 @@ QUANTITY_SKEW_IMPROVED_SPEC: List[Dict] = [
 ]
 
 
-# Mode 3 — FedProx-favourable balanced partition.
+# Mode 3 - FedProx-favourable balanced partition.
 #
 # 7 equal-size clients (~1000 samples each), all sharing the same background
 # of class 5 (melanocytic_nevi), each specialising in ONE other class. Designed
@@ -186,7 +186,7 @@ BALANCED_SPECIALIST_7_CLIENTS: List[Dict] = [
 ]
 
 
-# Mode 2 — medical skew with both DOMINANT and SECONDARY classes.
+# Mode 2 - medical skew with both DOMINANT and SECONDARY classes.
 #
 # For each client we list:
 #   (dominant_classes, secondary_classes, target_total_fraction_of_dominant)
@@ -253,7 +253,7 @@ def simple_pathological_3_clients(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Mode 1 — each client gets a fixed disjoint set of classes.
+    """Mode 1 - each client gets a fixed disjoint set of classes.
 
     Args:
         labels: length-N array of integer class IDs (0..6).
@@ -300,7 +300,7 @@ def medical_skew_7_clients(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Mode 2 — realistic medical-style skew with overlap.
+    """Mode 2 - realistic medical-style skew with overlap.
 
     Each client gets a controlled share of one or two dominant classes plus a
     smaller share of secondary classes. Remaining unallocated samples are
@@ -324,19 +324,19 @@ def medical_skew_7_clients(
 
     for spec in MEDICAL_SKEW_7_CLIENTS:
         cid = spec["id"]
-        # Dominant classes — take a large share of what's still available
+        # Dominant classes - take a large share of what's still available
         for c in spec["dominant"]:
             remaining = len(pools[c]) - pool_cursors[c]
             n = int(round(remaining * spec["dominant_share"]))
             clients[cid].extend(take(c, n).tolist())
-        # Secondary classes — small share to give the client some overlap
+        # Secondary classes - small share to give the client some overlap
         for c in spec["secondary"]:
             remaining = len(pools[c]) - pool_cursors[c]
             n = int(round(remaining * spec["secondary_share"]))
             clients[cid].extend(take(c, n).tolist())
 
     # Route unallocated samples to HOSPITAL clients only (0, 1, 2). This
-    # preserves specialist clients' modal class — otherwise the abundance of
+    # preserves specialist clients' modal class - otherwise the abundance of
     # mel_nevi (class 5) would swamp every specialist's small share.
     hospital_ids = [0, 1, 2]
     rng_left = np.random.default_rng(seed + 9001)
@@ -356,10 +356,10 @@ def balanced_specialist_7_clients(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Mode 3 — equal-size specialists. FedProx-favourable partition.
+    """Mode 3 - equal-size specialists. FedProx-favourable partition.
 
     7 clients, each ~1000 samples. Composition per client:
-      - 1/7 share of class 5 (mel_nevi) — uniform background
+      - 1/7 share of class 5 (mel_nevi) - uniform background
       - Their full allocated share of one specialty class (or pair, for C6)
 
     Aggregation weights are ~uniform across clients (each ~14%), so per-client
@@ -426,13 +426,13 @@ def balanced_paired_7_clients(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Mode 5 — every minority class is owned by exactly 2 clients.
+    """Mode 5 - every minority class is owned by exactly 2 clients.
 
     Each client gets a near-equal mel_nevi background plus two paired-specialty
     fragments (or only nevi for the general client). Designed to maximise
     FedProx's advantage on the per-class drift mechanism: with every rare
     class held by two clients, the proximal term has consensus-finding work
-    to do everywhere — no singleton ownership.
+    to do everywhere - no singleton ownership.
     """
     labels_arr = np.asarray(labels, dtype=np.int64).reshape(-1)
     _assert_labels_valid(labels_arr)
@@ -476,7 +476,7 @@ def specialist_7_clients(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Mode 6 — every minority class is owned by EXACTLY ONE client.
+    """Mode 6 - every minority class is owned by EXACTLY ONE client.
 
     The sister partition to :func:`balanced_paired_7_clients`, designed to
     defuse the "engineered partition favours FedProx" reviewer objection.
@@ -549,7 +549,7 @@ def two_client_90_10_rare_stress(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Mode 7 — engineered 2-client 90/10 rare-class stress test.
+    """Mode 7 - engineered 2-client 90/10 rare-class stress test.
 
     Hardcoded per-class allocation following ``TWO_CLIENT_90_10_RARE_STRESS_SPEC``:
       Client 0 (~86%): all actinic (0), all basal (1), all benign_kerat (2),
@@ -559,7 +559,7 @@ def two_client_90_10_rare_stress(
 
     The partition is class-disjoint: every class lives on exactly one
     client. Designed to maximally stress FedAvg's sample-count-weighted
-    aggregation — Client 0 carries 86% of the gradient weight but has
+    aggregation - Client 0 carries 86% of the gradient weight but has
     never seen a melanoma sample. FedProx's proximal term should restrain
     Client 0's drift toward a "kill the melanoma class" classifier.
 
@@ -624,7 +624,7 @@ def two_client_90_10_rare_stress(
 
 
 # ============================================================
-# Heterogeneity ladder — controlled 2-client partitions
+# Heterogeneity ladder - controlled 2-client partitions
 # ============================================================
 #
 # A four-level monotone ladder built on the same 2-client topology as
@@ -641,13 +641,13 @@ def two_client_90_10_rare_stress(
 #     best-validation checkpoint)
 #   * are validated by ``_validate()`` for overlap-free / full-coverage.
 #
-# Level 0  two_client_50_50_stratified_iid     —  IID control
-# Level 1  two_client_86_14_quantity_only_     —  quantity skew only
+# Level 0  two_client_50_50_stratified_iid     -  IID control
+# Level 1  two_client_86_14_quantity_only_     -  quantity skew only
 #          stratified                             (each class split 86/14)
-# Level 2  two_client_50_50_label_skew_only    —  label skew only
+# Level 2  two_client_50_50_label_skew_only    -  label skew only
 #          (rare classes 100% on C1; C1 made 50% via mel-nevi filler)
-# Level 3  two_client_70_30_rare_enriched      —  intermediate severity
-# Level 4  two_client_90_10_rare_stress (above)—  combined stress test
+# Level 3  two_client_70_30_rare_enriched      -  intermediate severity
+# Level 4  two_client_90_10_rare_stress (above)-  combined stress test
 #
 # All four call into the same shared helper ``_two_client_from_spec`` to
 # keep the cursor arithmetic in one place; the per-level specs below
@@ -710,7 +710,7 @@ def two_client_50_50_stratified_iid(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Level 0 — 2 clients, stratified ~50/50 IID control.
+    """Level 0 - 2 clients, stratified ~50/50 IID control.
 
     Every class is split as evenly as possible between the two clients
     (ceil/floor on odd counts). With DermMNIST training counts
@@ -733,7 +733,7 @@ def two_client_50_50_stratified_iid(
     )
 
 
-# Level 1 spec — each class split deterministically 86.33%/13.67% so the
+# Level 1 spec - each class split deterministically 86.33%/13.67% so the
 # global quantity ratio matches Level 4 (and the existing case study)
 # while every class is present on both clients in their global
 # proportions. Hardcoded to avoid floating-point drift across machines
@@ -755,7 +755,7 @@ def two_client_86_14_quantity_only_stratified(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Level 1 — 2 clients, ~86/14 quantity split, every class stratified.
+    """Level 1 - 2 clients, ~86/14 quantity split, every class stratified.
 
     Each of the seven classes is split deterministically
     ~86.3% / 13.7% between Client 0 and Client 1, matching the global
@@ -788,7 +788,7 @@ def two_client_50_50_label_skew_only(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Level 2 — 2 clients, ~50/50 quantity, rare classes 100% on C1.
+    """Level 2 - 2 clients, ~50/50 quantity, rare classes 100% on C1.
 
     Client 0 receives every sample of the four "common" classes ---
     actinic, basal, benign keratosis, mel-nevi --- minus the mel-nevi
@@ -859,7 +859,7 @@ def two_client_70_30_rare_enriched(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Level 3 — 2 clients, ~70/30 quantity, rare classes 100% on C1.
+    """Level 3 - 2 clients, ~70/30 quantity, rare classes 100% on C1.
 
     Intermediate-severity small-hospital scenario: Client 1 holds 30%
     of the data (a moderately small specialist site, not the 14%
@@ -919,7 +919,7 @@ def quantity_skew_improved(
     labels: Sequence[int],
     seed: int = 42,
 ) -> Tuple[List[List[int]], pd.DataFrame]:
-    """Mode 4 — quantity-skewed specialist 7-client partition.
+    """Mode 4 - quantity-skewed specialist 7-client partition.
 
     Realistic medical referral network: 3 large hospital-style clients (C0–C2)
     own most of the volume but share common classes (nevi, melanoma, benign);
@@ -929,7 +929,7 @@ def quantity_skew_improved(
     The per-class allocations are HARDCODED via `QUANTITY_SKEW_IMPROVED_SPEC`.
     The function:
       - validates that the spec's per-class sums match the dataset's class
-        sizes exactly (raises ValueError if not — abort loudly per spec);
+        sizes exactly (raises ValueError if not - abort loudly per spec);
       - shuffles each class deterministically by seed;
       - takes the first n samples of each class for each client (in spec order).
 
@@ -1147,7 +1147,7 @@ def save_partition(
 
 
 # ----------------------------------------------------------------------------
-# CLI entry point — load DermMNIST, partition, print + save
+# CLI entry point - load DermMNIST, partition, print + save
 # ----------------------------------------------------------------------------
 
 def _load_dermmnist_labels(npz_path: str | Path) -> np.ndarray:

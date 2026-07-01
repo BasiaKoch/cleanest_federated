@@ -1,5 +1,5 @@
 #!/bin/bash
-# IID-PARTITION system-heterogeneity sweep — C1 and C2 on iid_7_clients.
+# IID-PARTITION system-heterogeneity sweep - C1 and C2 on iid_7_clients.
 #
 # Two conditions × 10 seeds × 2 algorithms = 40 jobs at ~1 GPU-hour each.
 #
@@ -11,12 +11,12 @@
 # contribution, this script re-runs C1 and C2 on the IID partition.
 # Pair with the IID C0 baseline from submit_flower_C0_iid_baseline.sh.
 #
-#   C1 "fixed_stragglers"  — clients 5 and 6 always do E=5 (others do E=20).
+#   C1 "fixed_stragglers"  - clients 5 and 6 always do E=5 (others do E=20).
 #                            Under IID, client identities are exchangeable,
 #                            so the choice of (5, 6) is arbitrary; kept
 #                            consistent with the engineered-partition C1
 #                            for direct cross-partition comparison.
-#   C2 "random_stragglers" — each round, 50% of clients are randomly
+#   C2 "random_stragglers" - each round, 50% of clients are randomly
 #                            designated stragglers with E_i ~ Uniform[1, 19];
 #                            others do E=20. Li et al. (2020) §5.2.
 set -uo pipefail

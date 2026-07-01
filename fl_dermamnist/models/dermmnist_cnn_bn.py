@@ -1,4 +1,4 @@
-"""DermMNISTCNN_BN — BatchNorm variant of DermMNISTCNN for an architecture ablation.
+"""DermMNISTCNN_BN - BatchNorm variant of DermMNISTCNN for an architecture ablation.
 
 Identical to ``DermMNISTCNN`` in every respect except that the four GroupNorm
 layers are replaced by ``nn.BatchNorm2d``. This is the canonical FL-unfriendly
@@ -23,7 +23,7 @@ Architecture (identical layer-by-layer to ``DermMNISTCNN`` except norm type):
     Linear(256 → 128) + ReLU + Dropout(0.2)
     Linear(128 → 7)
 
-Parameter count is essentially identical to the GN variant — the BN affine
+Parameter count is essentially identical to the GN variant - the BN affine
 parameters (gamma, beta) match GN's, and the BN running buffers (running_mean,
 running_var) are not trainable but are aggregated by FedAvg's state-dict
 averaging (which is the very mechanism whose interaction with non-IID data

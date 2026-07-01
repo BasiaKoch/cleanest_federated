@@ -1,5 +1,5 @@
 #!/bin/bash
-# Permanent heterogeneous-compute sweep — Wang et al. (2020) FedNova-style
+# Permanent heterogeneous-compute sweep - Wang et al. (2020) FedNova-style
 # system heterogeneity on the engineered partition.
 #
 # 10 seeds × 2 algorithms × 2 partitions = 40 jobs at ~1 GPU-hour each on
@@ -51,7 +51,7 @@ n_iid=0
 # === Engineered partition (PRIMARY) ====================================
 # This is the load-bearing run. Bounded dissimilarity is present
 # (engineered partition has drift), and permanent E_i introduces the
-# γ-inexact regime — the (B > 1) × (γ < 1) case in Li et al. Theorem 4.
+# γ-inexact regime - the (B > 1) × (γ < 1) case in Li et al. Theorem 4.
 PARTITION_ENG=balanced_paired_7_clients
 ENG_OUT=fl_dermamnist/results/system_het_permanent_engineered
 mkdir -p "$REPO_ROOT/$ENG_OUT"
