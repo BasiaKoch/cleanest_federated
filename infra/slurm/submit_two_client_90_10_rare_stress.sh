@@ -36,7 +36,7 @@ MU=0.01
 PARTITION=two_client_90_10_rare_stress
 OUT_DIR=fl_dermamnist/results/two_client_90_10_rare_stress
 # --log-update-norms emits per-(round, client) client_update_norms_*.csv
-# beside the JSON — the diagnostic the supervisor asked for under stress.
+# beside the JSON — the per-round update-norm diagnostic used under stress.
 EXTRA_ARGS="--log-update-norms"
 
 MODE=${MODE:-pilot}

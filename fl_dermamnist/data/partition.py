@@ -113,37 +113,22 @@ SPECIALIST_7_CLIENTS_SPEC: List[Dict] = [
 
 
 # Mode 7 — engineered 2-client 90/10 rare-class stress test.
+# Two-client, class-disjoint partition (~86/14) for the L4 mechanism
+# experiments: rare-class signal is concentrated entirely on the minority client.
 #
-# Deliberately stressful 2-client partition designed to expose FedAvg's
-# failure mode under combined quantity- AND label-skew, the scenario where
-# the FedProx proximal term has the largest theoretical room to help.
+#   Client 0 (~86%): the four common classes in full — melanocytic_nevi (5),
+#     benign_keratosis-like (2), actinic_keratoses (0), basal_cell_carcinoma (1);
+#     no melanoma, dermatofibroma, or vascular_lesions.
+#   Client 1 (~14%): 100% of the three low-count classes — melanoma (4),
+#     dermatofibroma (3), vascular_lesions (6); none of Client 0's classes.
 #
-#   Client 0 (general/dominant, ~86%): holds every COMMON class in full —
-#     melanocytic_nevi (5), benign_keratosis-like (2), plus the two moderate
-#     carcinomas actinic_keratoses (0) and basal_cell_carcinoma (1). Holds
-#     ZERO melanoma, ZERO dermatofibroma, ZERO vascular_lesions.
+# Every class lives on exactly one client, so the majority client carries no
+# rare-class signal. The 86/14 ratio (rather than exact 90/10) follows from
+# keeping 100% of melanoma on Client 1: melanoma alone is 779/7007 = 11.1% of
+# the training set, so any such split is already >= 11%.
 #
-#   Client 1 (rare/critical specialist, ~14%): holds 100% of the three
-#     clinically-critical low-count classes — melanoma (4), dermatofibroma
-#     (3), vascular_lesions (6). Holds ZERO of the four classes on Client 0.
-#
-# The partition is class-DISJOINT by design: every class lives on exactly
-# one client. This maximises the sample-count-weighted FedAvg bias toward
-# Client 0's "no-melanoma" objective: 86% of the federated gradient signal
-# comes from a hospital that has never seen a melanoma. FedProx's proximal
-# term should restrain that drift; if the supervisor's stress-test framing
-# is correct, the FedProx-minus-FedAvg per-class delta on classes {3, 4, 6}
-# should be visibly positive even when global accuracy is similar.
-#
-# Why 86/14 instead of exact 90/10: melanoma alone is 779/7007 = 11.1% of
-# the training set, so any partition that keeps 100% of melanoma on Client 1
-# already sits at ≥11%. To honour the supervisor's "Client 0 should contain
-# little or no melanoma if feasible" instruction we keep melanoma 100% on
-# Client 1, accept the 86/14 ratio (still "approximately 90/10"), and gain
-# a maximally clean class-disjoint narrative in return.
-#
-# Per-class allocations are HARDCODED and validated at runtime against the
-# actual DermMNIST training set counts (228+359+769+80+779+4693+99 = 7007).
+# Per-class allocations are hardcoded and validated at runtime against the
+# DermaMNIST training-set counts (228+359+769+80+779+4693+99 = 7007).
 TWO_CLIENT_90_10_RARE_STRESS_SPEC: List[Dict] = [
     # Client 0 — general hospital, common-class dominated, NO rare/critical.
     {"id": 0, "name": "general_hospital_dominant",
